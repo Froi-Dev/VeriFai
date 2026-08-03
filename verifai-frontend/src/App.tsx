@@ -1,12 +1,59 @@
+import { useEffect, useState } from "react";
+import { LoaderCircle } from "lucide-react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthPage, DashboardPage, HomePage } from "@/pages";
+import { getCurrentUser } from "@/services/auth";
+
+function ProtectedDashboard() {
+  const [sessionState, setSessionState] = useState<
+    "checking" | "authenticated" | "anonymous"
+  >("checking");
+
+  useEffect(() => {
+    const token = localStorage.getItem("verifai_token");
+
+    if (!token) {
+      setSessionState("anonymous");
+      return;
+    }
+
+    getCurrentUser()
+      .then((user) => {
+        localStorage.setItem("verifai_user", JSON.stringify(user));
+        setSessionState("authenticated");
+      })
+      .catch(() => {
+        localStorage.removeItem("verifai_token");
+        localStorage.removeItem("verifai_user");
+        setSessionState("anonymous");
+      });
+  }, []);
+
+  if (sessionState === "checking") {
+    return (
+      <main className="dashboard-auth-check" aria-live="polite">
+        <LoaderCircle className="spin" size={22} />
+        <span>Opening your workspace…</span>
+      </main>
+    );
+  }
+
+  if (sessionState === "anonymous") {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <DashboardPage />;
+}
+
 export default function App() {
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-      <div className="text-center space-y-4 max-w-md">
-        <h1 className="text-3xl font-bold tracking-tight">Verifai</h1>
-        <p className="text-muted-foreground text-sm">
-          Welcome to Verifai. Boilerplate template code has been cleaned up.
-        </p>
-      </div>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/dashboard/*" element={<ProtectedDashboard />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
