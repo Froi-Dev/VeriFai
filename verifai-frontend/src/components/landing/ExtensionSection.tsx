@@ -29,7 +29,7 @@ export function ExtensionSection({ onRequestAccess }: ExtensionSectionProps) {
           <p className="kicker">BROWSER EXTENSION</p>
           <h2>Check content without leaving the page.</h2>
           <p>
-            Use VeriFai from the browser for quick, in-context checks, then move to
+            Use Verif.Ai from the browser for quick, in-context checks, then move to
             the web app when you need a fuller analysis workspace.
           </p>
           <ul>
@@ -38,13 +38,13 @@ export function ExtensionSection({ onRequestAccess }: ExtensionSectionProps) {
             <li><Check size={16} /> Review clear results designed to support human judgment</li>
           </ul>
           <button className="button primary large" onClick={onRequestAccess}>
-            Continue to VeriFai <ArrowRight size={18} />
+            Continue to Verif.Ai <ArrowRight size={18} />
           </button>
         </motion.div>
 
         <motion.div
           className="extension-visual"
-          aria-label="Concept preview of the VeriFai browser extension"
+          aria-label="Concept preview of the Verif.Ai browser extension"
           initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.98 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true, amount: 0.25 }}
@@ -66,7 +66,7 @@ export function ExtensionSection({ onRequestAccess }: ExtensionSectionProps) {
               </div>
               <div className="extension-panel">
                 <div className="extension-panel-head">
-                  <span><Puzzle size={17} /> VeriFai</span>
+                  <span><Puzzle size={17} /> Verif.Ai</span>
                   <small>Browser extension</small>
                 </div>
                 <div className="extension-selection">

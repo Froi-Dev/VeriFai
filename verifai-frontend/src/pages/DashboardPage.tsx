@@ -141,18 +141,18 @@ export function DashboardPage() {
   useEffect(() => {
     document.title =
       view === "overview"
-        ? "Dashboard | VeriFai"
+        ? "Dashboard | Verif.Ai"
         : view === "text"
-          ? "Text Analyzer | VeriFai"
+          ? "Text Analyzer | Verif.Ai"
           : view === "media"
-            ? "Media Analyzer | VeriFai"
+            ? "Media Analyzer | Verif.Ai"
             : view === "extension"
-              ? "Download Extension | VeriFai"
+              ? "Download Extension | Verif.Ai"
               : view === "profile"
-                ? "Profile Settings | VeriFai"
-          : "Scan history | VeriFai";
+                ? "Profile Settings | Verif.Ai"
+          : "Scan history | Verif.Ai";
     return () => {
-      document.title = "VeriFai — Digital Content Authenticity Analysis";
+      document.title = "Verif.Ai — Digital Content Authenticity Analysis";
     };
   }, [view]);
 
@@ -309,15 +309,15 @@ export function DashboardPage() {
 
   const downloadExtension = () => {
     const previewPackage = [
-      "VeriFai Browser Extension — Preview Package",
+      "Verif.Ai Browser Extension — Preview Package",
       "",
-      "This is a mock download for the VeriFai dashboard prototype.",
+      "This is a mock download for the Verif.Ai dashboard prototype.",
       "A production browser extension package will replace this file.",
     ].join("\n");
     const url = URL.createObjectURL(new Blob([previewPackage], { type: "text/plain" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "verifai-extension-preview.txt";
+    link.download = "verif-ai-extension-preview.txt";
     link.click();
     URL.revokeObjectURL(url);
     setDownloaded(true);
@@ -348,9 +348,9 @@ export function DashboardPage() {
       </AnimatePresence>
       <aside className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-head">
-          <Link className="brand dashboard-brand" to="/" aria-label="VeriFai home">
+          <Link className="brand dashboard-brand" to="/" aria-label="Verif.Ai home">
             <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-            <span>VeriFai</span>
+            <span>Verif.Ai</span>
           </Link>
           <button className="sidebar-close" type="button" onClick={() => setSidebarOpen(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
@@ -556,7 +556,7 @@ export function DashboardPage() {
                     </div>
                   </div>
                   <div className="plain-evidence">
-                    <h3>Why VeriFai reached this result</h3>
+                    <h3>Why Verif.Ai reached this result</h3>
                     <ul>
                       <li><Check size={15} /><span><strong>Unusual fine details</strong>Some small areas do not look as naturally formed as the rest of the media.</span></li>
                       <li><Check size={15} /><span><strong>Repeated visual patterns</strong>Similar textures appear where natural variation is normally expected.</span></li>
@@ -646,7 +646,7 @@ export function DashboardPage() {
                     </div>
                   </div>
                   <div className="plain-evidence">
-                    <h3>Why VeriFai reached this result</h3>
+                    <h3>Why Verif.Ai reached this result</h3>
                     <ul>
                       <li><Check size={15} /><span><strong>Very even sentence structure</strong>Many sentences are built in a similar way, which is common in generated writing.</span></li>
                       <li><Check size={15} /><span><strong>Predictable word choices</strong>Several phrases follow patterns that AI writing tools often repeat.</span></li>
@@ -666,12 +666,12 @@ export function DashboardPage() {
           <section className="dashboard-tool-page">
             <div className="tool-page-heading">
               <h1>Download Extension</h1>
-              <p>Use VeriFai from your browser while reading content online.</p>
+              <p>Use Verif.Ai from your browser while reading content online.</p>
             </div>
             <div className="extension-download-card">
               <div className="extension-product">
                 <span className="extension-product-mark"><span className="brand-mark" aria-hidden="true"><i /><i /></span></span>
-                <div><small>BROWSER EXTENSION</small><h2>VeriFai for Chrome and Edge</h2><p>Select text or media on a webpage and send it to your VeriFai workspace for analysis.</p></div>
+                <div><small>BROWSER EXTENSION</small><h2>Verif.Ai for Chrome and Edge</h2><p>Select text or media on a webpage and send it to your Verif.Ai workspace for analysis.</p></div>
               </div>
               <div className="extension-download-action">
                 <span>Preview package · Version 0.1</span>
@@ -682,7 +682,7 @@ export function DashboardPage() {
             <div className="extension-install-grid">
               <article><span>01</span><div><h3>Download the package</h3><p>Use the button above to download the current mock extension package.</p></div></article>
               <article><span>02</span><div><h3>Open browser extensions</h3><p>Visit your browser’s extension management page and enable developer mode.</p></div></article>
-              <article><span>03</span><div><h3>Load and pin VeriFai</h3><p>Load the unpacked extension, then pin it for quick access while browsing.</p></div></article>
+              <article><span>03</span><div><h3>Load and pin Verif.Ai</h3><p>Load the unpacked extension, then pin it for quick access while browsing.</p></div></article>
             </div>
             <p className="extension-preview-note"><Info size={15} /> This is a prototype download page. The production extension package will replace the preview file.</p>
           </section>
@@ -692,7 +692,7 @@ export function DashboardPage() {
           <section className="dashboard-tool-page profile-page">
             <div className="tool-page-heading">
               <h1>Profile Settings</h1>
-              <p>Manage the personal information shown in your VeriFai workspace.</p>
+              <p>Manage the personal information shown in your Verif.Ai workspace.</p>
             </div>
             <form className="profile-settings-card" onSubmit={(event) => { event.preventDefault(); saveProfile(); }}>
               <div className="profile-card-heading">
@@ -747,7 +747,7 @@ export function DashboardPage() {
       </main>
 
       <footer className="dashboard-footer">
-        <span>© 2026 VeriFai</span>
+        <span>© 2026 Verif.Ai</span>
         <span>Built for more careful sharing online.</span>
       </footer>
       </div>

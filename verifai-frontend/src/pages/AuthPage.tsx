@@ -27,7 +27,7 @@ export function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Sign in or create an account | VeriFai";
+    document.title = "Sign in or create an account | Verif.Ai";
 
     const token = publicPreview ? null : localStorage.getItem("verifai_token");
     if (token) {
@@ -43,7 +43,7 @@ export function AuthPage() {
     }
 
     return () => {
-      document.title = "VeriFai — Digital Content Authenticity Analysis";
+      document.title = "Verif.Ai — Digital Content Authenticity Analysis";
     };
   }, [navigate, publicPreview]);
 
@@ -98,10 +98,10 @@ export function AuthPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-story" aria-label="About VeriFai">
-        <Link className="auth-brand" to="/" aria-label="Return to VeriFai home">
+      <section className="auth-story" aria-label="About Verif.Ai">
+        <Link className="auth-brand" to="/" aria-label="Return to Verif.Ai home">
           <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          <span>VeriFai</span>
+          <span>Verif.Ai</span>
         </Link>
         <motion.div
           className="auth-artwork"
@@ -123,7 +123,7 @@ export function AuthPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className="kicker">VERIFAI ACCOUNT</p>
+            <p className="kicker">VERIF.AI ACCOUNT</p>
             <div className="auth-mode" role="tablist" aria-label="Authentication options">
               <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => changeMode("signin")}>Sign in</button>
               <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => changeMode("signup")}>Create account</button>
@@ -141,7 +141,7 @@ export function AuthPage() {
                 <p className="auth-intro">
                   {mode === "signin"
                     ? "Enter your details to continue to your analysis workspace."
-                    : "Set up your account to start using VeriFai on the web."}
+                    : "Set up your account to start using Verif.Ai on the web."}
                 </p>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
@@ -201,7 +201,7 @@ export function AuthPage() {
                   {mode === "signup" && (
                     <label className="auth-consent">
                       <input type="checkbox" required />
-                      <span>I agree to VeriFai’s terms and acknowledge the privacy notice.</span>
+                      <span>I agree to Verif.Ai’s terms and acknowledge the privacy notice.</span>
                     </label>
                   )}
 
@@ -213,7 +213,7 @@ export function AuthPage() {
                 </form>
 
                 <p className="auth-switch">
-                  {mode === "signin" ? "New to VeriFai?" : "Already have an account?"}
+                  {mode === "signin" ? "New to Verif.Ai?" : "Already have an account?"}
                   <button type="button" onClick={() => changeMode(mode === "signin" ? "signup" : "signin")}>
                     {mode === "signin" ? "Create an account" : "Sign in"}
                   </button>

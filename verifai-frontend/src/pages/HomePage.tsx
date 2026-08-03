@@ -19,18 +19,18 @@ const assetPath = (path: string) =>
 const capabilities = [
   {
     title: "Text intelligence",
-    copy: "Paste an article, message, caption, or written passage. VeriFai compares human and AI-writing likelihoods, then explains the strongest signals in language anyone can understand.",
+    copy: "Paste an article, message, caption, or written passage. Verif.Ai compares human and AI-writing likelihoods, then explains the strongest signals in language anyone can understand.",
     meta: "English · Filipino · Taglish",
     image: assetPath("/images/dashboard-text-analyzer.png"),
-    imageAlt: "VeriFai Text Analyzer showing human and AI-writing likelihoods with supporting explanations",
+    imageAlt: "Verif.Ai Text Analyzer showing human and AI-writing likelihoods with supporting explanations",
     generated: false,
   },
   {
     title: "Image and video analysis",
-    copy: "Upload one image, video, or audio file and review it beside the assessment. VeriFai highlights visual and file-level patterns associated with generated or altered media.",
+    copy: "Upload one image, video, or audio file and review it beside the assessment. Verif.Ai highlights visual and file-level patterns associated with generated or altered media.",
     meta: "Images · Video · Audio",
     image: assetPath("/images/dashboard-media-analyzer.png"),
-    imageAlt: "VeriFai Media Analyzer showing an uploaded image beside its authenticity assessment",
+    imageAlt: "Verif.Ai Media Analyzer showing an uploaded image beside its authenticity assessment",
     generated: false,
   },
   {
@@ -38,12 +38,12 @@ const capabilities = [
     copy: "Submitted content moves through a controlled analysis pipeline. Each completed scan keeps clear processing details while uploaded material remains limited to the analysis workflow.",
     meta: "Controlled · Traceable · Private",
     image: assetPath("/images/secure-content-pipeline-v1.png"),
-    imageAlt: "Illustration of documents and media passing through a protected VeriFai analysis pipeline",
+    imageAlt: "Illustration of documents and media passing through a protected Verif.Ai analysis pipeline",
     generated: true,
   },
   {
     title: "Philippine-aware models",
-    copy: "VeriFai accounts for English, Filipino, and Taglish patterns, including everyday code-switching and local expressions that generic detectors may misunderstand.",
+    copy: "Verif.Ai accounts for English, Filipino, and Taglish patterns, including everyday code-switching and local expressions that generic detectors may misunderstand.",
     meta: "Built with local context",
     image: assetPath("/images/ph-language-analysis-v1.png"),
     imageAlt: "English, Filipino, and Taglish signals converging into a fingerprint authenticity analysis",
@@ -52,7 +52,7 @@ const capabilities = [
 ];
 
 const steps = [
-  ["01", "Choose your content", "Paste text or upload an image or video. VeriF.ai routes it to the appropriate analysis pipeline."],
+  ["01", "Choose your content", "Paste text or upload an image or video. Verif.Ai routes it to the appropriate analysis pipeline."],
   ["02", "Run a custom model", "Our models inspect linguistic, visual, and structural signals associated with synthetic content."],
   ["03", "Review the assessment", "See the classification, confidence score, processing details, and an explanation where supported."],
 ];
@@ -65,9 +65,9 @@ const problems = [
 
 function Brand() {
   return (
-    <a className="brand" href="#top" aria-label="VeriF.ai home">
+    <a className="brand" href="#top" aria-label="Verif.Ai home">
       <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-      <span>VeriFai</span>
+      <span>Verif.Ai</span>
     </a>
   );
 }
@@ -184,12 +184,12 @@ export function HomePage() {
               <div className="preview-window">
                 <div className="preview-toolbar">
                   <span className="preview-dots" aria-hidden="true"><i /><i /><i /></span>
-                  <span>VeriFai workspace</span>
+                  <span>Verif.Ai workspace</span>
                   <Link to="/auth">Open app <ArrowRight size={13} /></Link>
                 </div>
                 <img
                   src={assetPath("/images/dashboard-overview-desktop.png")}
-                  alt="VeriFai dashboard showing weekly scan activity and recent analyses"
+                  alt="Verif.Ai dashboard showing weekly scan activity and recent analyses"
                 />
               </div>
             </div>
@@ -261,7 +261,7 @@ export function HomePage() {
             <Reveal className="workflow-intro center-heading">
               <p className="kicker">HOW IT WORKS</p>
               <h2>From upload to assessment in three clear steps.</h2>
-              <p>VeriF.ai reports likelihood—not truth. Results are designed to support human judgment, not replace it.</p>
+              <p>Verif.Ai reports likelihood—not truth. Results are designed to support human judgment, not replace it.</p>
             </Reveal>
             <div className="workflow-grid">
               <div className="steps">
@@ -319,8 +319,8 @@ export function HomePage() {
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
             <div><p className="kicker">START ANALYZING</p><h2>Bring more context to the content you encounter online.</h2></div>
-            <div><p>Create your VeriF.ai account or sign in to continue to the analysis workspace.</p>
-              <Link className="button light large" to="/auth">Continue to VeriF.ai <ArrowRight size={18} /></Link>
+            <div><p>Create your Verif.Ai account or sign in to continue to the analysis workspace.</p>
+              <Link className="button light large" to="/auth">Continue to Verif.Ai <ArrowRight size={18} /></Link>
             </div>
           </motion.div>
         </section>
@@ -334,7 +334,7 @@ export function HomePage() {
             <div><strong>Account</strong><Link to="/auth">Sign in or create account</Link></div>
           </div>
         </div>
-        <div className="container footer-bottom"><span>© 2026 VeriF.ai. All rights reserved.</span><span>Made for the Philippine digital landscape.</span></div>
+        <div className="container footer-bottom"><span>© 2026 Verif.Ai. All rights reserved.</span><span>Made for the Philippine digital landscape.</span></div>
       </footer>
     </div>
   );
