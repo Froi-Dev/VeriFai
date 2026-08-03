@@ -1,0 +1,1 @@
+Start-Process uvicorn -ArgumentList "main:app --reload" -WorkingDirectory .\Verifai-backend; npm --prefix .\verifai-frontend run dev
