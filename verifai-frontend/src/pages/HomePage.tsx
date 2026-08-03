@@ -109,7 +109,7 @@ export function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const updateHeader = () => setScrolled(window.scrollY > 40);
+    const updateHeader = () => setScrolled(window.scrollY > 50);
     updateHeader();
     window.addEventListener("scroll", updateHeader, { passive: true });
     return () => window.removeEventListener("scroll", updateHeader);

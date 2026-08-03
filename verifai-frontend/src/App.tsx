@@ -52,7 +52,7 @@ export default function App() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        {!landingOnly && <Route path="/auth" element={<AuthPage />} />}
+        <Route path="/auth" element={<AuthPage />} />
         {!landingOnly && <Route path="/dashboard/*" element={<ProtectedDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

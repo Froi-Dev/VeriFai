@@ -15,6 +15,7 @@ import { getCurrentUser, loginUser, registerUser } from "@/services/auth";
 type AuthMode = "signin" | "signup";
 
 export function AuthPage() {
+  const publicPreview = import.meta.env.VITE_LANDING_ONLY === "true";
   const [mode, setMode] = useState<AuthMode>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,7 +29,7 @@ export function AuthPage() {
   useEffect(() => {
     document.title = "Sign in or create an account | VeriFai";
 
-    const token = localStorage.getItem("verifai_token");
+    const token = publicPreview ? null : localStorage.getItem("verifai_token");
     if (token) {
       getCurrentUser()
         .then((currentUser) => {
@@ -44,7 +45,7 @@ export function AuthPage() {
     return () => {
       document.title = "VeriFai — Digital Content Authenticity Analysis";
     };
-  }, [navigate]);
+  }, [navigate, publicPreview]);
 
   const changeMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -53,6 +54,11 @@ export function AuthPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (publicPreview) {
+      setMessage("Authentication is unavailable in this public preview.");
+      return;
+    }
 
     setSubmitting(true);
     setMessage("");
@@ -103,7 +109,7 @@ export function AuthPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src="/images/auth-authenticity-scan.png" alt="A human profile transitioning into a red digital authenticity scan" />
+          <img src={`${import.meta.env.BASE_URL}images/auth-authenticity-scan.png`} alt="A human profile transitioning into a red digital authenticity scan" />
           <span className="auth-scan-line" aria-hidden="true" />
         </motion.div>
       </section>

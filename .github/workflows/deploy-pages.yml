@@ -46,6 +46,9 @@ jobs:
           VITE_BASE_PATH: /VeriFai/
           VITE_LANDING_ONLY: "true"
 
+      - name: Add single-page app fallback
+        run: cp dist/index.html dist/404.html
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
