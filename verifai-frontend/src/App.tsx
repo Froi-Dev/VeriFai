@@ -46,12 +46,14 @@ function ProtectedDashboard() {
 }
 
 export default function App() {
+  const landingOnly = import.meta.env.VITE_LANDING_ONLY === "true";
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/dashboard/*" element={<ProtectedDashboard />} />
+        {!landingOnly && <Route path="/auth" element={<AuthPage />} />}
+        {!landingOnly && <Route path="/dashboard/*" element={<ProtectedDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

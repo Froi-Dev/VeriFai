@@ -13,12 +13,15 @@ const nav = [
   ["Browser extension", "#extension"],
 ];
 
+const assetPath = (path: string) =>
+  `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
+
 const capabilities = [
   {
     title: "Text intelligence",
     copy: "Paste an article, message, caption, or written passage. VeriFai compares human and AI-writing likelihoods, then explains the strongest signals in language anyone can understand.",
     meta: "English · Filipino · Taglish",
-    image: "/images/dashboard-text-analyzer.png",
+    image: assetPath("/images/dashboard-text-analyzer.png"),
     imageAlt: "VeriFai Text Analyzer showing human and AI-writing likelihoods with supporting explanations",
     generated: false,
   },
@@ -26,7 +29,7 @@ const capabilities = [
     title: "Image and video analysis",
     copy: "Upload one image, video, or audio file and review it beside the assessment. VeriFai highlights visual and file-level patterns associated with generated or altered media.",
     meta: "Images · Video · Audio",
-    image: "/images/dashboard-media-analyzer.png",
+    image: assetPath("/images/dashboard-media-analyzer.png"),
     imageAlt: "VeriFai Media Analyzer showing an uploaded image beside its authenticity assessment",
     generated: false,
   },
@@ -34,7 +37,7 @@ const capabilities = [
     title: "Secure content handling",
     copy: "Submitted content moves through a controlled analysis pipeline. Each completed scan keeps clear processing details while uploaded material remains limited to the analysis workflow.",
     meta: "Controlled · Traceable · Private",
-    image: "/images/secure-content-pipeline-v1.png",
+    image: assetPath("/images/secure-content-pipeline-v1.png"),
     imageAlt: "Illustration of documents and media passing through a protected VeriFai analysis pipeline",
     generated: true,
   },
@@ -42,7 +45,7 @@ const capabilities = [
     title: "Philippine-aware models",
     copy: "VeriFai accounts for English, Filipino, and Taglish patterns, including everyday code-switching and local expressions that generic detectors may misunderstand.",
     meta: "Built with local context",
-    image: "/images/ph-language-analysis-v1.png",
+    image: assetPath("/images/ph-language-analysis-v1.png"),
     imageAlt: "English, Filipino, and Taglish signals converging into a fingerprint authenticity analysis",
     generated: true,
   },
@@ -185,7 +188,7 @@ export function HomePage() {
                   <Link to="/auth">Open app <ArrowRight size={13} /></Link>
                 </div>
                 <img
-                  src="/images/dashboard-overview-desktop.png"
+                  src={assetPath("/images/dashboard-overview-desktop.png")}
                   alt="VeriFai dashboard showing weekly scan activity and recent analyses"
                 />
               </div>
