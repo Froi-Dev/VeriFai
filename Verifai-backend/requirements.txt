@@ -8,3 +8,12 @@ pwdlib[argon2,bcrypt]==0.2.1
 passlib==1.7.4
 email-validator==2.2.0
 slowapi==0.1.9
+cryptography==45.0.7
+redis==6.4.0
+torch==2.13.0
+transformers==5.15.0
+httpx==0.28.1
+beautifulsoup4==4.13.5
+python-dateutil==2.9.0.post0
+rapidfuzz==3.14.1
+trafilatura==2.0.0

@@ -1,0 +1,25 @@
+# Secrets and local configuration (examples remain tracked)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Private keys and local certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Build, cache, and editor output
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.idea/
+.vscode/
+*.log

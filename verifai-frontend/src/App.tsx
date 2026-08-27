@@ -10,21 +10,13 @@ function ProtectedDashboard() {
   >("checking");
 
   useEffect(() => {
-    const token = localStorage.getItem("verifai_token");
-
-    if (!token) {
-      setSessionState("anonymous");
-      return;
-    }
-
     getCurrentUser()
       .then((user) => {
-        localStorage.setItem("verifai_user", JSON.stringify(user));
+        sessionStorage.setItem("verifai_user", JSON.stringify(user));
         setSessionState("authenticated");
       })
       .catch(() => {
-        localStorage.removeItem("verifai_token");
-        localStorage.removeItem("verifai_user");
+        sessionStorage.removeItem("verifai_user");
         setSessionState("anonymous");
       });
   }, []);
@@ -53,6 +45,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth/reset" element={<AuthPage />} />
         {!landingOnly && <Route path="/dashboard/*" element={<ProtectedDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

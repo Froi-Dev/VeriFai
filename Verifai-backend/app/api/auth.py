@@ -1,23 +1,39 @@
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request, Response, status
 
 from app.api.dependencies import CurrentUser, DatabaseSession, TokenData
 from app.core.config import settings
 from app.core.rate_limit import limiter
+from app.models import AuthSession
 from app.schemas import (
     AuthResponse,
     LoginRequest,
     MessageResponse,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RegisterRequest,
+    SessionResponse,
     UserResponse,
 )
 from app.services.auth import (
+    AccountLockedError,
     EmailAlreadyRegisteredError,
+    IdempotencyConflictError,
     InactiveUserError,
     InvalidCredentialsError,
+    InvalidPasswordResetError,
+    InvalidSessionError,
+    PasswordPolicyError,
     authenticate_user,
+    claim_idempotency_key,
+    list_sessions,
+    refresh_session,
     register_user,
+    request_password_reset,
+    reset_password,
+    revoke_all_sessions,
     revoke_session,
 )
+from app.services.email import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -26,63 +42,188 @@ def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
+def _user_agent(request: Request) -> str | None:
+    return request.headers.get("user-agent")
+
+
 def _user_response(user: CurrentUser) -> UserResponse:
-    return UserResponse(id=str(user.user_id), name=user.username, email=user.email)
+    return UserResponse(
+        id=str(user.user_id), name=user.username, email=user.email, role=user.role
+    )
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    common = {
+        "httponly": True,
+        "secure": settings.cookie_secure,
+        "samesite": "lax",
+        "domain": settings.cookie_domain,
+    }
+    response.set_cookie(
+        settings.access_cookie_name,
+        access_token,
+        max_age=settings.access_token_expire_minutes * 60,
+        path="/",
+        **common,
+    )
+    response.set_cookie(
+        settings.refresh_cookie_name,
+        refresh_token,
+        max_age=settings.refresh_token_expire_days * 86400,
+        path=f"{settings.api_v1_prefix}/auth",
+        **common,
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    common = {
+        "httponly": True,
+        "secure": settings.cookie_secure,
+        "samesite": "lax",
+        "domain": settings.cookie_domain,
+    }
+    response.delete_cookie(settings.access_cookie_name, path="/", **common)
+    response.delete_cookie(
+        settings.refresh_cookie_name,
+        path=f"{settings.api_v1_prefix}/auth",
+        **common,
+    )
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.rate_limit_register)
-def register(payload: RegisterRequest, request: Request, db: DatabaseSession) -> AuthResponse:
+def register(
+    payload: RegisterRequest, request: Request, response: Response, db: DatabaseSession
+) -> AuthResponse:
     try:
-        user, token = register_user(
+        result = register_user(
             db,
             name=payload.name,
             email=str(payload.email),
             password=payload.password,
             ip_address=_client_ip(request),
+            user_agent=_user_agent(request),
         )
     except EmailAlreadyRegisteredError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists",
         ) from exc
-    return AuthResponse(token=token.encoded, user=_user_response(user))
+    except PasswordPolicyError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors) from exc
+    _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
+    return AuthResponse(user=_user_response(result.user))
 
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit(settings.rate_limit_login)
-def login(payload: LoginRequest, request: Request, db: DatabaseSession) -> AuthResponse:
+def login(
+    payload: LoginRequest, request: Request, response: Response, db: DatabaseSession
+) -> AuthResponse:
     try:
-        user, token = authenticate_user(
+        result = authenticate_user(
             db,
             email=str(payload.email),
             password=payload.password,
             ip_address=_client_ip(request),
+            user_agent=_user_agent(request),
         )
     except InvalidCredentialsError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    except AccountLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Account temporarily locked after repeated failed sign-in attempts",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
     except InactiveUserError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account is inactive",
         ) from exc
-    return AuthResponse(token=token.encoded, user=_user_response(user))
+    _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
+    return AuthResponse(user=_user_response(result.user))
+
+
+@router.post("/refresh", response_model=AuthResponse)
+@limiter.limit(settings.rate_limit_refresh)
+def refresh(request: Request, response: Response, db: DatabaseSession) -> AuthResponse:
+    token = request.cookies.get(settings.refresh_cookie_name)
+    if not token:
+        _clear_auth_cookies(response)
+        raise HTTPException(status_code=401, detail="Session expired")
+    try:
+        result = refresh_session(
+            db,
+            refresh_token=token,
+            ip_address=_client_ip(request),
+            user_agent=_user_agent(request),
+        )
+    except InvalidSessionError as exc:
+        _clear_auth_cookies(response)
+        raise HTTPException(status_code=401, detail="Session expired") from exc
+    _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
+    return AuthResponse(user=_user_response(result.user))
 
 
 @router.get("/me", response_model=UserResponse)
 @limiter.limit(settings.rate_limit_me)
-def me(request: Request, user: CurrentUser) -> UserResponse:
+def me(request: Request, response: Response, user: CurrentUser) -> UserResponse:
     return _user_response(user)
+
+
+@router.get("/sessions", response_model=list[SessionResponse])
+@limiter.limit(settings.rate_limit_me)
+def sessions(
+    request: Request,
+    response: Response,
+    user: CurrentUser,
+    token_data: TokenData,
+    db: DatabaseSession,
+):
+    return [
+        _session_response(item, token_data.session_id)
+        for item in list_sessions(db, user.user_id)
+    ]
+
+
+def _session_response(session: AuthSession, current_id: str) -> SessionResponse:
+    return SessionResponse(
+        id=session.session_id,
+        created_at=session.created_at,
+        last_seen_at=session.last_seen_at,
+        expires_at=session.expires_at,
+        current=session.session_id == current_id,
+    )
+
+
+@router.delete("/sessions/{session_id}", response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_logout)
+def delete_session(
+    session_id: str,
+    request: Request,
+    response: Response,
+    user: CurrentUser,
+    token_data: TokenData,
+    db: DatabaseSession,
+) -> MessageResponse:
+    if not revoke_session(
+        db, session_id=session_id, user=user, ip_address=_client_ip(request)
+    ):
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session_id == token_data.session_id:
+        _clear_auth_cookies(response)
+    return MessageResponse(message="Session revoked")
 
 
 @router.post("/logout", response_model=MessageResponse)
 @limiter.limit(settings.rate_limit_logout)
 def logout(
     request: Request,
+    response: Response,
     db: DatabaseSession,
     user: CurrentUser,
     token_data: TokenData,
@@ -93,4 +234,73 @@ def logout(
         user=user,
         ip_address=_client_ip(request),
     )
+    _clear_auth_cookies(response)
     return MessageResponse(message="Signed out successfully")
+
+
+@router.post("/logout-all", response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_logout)
+def logout_all(
+    request: Request, response: Response, db: DatabaseSession, user: CurrentUser
+) -> MessageResponse:
+    revoke_all_sessions(db, user=user, ip_address=_client_ip(request))
+    _clear_auth_cookies(response)
+    return MessageResponse(message="Signed out on all devices")
+
+
+@router.post("/password-reset/request", response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_password_reset)
+def password_reset_request(
+    payload: PasswordResetRequest,
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    db: DatabaseSession,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=200),
+) -> MessageResponse:
+    try:
+        is_new = claim_idempotency_key(
+            db,
+            scope="password-reset-request",
+            key=idempotency_key,
+            request_fingerprint=str(payload.email).lower(),
+        )
+    except IdempotencyConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key was already used for a different request",
+        ) from exc
+    if is_new:
+        token = request_password_reset(
+            db, email=str(payload.email), ip_address=_client_ip(request)
+        )
+        if token:
+            background_tasks.add_task(send_password_reset_email, str(payload.email), token)
+    return MessageResponse(
+        message="If that account exists, password reset instructions will be sent"
+    )
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_password_reset)
+def password_reset_confirm(
+    payload: PasswordResetConfirmRequest,
+    request: Request,
+    response: Response,
+    db: DatabaseSession,
+) -> MessageResponse:
+    try:
+        reset_password(
+            db,
+            token=payload.token,
+            new_password=payload.password,
+            ip_address=_client_ip(request),
+        )
+    except InvalidPasswordResetError as exc:
+        raise HTTPException(
+            status_code=400, detail="Password reset link is invalid or expired"
+        ) from exc
+    except PasswordPolicyError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors) from exc
+    _clear_auth_cookies(response)
+    return MessageResponse(message="Password reset successfully; please sign in again")
