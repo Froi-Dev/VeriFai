@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  ArrowRight, Check, FileText, Menu, Moon, ScanSearch, Sun, X,
+  ArrowRight, FileText, Menu, Moon, ScanSearch, Sun, X,
 } from "lucide-react";
-import { ExtensionSection } from "@/components/landing/ExtensionSection";
-
 const nav = [
   ["Capabilities", "#capabilities"],
   ["How it works", "#how-it-works"],
-  ["Browser extension", "#extension"],
 ];
 
 const assetPath = (path: string) =>
@@ -21,40 +18,32 @@ const capabilities = [
     title: "Text intelligence",
     copy: "Paste an article, message, caption, or written passage. Verif.Ai compares human and AI-writing likelihoods, then explains the strongest signals in language anyone can understand.",
     meta: "English · Filipino · Taglish",
-    image: assetPath("/images/dashboard-text-analyzer.png"),
-    imageAlt: "Verif.Ai Text Analyzer showing human and AI-writing likelihoods with supporting explanations",
-    generated: false,
-  },
-  {
-    title: "Image and video analysis",
-    copy: "Upload one image, video, or audio file and review it beside the assessment. Verif.Ai highlights visual and file-level patterns associated with generated or altered media.",
-    meta: "Images · Video · Audio",
-    image: assetPath("/images/dashboard-media-analyzer.png"),
-    imageAlt: "Verif.Ai Media Analyzer showing an uploaded image beside its authenticity assessment",
-    generated: false,
-  },
-  {
-    title: "Secure content handling",
-    copy: "Submitted content moves through a controlled analysis pipeline. Each completed scan keeps clear processing details while uploaded material remains limited to the analysis workflow.",
-    meta: "Controlled · Traceable · Private",
-    image: assetPath("/images/secure-content-pipeline-v1.png"),
-    imageAlt: "Illustration of documents and media passing through a protected Verif.Ai analysis pipeline",
+    image: assetPath("/images/ph-language-analysis-v1.png"),
+    imageAlt: "Illustration of language signals converging into an authenticity analysis",
     generated: true,
   },
   {
-    title: "Philippine-aware models",
-    copy: "Verif.Ai accounts for English, Filipino, and Taglish patterns, including everyday code-switching and local expressions that generic detectors may misunderstand.",
-    meta: "Built with local context",
-    image: assetPath("/images/ph-language-analysis-v1.png"),
-    imageAlt: "English, Filipino, and Taglish signals converging into a fingerprint authenticity analysis",
+    title: "News verification",
+    copy: "Paste a news story and compare its claims with current reporting, related coverage, and available fact-check evidence.",
+    meta: "Claims · Sources · Context",
+    image: assetPath("/images/secure-content-pipeline-v1.png"),
+    imageAlt: "Illustration of content passing through a protected verification pipeline",
+    generated: true,
+  },
+  {
+    title: "Screenshot fact-checking",
+    copy: "Upload a clear screenshot of a news claim. Verif.Ai extracts the visible text, separates factual claims, and returns the evidence found for each one.",
+    meta: "OCR · Claims · Evidence",
+    image: assetPath("/images/landing-authenticity-background.png"),
+    imageAlt: "Abstract Verif.Ai authenticity analysis illustration",
     generated: true,
   },
 ];
 
 const steps = [
-  ["01", "Choose your content", "Paste text or upload an image or video. Verif.Ai routes it to the appropriate analysis pipeline."],
-  ["02", "Run a custom model", "Our models inspect linguistic, visual, and structural signals associated with synthetic content."],
-  ["03", "Review the assessment", "See the classification, confidence score, processing details, and an explanation where supported."],
+  ["01", "Choose a live analyzer", "Open the text detector or news checker for the content you want to assess."],
+  ["02", "Submit your content", "Verif.Ai sends the text or news screenshot to the connected analysis service."],
+  ["03", "Review the response", "See the classification, confidence, and source evidence returned by that service."],
 ];
 
 const problems = [
@@ -106,8 +95,6 @@ export function HomePage() {
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
   const reduceMotion = useReducedMotion();
-  const navigate = useNavigate();
-
   useEffect(() => {
     const updateHeader = () => setScrolled(window.scrollY > 50);
     updateHeader();
@@ -170,7 +157,7 @@ export function HomePage() {
             >
               <p className="overline"><span /><b>Detect - Authenticate</b></p>
               <h1>Know what is real before you share it.</h1>
-              <p className="hero-lead">Analyze text, images, video, and audio for signals associated with AI-generated or altered content.</p>
+              <p className="hero-lead">Analyze writing and verify news claims using connected detection, search, and screenshot fact-checking services.</p>
               <div className="hero-actions">
                 <Link className="button primary large" to="/auth">
                   Start analyzing <ArrowRight size={18} />
@@ -187,10 +174,11 @@ export function HomePage() {
                   <span>Verif.Ai workspace</span>
                   <Link to="/auth">Open app <ArrowRight size={13} /></Link>
                 </div>
-                <img
-                  src={assetPath("/images/dashboard-overview-desktop.png")}
-                  alt="Verif.Ai dashboard showing weekly scan activity and recent analyses"
-                />
+                <div className="live-preview-empty">
+                  <span><ScanSearch size={30} /></span>
+                  <strong>Ready for your first analysis</strong>
+                  <p>The workspace begins empty and displays results only after a live analyzer responds.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -285,30 +273,15 @@ export function HomePage() {
                 viewport={{ once: true, amount: 0.25 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               >
-                <span className="mockup-label">Concept preview</span>
-                <div className="workflow-bar"><i /><i /><i /><span>New analysis</span></div>
-                <div className="drop-zone">
-                  <span><FileText size={22} /></span>
-                  <strong>Drop content to analyze</strong>
-                  <small>Text, image, or video</small>
+                <div className="live-workflow-empty">
+                  <span><FileText size={24} /></span>
+                  <strong>No example result loaded</strong>
+                  <p>Sign in and submit content to receive a fresh response from a connected analyzer.</p>
                 </div>
-                <div className="process-row">
-                  <span className="process-done"><Check size={15} /></span>
-                  <div><strong>Content received</strong><small>Routing to Text Model v1.4</small></div>
-                  <span>Complete</span>
-                </div>
-                <div className="process-row">
-                  <span className="process-active"><ScanSearch size={15} /></span>
-                  <div><strong>Analyzing signals</strong><small>Language detected: Taglish</small></div>
-                  <span>Processing</span>
-                </div>
-                <div className="process-progress"><i /></div>
               </motion.div>
             </div>
           </div>
         </section>
-
-        <ExtensionSection onRequestAccess={() => navigate("/auth")} />
 
         <section className="cta">
           <motion.div

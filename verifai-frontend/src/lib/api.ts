@@ -5,7 +5,9 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
 }
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  // Prefer the Vite/deployment same-origin proxy so Chromium privacy controls
+  // do not treat local frontend and API hostnames as different sites.
+  baseURL: import.meta.env.VITE_API_URL || "/api/v1",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
   timeout: 15_000,

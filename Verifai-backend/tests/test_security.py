@@ -4,7 +4,8 @@ import pytest
 from passlib.hash import bcrypt_sha256
 from pydantic import ValidationError
 
-from app.core.security import (
+from app.Global.schemas import RegisterRequest
+from app.Global.security import (
     create_access_token,
     decode_access_token,
     hash_password,
@@ -14,7 +15,6 @@ from app.core.security import (
     tokens_match,
     verify_password,
 )
-from app.schemas import RegisterRequest
 
 
 def test_password_hash_round_trip() -> None:

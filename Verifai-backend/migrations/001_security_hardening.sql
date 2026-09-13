@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.auth_sessions (
     user_id integer NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
     refresh_token_hash varchar(64) NOT NULL,
     previous_refresh_token_hash varchar(64),
+    last_rotated_at timestamptz,
     generation integer NOT NULL DEFAULT 1 CHECK (generation > 0),
     user_agent_hash varchar(64) NOT NULL,
     ip_hash varchar(64) NOT NULL,

@@ -10,9 +10,16 @@ existing PostgreSQL database.
 accepts 20–10,000 characters, and returns AI/human probabilities plus a cautious verdict.
 Long inputs are analyzed in overlapping 512-token windows instead of being silently cut off.
 
-The supplied model export has two labels but no `id2label` metadata. The default assumes
-the training convention `0=human` and `1=AI`. Set `TEXT_MODEL_AI_LABEL_ID=0` if the training
-dataset used the reverse mapping.
+The configured `xlmr-ai-human-best` export declares `0=human` and `1=AI` in its
+`id2label` metadata, so the detector resolves the class mapping directly from the model.
+
+## Image detector
+
+`POST /api/v1/detector/image` accepts one authenticated JPEG, PNG, WEBP, GIF, HEIC, or HEIF
+image up to 10 MB. Gemini assesses visible generation/manipulation signals and returns a
+structured classification, AI/authentic likelihoods, observed signals, and limitations. This
+is a visual assessment rather than forensic proof; it does not claim to inspect unavailable
+metadata or establish provenance.
 
 ## Fake News Analyzer
 
@@ -23,6 +30,7 @@ claim and never sends that claim to an AI model. The deterministic pipeline:
 - extracts entities, keywords, dates, and event categories with rules;
 - searches configured national and regional Philippine outlets with several full-claim and
   altered-headline query views;
+- searches VERA Files, Rappler Fact Check, and Tsek.ph first for an explicit assessment;
 - uses Google Custom Search, SearchAPI, and Serper in configurable fallback order;
 - deduplicates tracking URLs and copied headlines;
 - pre-filters results before SSRF-protected article retrieval;
@@ -50,14 +58,99 @@ Invoke-RestMethod -Method Post `
   -Body '{"text":"Ferdinand Marcos Jr. signed the Maharlika Investment Fund Act into law."}'
 ```
 
+### Philippine news image fact-checking
+
+`POST /api/v1/news/verify-image` accepts one authenticated JPEG, PNG, WEBP, GIF, HEIC, or
+HEIF upload up to 10 MB. Pillow downsizes high-resolution sources before creating the bounded
+OCR array; GIF and phone-native HEIF formats are normalized to JPEG for vision fallback.
+PaddleOCR is always the primary engine. Gemini Vision is called only when the
+overall OCR is weak or a low-confidence region contains a critical name, date, number,
+percentage, currency value, or agency.
+
+The response preserves `raw_paddle_text` and `gemini_transcription` separately, records OCR
+corrections and conflicts, and returns deterministic normalization, atomic claims, evidence,
+numerical/context checks, claim verdicts, source-independence metadata, and a central overall
+verdict. A disputed critical OCR token forces affected claims to `UNVERIFIABLE` instead of
+guessing.
+
+Set `GEMINI_API_KEYS` to a comma-separated, backend-only key pool. The shared Gemini client
+round-robins image detection and fallback OCR requests and temporarily skips credentials that
+return quota, authentication, or permission errors. `GEMINI_API_KEY` remains supported for a
+single-key deployment. Credentials are sent in the `x-goog-api-key` header and are never
+exposed to the browser.
+PaddleOCR is loaded lazily by default so each web process does not immediately allocate a copy.
+`IMAGE_OCR_WARMUP=true` is available for a dedicated single-worker inference deployment. A
+warmup failure is logged without taking unrelated API routes offline. Pre-cache the models in
+deployments without model-host access.
+
+Low-confidence OCR is never submitted for fact-checking unless the fallback returns a usable
+transcription. Image provenance remains explicitly `UNKNOWN` because textual web search is not
+a reverse-image search.
+
+### Text detector deployment
+
+The text model is loaded lazily by default (`TEXT_MODEL_WARMUP=false`). Run one asynchronous API
+worker while the text and OCR models are in-process; each additional process would load another
+copy of both model families. Scale the bounded I/O concurrency first, or deploy model inference
+as a separately scaled service before increasing API process count. A single worker shares one
+text model across up to `TEXT_MODEL_MAX_CONCURRENT_INFERENCES` bounded inference calls.
+
+The model's `config.json` must identify the AI and human labels. For legacy models with generic
+`LABEL_0`/`LABEL_1` metadata, set `TEXT_MODEL_AI_LABEL_ID` only after confirming the mapping from
+the training pipeline. A model export containing `text_calibration.json` automatically uses its
+held-out temperature and asymmetric review thresholds. Exports without that artifact present
+scores as uncalibrated rather than inventing a real-world confidence claim.
+
+The leakage-resistant fine-tuning, calibration, subgroup evaluation, dataset schema, and release
+checklist are documented in [docs/text-detector-training.md](docs/text-detector-training.md).
+
+Example authenticated upload:
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/v1/news/verify-image `
+  -WebSession $session `
+  -Form @{ image = Get-Item .\news-card.png }
+```
+
+## Reliability controls
+
+- `GET /live` is process liveness and never depends on PostgreSQL. `GET /health` and
+  `GET /api/v1/health` are readiness checks and return `503` when PostgreSQL is unavailable.
+  Database unavailability no longer prevents application startup.
+- Authentication for long-running detector and verification routes uses a short-lived database
+  session, releasing its connection before model inference, searches, OCR, or scraping begins.
+- `DATABASE_POOL_SIZE`, `DATABASE_MAX_OVERFLOW`, and `DATABASE_POOL_TIMEOUT_SECONDS` are explicit.
+  Keep `instances * (pool size + overflow)` below the PostgreSQL connection budget after reserving
+  capacity for migrations, administration, and monitoring.
+- Search variants run concurrently behind `NEWS_MAX_CONCURRENT_SEARCH_REQUESTS`; article downloads
+  reuse one keep-alive HTTP pool and are bounded by `NEWS_MAX_CONCURRENT_SCRAPES`. Image claims use
+  the stricter `IMAGE_MAX_CONCURRENT_CLAIMS` limit.
+- End-to-end deadlines cover text, news, and image analysis. Deadline expiry returns `504` and
+  cancels outstanding asynchronous provider work.
+- Successful results are cached by content hash. Development uses a bounded in-process TTL cache;
+  production automatically reuses the Redis rate-limit URL unless `RESULT_CACHE_URL` is set.
+  Simultaneous identical misses are coalesced to one computation.
+- Every response carries `X-Request-ID`, and error bodies include the same support reference.
+  `X-Cache` reports `HIT` or `MISS` for analysis routes.
+- Evidence is ranked, publisher/copy-chain deduplicated, and capped by
+  `NEWS_MAX_EVIDENCE_ITEMS`; weak related evidence has its own smaller cap.
+
 ## Security model
 
 - Argon2id password hashing with per-password salts; legacy bcrypt hashes upgrade on login.
 - Twelve-character password policy enforced independently by the API.
 - 15-minute JWT access tokens in `HttpOnly` cookies.
-- Opaque refresh tokens stored only as SHA-256 hashes, rotated on every refresh.
-- Server-side revocation, idle/absolute expiry, client fingerprint checks, and reuse detection.
-- Account lockout, generic password-reset discovery responses, one-time reset tokens, and reset-driven global logout.
+- Opaque refresh tokens stored only as SHA-256 hashes and rotated on every refresh. A short,
+  server-derived replay window makes simultaneous tab refreshes idempotent; delayed reuse still
+  revokes the session.
+- Server-side revocation plus idle and absolute expiry. User-Agent changes are audited and update
+  the device metadata instead of invalidating a valid refresh token.
+- Per-IP login throttling avoids attacker-triggered account lockout. Reaching the active-session
+  limit rejects the new login explicitly instead of silently signing out an older device.
+- Generic password-reset discovery responses, one-time reset tokens, and reset-driven global
+  logout. A failed SMTP background delivery releases its idempotency key for retry.
+- Password-reset requests return `503` for everyone when SMTP is not configured; production startup rejects missing SMTP settings instead of promising undeliverable mail.
 - User/moderator/admin role dependencies; `/api/v1/admin/users` requires `admin`.
 - Strict Pydantic request models, SQLAlchemy bound parameters, request-size limits, CORS allowlists, origin checks, security headers, and endpoint rate limits.
 - Encrypted audit IP addresses when `DATA_ENCRYPTION_KEY` is configured; IP/user-agent session metadata is only stored as keyed fingerprints.
@@ -73,6 +166,7 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-dev.txt
 psql "$env:DATABASE_URL" -f migrations/001_security_hardening.sql
+psql "$env:DATABASE_URL" -f migrations/002_auth_session_resilience.sql
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -96,10 +190,10 @@ ruff check .
 pytest
 ```
 
-Set the frontend's public API location in its `.env`:
+For local development, route browser requests through the Vite same-origin proxy:
 
 ```env
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=/api/v1
 ```
 
 ## Production requirements
@@ -107,7 +201,8 @@ VITE_API_URL=http://localhost:8000/api/v1
 - Terminate TLS at a trusted reverse proxy, use `sslmode=verify-full` (or at least `require`) for PostgreSQL, and set `ENVIRONMENT=production` and `COOKIE_SECURE=true`.
 - Explicitly set `CORS_ORIGINS` and `TRUSTED_HOSTS`; wildcards are rejected.
 - Store `JWT_SECRET`, `DATA_ENCRYPTION_KEY`, database credentials, Redis credentials, and SMTP credentials in the deployment secret manager—not source control or Vite variables.
-- Set `RATE_LIMIT_STORAGE_URI` to Redis for consistent limits across workers.
+- Set `RATE_LIMIT_STORAGE_URI` to Redis for consistent limits and shared result caching across
+  instances. Set `RESULT_CACHE_URL` only when caching should use a separate Redis deployment.
 - Apply migrations with an owner role, then run the API as a DML-only role using `002_least_privilege.example.sql` as a template.
 - Configure encrypted database volumes/backups, restricted network access, rotation, and restore testing at the infrastructure layer.
 - Serve the frontend with its own CSP, HSTS, `frame-ancestors 'none'`, and MIME-sniffing headers. API headers do not protect separately hosted HTML.

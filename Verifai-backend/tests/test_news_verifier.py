@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from app.services.news_verifier import (
+from app.FakeNewsAnalyzer.news_verifier import (
     EvidenceAnalysis,
     NewsSearchClient,
     NewsVerifier,
@@ -12,9 +12,13 @@ from app.services.news_verifier import (
     SearchResult,
     _extract_result_image,
     _headline_match_and_mutation,
+    _is_evidence_page,
     _relationship,
+    _source_tier,
     clean_claim_text,
     extract_claim_features,
+    generate_fact_check_queries,
+    generate_quote_source_queries,
     generate_search_queries,
     normalize_search_text,
     normalize_url,
@@ -44,10 +48,118 @@ def test_query_generation_uses_multiple_deterministic_views() -> None:
     assert any("resign" in query.lower() for query in queries)
 
 
+def test_query_generation_prioritizes_quote_despite_copied_page_noise() -> None:
+    paragraph = (
+        "Faster Filipinos should \u201cshed our defeatist mindset,\u201d a Philippine Coast "
+        "Guard official said in the West Philippine Sea dispute."
+    )
+    features = extract_claim_features(paragraph)
+
+    queries = generate_search_queries(paragraph, features)
+
+    assert '"shed our defeatist mindset"' in queries[:3]
+
+
+def test_matching_quoted_search_result_survives_initial_relevance_filter() -> None:
+    paragraph = (
+        "Faster Filipinos should \u201cshed our defeatist mindset,\u201d a Philippine Coast "
+        "Guard official said in the West Philippine Sea dispute."
+    )
+    features = extract_claim_features(paragraph)
+    result = SearchResult(
+        title="West PH Sea: Tarriela urges Filipinos to shed 'defeatist mindset'",
+        url="https://inquirer.net/defeatist-mindset",
+        domain="inquirer.net",
+        snippet=(
+            "Let us shed our defeatist mindset, because defeatism never represented what "
+            "our heroes stood for, Tarriela said."
+        ),
+        published_date="2026-08-31",
+        provider="test",
+        query='"shed our defeatist mindset" (site:inquirer.net)',
+    )
+
+    score = score_initial_relevance(features, normalize_search_text(paragraph), result)
+
+    assert score >= 40
+
+
+def test_fact_check_query_runs_within_bounded_provider_limit() -> None:
+    cleaned = clean_claim_text(
+        "President Donald Tram binisita ang ating pangulo at nangako na papalayain Duterte Forever"
+    )
+    queries = generate_search_queries(cleaned, extract_claim_features(cleaned))
+
+    assert any("fact check" in query for query in queries[:5])
+
+
+def test_each_philippine_fact_check_archive_gets_a_targeted_query() -> None:
+    queries = generate_fact_check_queries(
+        "Duterte is returning from ICC custody",
+        ["verafiles.org", "rappler.com", "tsek.ph"],
+    )
+
+    assert queries == [
+        "duterte returning icc custody fact check",
+        "site:verafiles.org/articles duterte returning icc custody",
+        "site:rappler.com/newsbreak/fact-check duterte returning icc custody",
+        "site:tsek.ph duterte returning icc custody",
+    ]
+
+
+def test_quote_source_query_pairs_distinctive_words_with_speaker() -> None:
+    cleaned = clean_claim_text(
+        "'Pag may nangyaring di maganda sa buhay nyo, isipin nyo na lang na mas matindi "
+        "yung nangyari sa buhay ko VP Sara Duterte"
+    )
+    features = extract_claim_features(cleaned)
+
+    queries = generate_quote_source_queries(cleaned, features)
+
+    assert '"mas matindi" "buhay ko"' in queries[0]
+    assert "VP Sara Duterte" in queries[0]
+
+
+@pytest.mark.parametrize(
+    ("url", "domain", "usable"),
+    [
+        ("https://facebook.com/example/posts/1", "facebook.com", False),
+        ("https://www.youtube.com/channel/UClL_VSvGY3RB98YEdkqwItw", "youtube.com", False),
+        ("https://balita.mb.com.ph/author/13/?pgno=49", "balita.mb.com.ph", False),
+        ("https://apnews.com/hub/donald-trump", "apnews.com", False),
+        ("https://verafiles.org/articles/fact-check-example", "verafiles.org", True),
+    ],
+)
+def test_only_article_pages_are_used_as_news_evidence(url: str, domain: str, usable: bool) -> None:
+    result = SearchResult(
+        title="Result",
+        url=url,
+        domain=domain,
+        snippet="",
+        published_date=None,
+        provider="test",
+        query="test",
+    )
+
+    assert _is_evidence_page(result) is usable
+
+
+@pytest.mark.parametrize("domain", ["verafiles.org", "rappler.com", "tsek.ph", "pco.gov.ph"])
+def test_philippine_fact_check_organizations_are_top_tier(domain: str) -> None:
+    assert _source_tier(domain, verifier_settings()) == 1
+
+
+def test_quote_reporting_sources_are_credible_secondary_sources() -> None:
+    settings = verifier_settings()
+    settings.news_tier_2_domain_list.extend(["tribune.net.ph", "smninewschannel.com"])
+
+    assert _source_tier("tribune.net.ph", settings) == 2
+    assert _source_tier("smninewschannel.com", settings) == 2
+
+
 def test_query_generation_searches_without_an_appended_headline_ending() -> None:
     cleaned = clean_claim_text(
-        "DILG wants PNP access to homes of illegal firearm owners for inspections "
-        "to kill people"
+        "DILG wants PNP access to homes of illegal firearm owners for inspections to kill people"
     )
     features = extract_claim_features(cleaned)
 
@@ -71,9 +183,7 @@ def test_normalize_url_preserves_redirect_significant_trailing_slash() -> None:
 def test_extract_result_image_uses_google_thumbnail() -> None:
     item = {
         "pagemap": {
-            "cse_thumbnail": [
-                {"src": "https://cdn.example.com/news/photo.jpg?utm_source=search"}
-            ]
+            "cse_thumbnail": [{"src": "https://cdn.example.com/news/photo.jpg?utm_source=search"}]
         }
     }
 
@@ -88,8 +198,7 @@ def test_extract_result_image_supports_nested_and_protocol_relative_images() -> 
 
 def test_appended_words_are_detected_as_a_headline_mutation() -> None:
     claim = (
-        "DILG wants PNP access to homes of illegal firearm owners for inspections "
-        "to kill people"
+        "DILG wants PNP access to homes of illegal firearm owners for inspections to kill people"
     )
     headline = "DILG wants PNP access to homes of illegal firearm owners for inspections"
 
@@ -100,10 +209,21 @@ def test_appended_words_are_detected_as_a_headline_mutation() -> None:
     assert "kill people" in mutation
 
 
+def test_search_engine_ellipsis_is_not_treated_as_an_altered_headline() -> None:
+    claim = "VP Duterte trial: Prosecution 'willing to wait' for ill-stricken Fajarda"
+    truncated_result = (
+        "VP Duterte trial: Prosecution 'willing to wait' for ill-stricken ..."
+    )
+
+    score, mutation = _headline_match_and_mutation(claim, truncated_result)
+
+    assert score >= 90
+    assert mutation is None
+
+
 def test_underlying_headline_outranks_an_unrelated_shared_event() -> None:
     claim_text = (
-        "DILG wants PNP access to homes of illegal firearm owners for inspections "
-        "to kill people"
+        "DILG wants PNP access to homes of illegal firearm owners for inspections to kill people"
     )
     claim = extract_claim_features(claim_text)
     real_headline = SearchResult(
@@ -141,6 +261,56 @@ def test_policy_event_words_do_not_need_to_be_adjacent() -> None:
     assert "POLICY_APPROVED" in claim.event_categories
 
 
+def test_filipino_policy_consideration_generates_english_queries_in_first_wave() -> None:
+    headline = (
+        "President Marcos, bukas sa posibilidad ng pagbabawal sa Facebook sa Pilipinas "
+        "ayon kay Castro."
+    )
+    features = extract_claim_features(headline)
+
+    queries = generate_search_queries(headline, features)
+
+    assert "POLICY_CONSIDERATION" in features.event_categories
+    assert features.attributed_entity == "Claire Castro"
+    assert extract_claim_features(headline.replace("ayon kay", "Ayon kay")).attributed_entity == (
+        "Claire Castro"
+    )
+    assert "President Marcos Facebook open possible ban Castro" in queries[:3]
+    assert "Marcos considering Facebook restrictions Philippines Claire Castro" in queries[:3]
+
+
+def test_policy_consideration_is_not_confused_with_an_ordered_ban() -> None:
+    consideration = extract_claim_features(
+        "President Marcos is open to considering a possible Facebook ban, according to "
+        "Claire Castro."
+    )
+    ordered = (
+        "President Marcos ordered Facebook banned, Palace Press Officer Claire Castro "
+        "announced. The restriction was implemented immediately."
+    )
+
+    relationship, _, transformation = _relationship(consideration, ordered, 82)
+
+    assert relationship == "RELATED"
+    assert transformation is not None
+    assert "different policy state" in transformation
+
+
+def test_unrelated_marcos_facebook_story_cannot_support_policy_claim() -> None:
+    claim = extract_claim_features(
+        "President Marcos, bukas sa posibilidad ng pagbabawal sa Facebook sa Pilipinas "
+        "ayon kay Castro."
+    )
+    unrelated = (
+        "President Marcos posted a Facebook message about fake news. Claire Castro discussed "
+        "the post during an unrelated media interview in the Philippines."
+    )
+
+    relationship, _, _ = _relationship(claim, unrelated, 80)
+
+    assert relationship == "IRRELEVANT"
+
+
 def test_death_claim_is_contradicted_by_alive_report() -> None:
     claim = extract_claim_features("Senator Juan Dela Cruz died today")
 
@@ -155,6 +325,117 @@ def test_death_claim_is_contradicted_by_alive_report() -> None:
     assert transformation is None
 
 
+@pytest.mark.parametrize(
+    "unrelated_report",
+    [
+        "WATCH: VP Sara Duterte impeachment is 'dead'",
+        (
+            "Sara Duterte hopes the ICC will expedite her father's trial. "
+            "The case concerns deaths during the drug war."
+        ),
+        (
+            "Duterte propagandists eating up the dead: Sara Duterte discussed the poor "
+            "state of political discourse."
+        ),
+    ],
+)
+def test_death_claim_requires_predicate_to_describe_named_person(
+    unrelated_report: str,
+) -> None:
+    claim = extract_claim_features("Sara Duterte is dead")
+
+    relationship, _, _ = _relationship(claim, unrelated_report, 80)
+
+    assert relationship != "SUPPORTS"
+
+
+def test_fact_check_for_same_person_debunks_death_claim() -> None:
+    claim = extract_claim_features("Sara Duterte is dead")
+
+    relationship, _, _ = _relationship(
+        claim,
+        "FACT CHECK: VP Sara Duterte is NOT dead. The claim is false; she remains alive.",
+        90,
+    )
+
+    assert relationship == "DEBUNKS"
+
+
+def test_fact_check_for_relative_does_not_debunk_named_person_death_claim() -> None:
+    claim = extract_claim_features("Sara Duterte is dead")
+
+    relationship, _, _ = _relationship(
+        claim,
+        "FACT CHECK: Rodrigo Duterte is not dead. Sara Duterte visited her father.",
+        80,
+    )
+
+    assert relationship not in {"DEBUNKS", "CONTRADICTS"}
+
+
+def test_literal_death_report_supports_same_named_person_claim() -> None:
+    claim = extract_claim_features("Sara Duterte is dead")
+
+    relationship, _, _ = _relationship(
+        claim,
+        "Breaking: Vice President Sara Duterte has reportedly died.",
+        80,
+    )
+
+    assert relationship == "SUPPORTS"
+
+
+def test_related_link_in_article_footer_cannot_decide_death_claim() -> None:
+    claim = extract_claim_features("Sara Duterte is dead")
+    opening = "Sara Duterte failed to declare investments, according to public documents."
+    document = (
+        opening
+        + " Filing records and disclosure rules were discussed." * 80
+        + " Related: FACT CHECK: VP Sara Duterte is NOT dead."
+    )
+
+    relationship, _, _ = _relationship(
+        claim,
+        document,
+        55,
+        support_scopes=[opening],
+    )
+
+    assert relationship not in {"SUPPORTS", "CONTRADICTS", "DEBUNKS"}
+
+
+def test_attributed_filipino_quote_is_supported_by_matching_article_passage() -> None:
+    claim = extract_claim_features(
+        "Isipin n'yo na lang na mas matindi yung nangyari sa buhay ko. VP Sara Duterte"
+    )
+    article = (
+        "Ayon kay VP Sara Duterte sa panayam: Isipin ninyo na lang na mas matindi "
+        "yung nangyari sa buhay ko. Hindi iyon ang katapusan ninyo."
+    )
+
+    relationship, rules, transformation = _relationship(claim, article, 51)
+
+    assert relationship == "SUPPORTS"
+    assert "matching attributed quote" in rules[0]
+    assert transformation is None
+
+
+def test_attributed_quote_is_not_supported_when_article_omits_the_speaker() -> None:
+    claim = extract_claim_features(
+        "Sir Jack Argota said that the International Criminal Court will be dismantled."
+    )
+    article = (
+        "A foreign political campaign is seeking to isolate and dismantle the International "
+        "Criminal Court. The report discusses a different international controversy."
+    )
+
+    relationship, rules, transformation = _relationship(claim, article, 72)
+
+    assert relationship == "RELATED"
+    assert "does not mention the attributed speaker" in rules[0]
+    assert transformation is None
+
+
 def test_explicit_fact_check_is_classified_as_debunk() -> None:
     claim = extract_claim_features("Mayor Ana Santos was arrested")
 
@@ -165,6 +446,64 @@ def test_explicit_fact_check_is_classified_as_debunk() -> None:
     )
 
     assert relationship == "DEBUNKS"
+
+
+def test_unrelated_negation_does_not_contradict_an_ongoing_trial() -> None:
+    claim = extract_claim_features(
+        "VP Duterte trial: Prosecution willing to wait for ill-stricken Fajarda"
+    )
+    article = (
+        "The impeachment trial is ongoing. The panel will finish presenting evidence "
+        "without sacrificing either the prosecution's effort to trace the money or the "
+        "defense's opportunity to respond."
+    )
+
+    relationship, _, _ = _relationship(claim, article, 60)
+
+    assert relationship != "CONTRADICTS"
+
+
+def test_trial_report_without_health_detail_does_not_support_full_headline() -> None:
+    claim = extract_claim_features(
+        "VP Duterte trial: Prosecution willing to wait for ill-stricken Fajarda"
+    )
+    article = (
+        "The prosecution in Vice President Duterte's impeachment trial discussed Edward "
+        "Fajarda as a possible witness in the confidential-funds proceedings."
+    )
+
+    relationship, _, _ = _relationship(claim, article, 70)
+
+    assert relationship == "RELATED"
+
+
+def test_report_missing_fajarda_does_not_support_fajarda_headline() -> None:
+    claim = extract_claim_features(
+        "VP Duterte trial: Prosecution willing to wait for ill-stricken Fajarda"
+    )
+    unrelated_person = (
+        "Vice President Duterte's impeachment trial continued after another staff member "
+        "was confined at a hospital, according to the prosecution."
+    )
+
+    relationship, _, _ = _relationship(claim, unrelated_person, 70)
+
+    assert relationship == "RELATED"
+
+
+def test_fact_check_about_same_person_but_different_claim_is_not_a_debunk() -> None:
+    claim = extract_claim_features("VP Sara Duterte said mas matindi yung nangyari sa buhay ko")
+
+    relationship, _, _ = _relationship(
+        claim,
+        (
+            "Fact check: Rodrigo Duterte remains detained. VP Sara Duterte did not say "
+            "that she would pick up her father from the ICC."
+        ),
+        43,
+    )
+
+    assert relationship != "DEBUNKS"
 
 
 def test_unrelated_footer_language_does_not_trigger_debunk() -> None:
@@ -233,6 +572,82 @@ def test_same_event_in_a_different_location_is_irrelevant() -> None:
     assert rules == ["The report names a different location."]
 
 
+def test_near_identical_headline_with_changed_location_remains_related() -> None:
+    claim_text = (
+        "Alex Eala takes on home bet Mary Stoiana in the first round of the US Open "
+        "singles on Monday (Manila time) in Russia."
+    )
+    authentic_title = (
+        "Alex Eala takes on home bet Mary Stoiana in the first round of the US Open "
+        "singles on Monday (Manila time) in Queens, New York"
+    )
+    claim = extract_claim_features(claim_text)
+    report = SearchResult(
+        title=authentic_title,
+        url="https://inquirer.net/eala-us-open",
+        domain="inquirer.net",
+        snippet="Eala faces Mary Stoiana at the US Open in Queens, New York.",
+        published_date=None,
+        provider="test",
+        query=claim_text,
+    )
+
+    assert score_initial_relevance(claim, normalize_search_text(claim_text), report) >= 40
+    relationship, rules, transformation = _relationship(
+        claim,
+        f"{report.title} {report.snippet}",
+        62,
+    )
+
+    assert relationship == "RELATED"
+    assert transformation is not None
+    assert "Russia" in transformation
+    assert "Queens" in transformation
+    assert rules == [transformation]
+
+
+@pytest.mark.asyncio
+async def test_changed_eala_location_returns_real_story_in_response() -> None:
+    claim_text = (
+        "Alex Eala takes on home bet Mary Stoiana in the first round of the US Open "
+        "singles on Monday (Manila time) in Russia."
+    )
+    authentic_title = (
+        "Alex Eala takes on home bet Mary Stoiana in the first round of the US Open "
+        "singles on Monday (Manila time) in Queens, New York"
+    )
+
+    class EalaSearchClient:
+        async def search(self, queries, *, restricted_domains, result_filter=None):
+            del restricted_domains
+            result = SearchResult(
+                title=authentic_title,
+                url="https://inquirer.net/eala-us-open",
+                domain="inquirer.net",
+                snippet="Eala faces Mary Stoiana at the US Open in Queens, New York.",
+                published_date=None,
+                provider="test",
+                query=queries[0],
+            )
+            assert result_filter is None or result_filter(result)
+            return SearchOutcome([result], ["test"], True)
+
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=EalaSearchClient(),
+        scraper=NoResultScraper(),
+    )
+
+    response = await verifier.verify(claim_text)
+
+    assert response["verdict"] == "MISLEADING"
+    assert response["evidence"]["related"][0]["title"] == authentic_title
+    assert response["closest_real_story"]["found"] is True
+    assert response["closest_real_story"]["title"] == authentic_title
+    assert "Queens, New York" in response["explanation"]
+    assert "Russia" in response["explanation"]
+
+
 def test_same_event_in_the_same_location_can_support_the_claim() -> None:
     claim = extract_claim_features(
         "Palace says no Filipino casualties were reported after flash floods in Nepal."
@@ -266,6 +681,7 @@ class RecordingSearchClient(EmptySearchClient):
     def __init__(self) -> None:
         super().__init__(succeeded=True)
         self.restricted_domains: list[str] | None | object = object()
+        self.restriction_history: list[list[str] | None] = []
 
     async def search(
         self,
@@ -275,6 +691,7 @@ class RecordingSearchClient(EmptySearchClient):
         result_filter=None,
     ):
         self.restricted_domains = restricted_domains
+        self.restriction_history.append(restricted_domains)
         return await super().search(
             queries,
             restricted_domains=restricted_domains,
@@ -316,6 +733,8 @@ class SimulatedFallbackSearchClient(NewsSearchClient):
 
 def verifier_settings() -> SimpleNamespace:
     return SimpleNamespace(
+        fact_check_domain_list=["verafiles.org", "rappler.com", "tsek.ph"],
+        quote_source_domain_list=["tribune.net.ph", "smninewschannel.com"],
         philippine_news_domain_list=[
             "abs-cbn.com",
             "gmanetwork.com",
@@ -323,6 +742,7 @@ def verifier_settings() -> SimpleNamespace:
             "mb.com.ph",
             "philstar.com",
             "pna.gov.ph",
+            "pco.gov.ph",
             "rappler.com",
             "sunstar.com.ph",
         ],
@@ -339,7 +759,156 @@ def verifier_settings() -> SimpleNamespace:
         news_max_articles_to_scrape=6,
         news_debug=False,
         news_old_story_days=30,
+        news_unrestricted_fallback=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_sara_duterte_death_claim_returns_false_with_exact_fact_check() -> None:
+    claim_text = "Sara Duterte is dead"
+
+    class SaraDeathSearchClient:
+        async def search(self, queries, *, restricted_domains, result_filter=None):
+            del restricted_domains
+            results = [
+                SearchResult(
+                    title="FACT CHECK: VP Sara Duterte is NOT dead",
+                    url="https://verafiles.org/articles/fact-check-vp-sara-duterte-is-not-dead",
+                    domain="verafiles.org",
+                    snippet=("The claim is false. Vice President Sara Duterte remains alive."),
+                    published_date="2025-03-13",
+                    provider="test",
+                    query=queries[0],
+                ),
+                SearchResult(
+                    title="WATCH: VP Sara Duterte impeachment is 'dead'",
+                    url="https://rappler.com/example/sara-impeachment-dead",
+                    domain="rappler.com",
+                    snippet="The discussion concerned the state of impeachment proceedings.",
+                    published_date="2025-08-07",
+                    provider="test",
+                    query=queries[0],
+                ),
+                SearchResult(
+                    title="Sara Duterte hopes ICC will expedite father's trial",
+                    url="https://inquirer.net/example/fathers-trial",
+                    domain="inquirer.net",
+                    snippet="The case concerns deaths during the drug war.",
+                    published_date="2026-07-30",
+                    provider="test",
+                    query=queries[0],
+                ),
+            ]
+            if result_filter is not None:
+                results = [item for item in results if result_filter(item)]
+            return SearchOutcome(results, ["test"], True)
+
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=SaraDeathSearchClient(),
+        scraper=NoResultScraper(),
+    )
+
+    response = await verifier.verify(claim_text)
+
+    assert response["verdict"] == "FALSE"
+    assert response["evidence"]["supporting"] == []
+    assert [item["title"] for item in response["evidence"]["debunks"]] == [
+        "FACT CHECK: VP Sara Duterte is NOT dead"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_fajarda_headline_is_supported_when_search_title_is_truncated() -> None:
+    headline = "VP Duterte trial: Prosecution 'willing to wait' for ill-stricken Fajarda"
+
+    class FajardaSearchClient:
+        async def search(self, queries, *, restricted_domains, result_filter=None):
+            if restricted_domains == verifier_settings().fact_check_domain_list:
+                return SearchOutcome([], ["test"], True)
+            result = SearchResult(
+                title=("VP Duterte trial: Prosecution 'willing to wait' for ill-stricken ..."),
+                url=(
+                    "https://newsinfo.inquirer.net/2295748/vp-duterte-trial-prosecution-"
+                    "willing-to-wait-for-ill-stricken-fajarda"
+                ),
+                domain="newsinfo.inquirer.net",
+                snippet=(
+                    "The prosecution is willing to wait until Edward Fajarda is well enough "
+                    "to testify after he suffered a stroke."
+                ),
+                published_date="2026-08-31",
+                provider="test",
+                query=queries[0],
+            )
+            results = [result]
+            if result_filter is not None:
+                results = [item for item in results if result_filter(item)]
+            return SearchOutcome(results, ["test"], True)
+
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=FajardaSearchClient(),
+        scraper=NoResultScraper(),
+    )
+
+    response = await verifier.verify(headline)
+
+    assert response["verdict"] == "LIKELY_TRUE"
+    assert response["evidence"]["supporting"][0]["url"].endswith(
+        "willing-to-wait-for-ill-stricken-fajarda"
+    )
+    assert response["evidence"]["contradicting"] == []
+
+
+@pytest.mark.asyncio
+async def test_defeatist_mindset_quote_finds_original_report_despite_page_noise() -> None:
+    paragraph = (
+        "Faster Filipinos should \u201cshed our defeatist mindset,\u201d a Philippine Coast "
+        "Guard (PCG) official said on Monday, in an apparent swipe at naysayers in the "
+        "country's fight for its sovereign rights in the West Philippine Sea."
+    )
+
+    class DefeatistMindsetSearchClient:
+        async def search(self, queries, *, restricted_domains, result_filter=None):
+            if restricted_domains == verifier_settings().fact_check_domain_list:
+                return SearchOutcome([], ["test"], True)
+            if '"shed our defeatist mindset"' not in queries[:3]:
+                return SearchOutcome([], ["test"], True)
+            result = SearchResult(
+                title=(
+                    "West PH Sea: Tarriela urges Filipinos to shed 'defeatist mindset'"
+                ),
+                url=(
+                    "https://www.inquirer.net/486843/west-ph-sea-tarriela-urges-"
+                    "filipinos-to-shed-defeatist-mindset/"
+                ),
+                domain="www.inquirer.net",
+                snippet=(
+                    "Filipinos should shed our defeatist mindset, a Philippine Coast Guard "
+                    "official said on Monday in the fight for sovereign rights in the West "
+                    "Philippine Sea."
+                ),
+                published_date="2026-08-31",
+                provider="test",
+                query='"shed our defeatist mindset"',
+            )
+            results = [result]
+            if result_filter is not None:
+                results = [item for item in results if result_filter(item)]
+            return SearchOutcome(results, ["test"], True)
+
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=DefeatistMindsetSearchClient(),
+        scraper=NoResultScraper(),
+    )
+
+    response = await verifier.verify(paragraph)
+
+    assert response["verdict"] == "LIKELY_TRUE"
+    assert response["evidence"]["supporting"][0]["publisher"] == "Inquirer.net"
+    assert response["closest_real_story"]["found"] is False
 
 
 @pytest.mark.asyncio
@@ -388,11 +957,89 @@ async def test_verifier_searches_all_configured_philippine_outlets() -> None:
 
     result = await verifier.verify("Marcos resigns as President today")
 
-    assert search_client.restricted_domains == verifier_settings().philippine_news_domain_list
+    assert search_client.restriction_history == [
+        verifier_settings().fact_check_domain_list,
+        verifier_settings().philippine_news_domain_list,
+        [],
+        verifier_settings().philippine_news_domain_list,
+        None,
+    ]
     assert (
         result["search"]["outlet_domains_searched"]
         == verifier_settings().philippine_news_domain_list
     )
+
+
+@pytest.mark.asyncio
+async def test_filipino_facebook_policy_claim_is_supported_with_required_context() -> None:
+    headline = (
+        "President Marcos, bukas sa posibilidad ng pagbabawal sa Facebook sa Pilipinas "
+        "ayon kay Castro."
+    )
+
+    class PolicySearchClient:
+        async def search(self, queries, *, restricted_domains, result_filter=None):
+            if restricted_domains == verifier_settings().fact_check_domain_list:
+                return SearchOutcome([], ["test"], True)
+            documents = [
+                (
+                    "Malacañang open to broader restrictions on digital platforms",
+                    "https://pco.gov.ph/news_releases/policy-platform-restrictions/",
+                    "pco.gov.ph",
+                    "President Marcos is open to considering Facebook restrictions in the "
+                    "Philippines, Palace Press Officer Claire Castro said. Any ban would first "
+                    "be studied.",
+                ),
+                (
+                    "Palace open to social media ban amid violence, fake news concerns",
+                    "https://gmanetwork.com/news/palace-open-social-media-ban/story/",
+                    "gmanetwork.com",
+                    "Claire Castro said President Marcos is open to studying whether Facebook "
+                    "or another harmful platform should be removed in the Philippines.",
+                ),
+                (
+                    "No Facebook ban for now, other platforms may face restrictions — Palace",
+                    "https://inquirer.net/no-facebook-ban-for-now/",
+                    "inquirer.net",
+                    "Palace Press Officer Claire Castro clarified that President Marcos has "
+                    "not ordered a Facebook ban in the Philippines, while possible platform "
+                    "restrictions remain under study.",
+                ),
+            ]
+            results = [
+                SearchResult(
+                    title=title,
+                    url=url,
+                    domain=domain,
+                    snippet=snippet,
+                    published_date="2026-08-25",
+                    provider="test",
+                    query=queries[0],
+                )
+                for title, url, domain, snippet in documents
+            ]
+            if result_filter is not None:
+                results = [result for result in results if result_filter(result)]
+            return SearchOutcome(results, ["test"], True)
+
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=PolicySearchClient(),
+        scraper=NoResultScraper(),
+    )
+
+    result = await verifier.verify(headline)
+
+    assert result["verdict"] == "VERIFIED"
+    assert result["context_warnings"] == [
+        "The government was only open to studying the possibility; no ban was ordered."
+    ]
+    assert {item["domain"] for item in result["evidence"]["supporting"]} == {
+        "pco.gov.ph",
+        "gmanetwork.com",
+        "inquirer.net",
+    }
+    assert result["search"]["queries"][1].startswith("President Marcos Facebook open possible ban")
 
 
 @pytest.mark.asyncio
@@ -444,8 +1091,7 @@ async def test_general_web_results_are_excluded_from_news_evidence() -> None:
 @pytest.mark.asyncio
 async def test_altered_headline_returns_the_underlying_report_as_closest_match() -> None:
     claim = (
-        "DILG wants PNP access to homes of illegal firearm owners for inspections "
-        "to kill people"
+        "DILG wants PNP access to homes of illegal firearm owners for inspections to kill people"
     )
 
     class AlteredHeadlineSearchClient:
@@ -461,8 +1107,7 @@ async def test_altered_headline_returns_the_underlying_report_as_closest_match()
                         url="https://gmanetwork.com/news/firearm-inspections",
                         domain="gmanetwork.com",
                         snippet=(
-                            "The DILG proposed inspections involving owners of illegal "
-                            "firearms."
+                            "The DILG proposed inspections involving owners of illegal firearms."
                         ),
                         published_date=None,
                         provider="test",
@@ -498,7 +1143,7 @@ async def test_altered_headline_returns_the_underlying_report_as_closest_match()
     assert result["evidence"]["supporting"] == []
 
 
-def test_credible_related_story_makes_specific_claim_likely_false() -> None:
+def test_credible_related_story_does_not_make_specific_claim_false() -> None:
     verifier = NewsVerifier(
         verifier_settings(),
         search_client=EmptySearchClient(succeeded=True),
@@ -531,9 +1176,47 @@ def test_credible_related_story_makes_specific_claim_likely_false() -> None:
         datetime.now(UTC),
     )
 
-    assert verdict == "LIKELY_FALSE"
-    assert confidence == 52
-    assert "likely false" in explanation
+    assert verdict == "UNVERIFIED"
+    assert confidence == 42
+    assert "remains unverified" in explanation
+
+
+def test_same_publisher_subdomains_are_not_independent_support() -> None:
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=EmptySearchClient(succeeded=True),
+        scraper=NoopScraper(),
+    )
+    analyses = [
+        EvidenceAnalysis(
+            result=SearchResult(
+                title=f"Mayor Santos arrested - report {index}",
+                url=f"https://{subdomain}.inquirer.net/story-{index}",
+                domain=f"{subdomain}.inquirer.net",
+                snippet="Mayor Santos was arrested after an investigation.",
+                published_date="2026-08-29",
+                provider="test",
+                query="Mayor Santos arrested",
+            ),
+            article=None,
+            relationship="SUPPORTS",
+            similarity=85,
+            evidence_score=85,
+            source_tier=1,
+            recency_score=100,
+            explanation="Direct support.",
+        )
+        for index, subdomain in enumerate(("newsinfo", "cebudailynews"), start=1)
+    ]
+
+    verdict, _, explanation = verifier._decide_verdict(
+        analyses,
+        extract_claim_features("Mayor Santos was arrested"),
+        datetime.now(UTC),
+    )
+
+    assert verdict == "LIKELY_TRUE"
+    assert "independent confirmation is limited" in explanation
 
 
 @pytest.mark.asyncio

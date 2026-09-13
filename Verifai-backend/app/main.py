@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -9,30 +10,53 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.admin import router as admin_router
-from app.api.auth import router as auth_router
-from app.api.detector import router as detector_router
-from app.api.news import router as news_router
-from app.core.config import settings
-from app.core.middleware import (
+from app.Auth.admin import router as admin_router
+from app.Auth.auth_router import router as auth_router
+from app.ContentDetector.detector import router as detector_router
+from app.ContentDetector.detector import text_detector
+from app.ContentDetector.scan_router import router as scan_router
+from app.FakeNewsAnalyzer.news import image_fact_checker, news_verifier
+from app.FakeNewsAnalyzer.news import router as news_router
+from app.Global.cache import result_cache
+from app.Global.config import settings
+from app.Global.db import engine
+from app.Global.middleware import (
     ExposureProtectionMiddleware,
     OriginProtectionMiddleware,
+    RequestIdMiddleware,
     RequestSizeLimitMiddleware,
+    RequestTooLargeError,
     SecurityHeadersMiddleware,
 )
-from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.db import engine
+from app.Global.rate_limit import limiter, rate_limit_exceeded_handler
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
-    yield
-    engine.dispose()
+    if settings.text_model_warmup:
+        try:
+            await asyncio.to_thread(text_detector.warmup)
+        except Exception:
+            # Keep health and non-detector routes available; detector requests
+            # return their existing 503 until deployment fixes the model.
+            logger.exception("Text detector startup warmup failed")
+    if settings.image_ocr_warmup:
+        try:
+            await asyncio.to_thread(image_fact_checker.warmup)
+        except Exception:
+            logger.exception("Image OCR startup warmup failed")
+    try:
+        yield
+    finally:
+        await image_fact_checker.aclose(close_news_verifier=False)
+        await news_verifier.aclose()
+        await result_cache.close()
+        engine.dispose()
 
 
 app = FastAPI(
@@ -57,13 +81,46 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
                 "message": error["msg"],
             }
         )
-    return JSONResponse(status_code=422, content={"detail": errors})
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": errors,
+            "request_id": getattr(request.state, "request_id", None),
+        },
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "request_id": getattr(request.state, "request_id", None),
+        },
+        headers=exc.headers,
+    )
 
 
 @app.exception_handler(Exception)
 async def unexpected_error_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled API error on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred"})
+    request_id = getattr(request.state, "request_id", None)
+    logger.exception(
+        "Unhandled API error on %s %s request_id=%s",
+        request.method,
+        request.url.path,
+        request_id,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred", "request_id": request_id},
+    )
+
+
+@app.exception_handler(RequestTooLargeError)
+async def request_too_large_handler(request: Request, exc: RequestTooLargeError):
+    del request, exc
+    return JSONResponse(status_code=413, content={"detail": "Request too large"})
 
 
 # Middleware is executed bottom-to-top.
@@ -76,28 +133,47 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+    expose_headers=["X-Request-ID", "X-Cache"],
     max_age=600,
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_list)
 if settings.is_production:
     app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIdMiddleware)
 
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
 app.include_router(detector_router, prefix=settings.api_v1_prefix)
 app.include_router(news_router, prefix=settings.api_v1_prefix)
+app.include_router(scan_router, prefix=settings.api_v1_prefix)
+
+
+def _readiness_response() -> JSONResponse:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.warning("Database readiness check failed")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "database": "disconnected"},
+        )
+    return JSONResponse(content={"status": "ok", "database": "connected"})
+
+
+@app.get("/live", tags=["Health"])
+def liveness(request: Request, response: Response) -> dict[str, str]:
+    return {"status": "ok"}
 
 
 @app.get("/health", tags=["Health"])
 @limiter.limit(settings.rate_limit_health)
-def health(request: Request, response: Response) -> dict[str, str]:
-    return {"status": "ok"}
+def health(request: Request, response: Response) -> Response:
+    return _readiness_response()
 
 
 @app.get(f"{settings.api_v1_prefix}/health", tags=["Health"])
 @limiter.limit(settings.rate_limit_health)
-def api_health(request: Request, response: Response) -> dict[str, str]:
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "connected"}
+def api_health(request: Request, response: Response) -> Response:
+    return _readiness_response()

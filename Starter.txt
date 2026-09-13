@@ -1,1 +1,1 @@
-Start-Process uvicorn -ArgumentList "app.main:app --reload" -WorkingDirectory .\Verifai-backend; npm --prefix .\verifai-frontend run dev
+Start-Process .\Verifai-backend\.venv\Scripts\python.exe -ArgumentList "-m uvicorn app.main:app --host 127.0.0.1 --port 8000" -WorkingDirectory .\Verifai-backend -WindowStyle Hidden; npm --prefix .\verifai-frontend run dev

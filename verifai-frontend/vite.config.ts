@@ -16,12 +16,12 @@ const developmentSecurityHeaders = {
   // React Refresh injects a generated inline preamble in development. Brave can
   // transform it, invalidating a fixed hash, so inline scripts are allowed only
   // on the local development server. Deployed HTML uses public/_headers instead.
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 ws://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
 };
 
 const previewSecurityHeaders = {
   ...baseSecurityHeaders,
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' http://localhost:8000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
 };
 
 export default defineConfig({
@@ -31,8 +31,17 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: "127.0.0.1",
+    port: 5173,
+    strictPort: true,
     headers: developmentSecurityHeaders,
     fs: { deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**"] },
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
   },
   preview: { headers: previewSecurityHeaders },
   resolve: {
