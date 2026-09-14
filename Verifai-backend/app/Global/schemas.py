@@ -157,166 +157,99 @@ class NewsVerificationResponse(BaseModel):
     adjudication_source: Literal["llm", "rules"] = "rules"
 
 
-class OcrSegmentResponse(BaseModel):
+class ImageOcrBlock(BaseModel):
     text: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    bounding_box: list[list[float]]
-    engine: Literal["paddleocr"] = "paddleocr"
+    type: Literal["headline", "body", "caption", "label", "watermark", "ui_element", "other"]
 
 
-class OcrConflictResponse(BaseModel):
-    status: Literal["OCR_CONFLICT"] = "OCR_CONFLICT"
-    candidates: list[str]
-    requires_review: bool = True
+class ImageOcrResult(BaseModel):
+    raw_text: str
+    cleaned_text: str
+    blocks: list[ImageOcrBlock] = []
+    confidence: float | None = None
+    provider: Literal["gemini", "paddleocr", "none"] = "gemini"
+    fallback_used: bool = False
 
 
-class OcrCorrectionResponse(BaseModel):
-    original: str
-    corrected: str
-    confidence: Literal["HIGH", "MEDIUM", "LOW"]
+class ImageVerificationTiming(BaseModel):
+    image_processing_ms: float = 0.0
+    gemini_ocr_ms: float = 0.0
+    cleanup_ms: float = 0.0
+    verification_ms: float = 0.0
+    total_ms: float = 0.0
+    paddleocr_ms: float | None = None
 
 
-class ImageOcrResponse(BaseModel):
-    primary_engine: Literal["Gemini Vision"] = "Gemini Vision"
-    fallback_engine: Literal["PaddleOCR"] = "PaddleOCR"
-    gemini_used: bool
-    raw_paddle_text: str
-    paddle_confidence: float = Field(ge=0.0, le=1.0)
-    paddle_segments: list[OcrSegmentResponse]
-    gemini_transcription: str
-    normalized_text: str
-    normalized_values: list[dict[str, object]]
-    ocr_quality: Literal["HIGH", "MEDIUM", "LOW"]
-    uncertain_sections: list[dict[str, object]]
-    ocr_conflicts: list[OcrConflictResponse]
-    corrections: list[OcrCorrectionResponse]
+class ImageVerificationMetadata(BaseModel):
+    ocr_provider: str
+    verification_engine: str = "NewsVerifier"
+    timing: ImageVerificationTiming
 
 
-class FactCheckEntity(BaseModel):
-    type: Literal["PERSON", "ORGANIZATION", "AGENCY", "LOCATION", "MONEY", "DATE", "OTHER"]
-    value: str
-    normalized_value: str
+class ImageVerificationResponse(BaseModel):
+    """Unified image verification response.
+
+    Wraps the NewsVerifier result with OCR metadata and timing instrumentation.
+    The ``verification`` field contains the full, unmodified NewsVerifier result
+    so the same evidence, verdict, and explanation are available regardless of
+    whether the input was text or image.
+    """
+
+    input_type: Literal["image"] = "image"
+    status: Literal["success", "insufficient_text", "ocr_failed", "verification_error"]
+
+    # OCR extraction result
+    ocr: ImageOcrResult
+
+    # Full NewsVerifier result (None when status != "success")
+    verification: dict[str, Any] | None = None
+
+    # Pipeline metadata and timing
+    metadata: ImageVerificationMetadata
+
+    # Top-level convenience fields (derived from verification)
+    classification: str
+    confidence: int = Field(ge=0, le=100, default=0)
+    overall_verdict: str = "UNVERIFIABLE"
+    overall_confidence: Literal["HIGH", "MEDIUM", "LOW"] = "LOW"
+    reasoning_summary: str = ""
+    user_explanation: str = ""
+    recommendation: str = ""
+
+    # Compatibility fields for frontend / existing clients
+    summary: str = ""
+    claims: list[dict[str, Any]] = []
+    extracted: dict[str, Any] = Field(default_factory=lambda: {
+        "headline": "",
+        "body_text": "",
+        "publisher": "",
+        "speaker": "",
+        "quote": "",
+        "date": "",
+        "entities": [],
+    })
+    quote_verification: dict[str, Any] = Field(default_factory=lambda: {
+        "is_quote": False,
+        "speaker": "",
+        "attribution": "UNVERIFIED",
+        "context": "UNKNOWN",
+    })
+    date_analysis: dict[str, Any] = Field(default_factory=lambda: {
+        "post_date": "",
+        "event_date": "",
+        "source_dates": [],
+        "consistent": True,
+        "notes": "",
+    })
+    primary_source_found: bool = False
+    independent_corroboration_count: int = 0
+    credible_contradiction_found: bool = False
+    key_context: list[str] = []
+    closest_real_story: dict[str, Any] | None = None
 
 
-class FactCheckEvidence(BaseModel):
-    source: str
-    source_type: Literal["PRIMARY", "MAJOR_NEWS", "SECONDARY", "SOCIAL"]
-    url: str
-    publication_date: str
-    relationship: Literal["SUPPORTS", "CONTRADICTS", "PARTIAL", "UNRELATED"]
-    reason: str
-    title: str = ""
-    similarity: int = 0
-
-
-class NumericalAnalysisResponse(BaseModel):
-    required: bool
-    calculation: str
-    result: str
-    math_status: Literal["CONSISTENT", "INCONSISTENT", "APPROXIMATELY_CONSISTENT", "NOT_APPLICABLE"]
-    source_status: Literal["VERIFIED", "ESTIMATE", "UNVERIFIED", "NOT_APPLICABLE"]
-
-
-class FactCheckClaim(BaseModel):
-    claim: str
-    verdict: Literal["SUPPORTED", "PARTIALLY_SUPPORTED", "CONTRADICTED", "UNVERIFIED"]
-    confidence: int = Field(ge=0, le=100)
-    evidence: list[FactCheckEvidence]
-
-    # These fields keep useful diagnostics available to the UI without changing
-    # the public REAL / QUOTE / FAKE contract.
-    claim_id: str
-    original_claim: str
-    normalized_claim: str
-    claim_type: Literal["FACT", "MONEY", "STATISTIC", "QUOTE", "EVENT", "POLICY", "OTHER"]
-    ocr_confidence: Literal["HIGH", "MEDIUM", "LOW"]
-    search_queries: list[str]
-    numerical_analysis: NumericalAnalysisResponse
-    context_warnings: list[str]
-    explanation: str
-
-
-class SourceIndependenceResponse(BaseModel):
-    unique_primary_sources: int = Field(ge=0)
-    unique_secondary_sources: int = Field(ge=0)
-    duplicate_evidence_chains_detected: list[str]
-    assessment: str
-
-
-class ImageProvenanceResponse(BaseModel):
-    status: Literal["VERIFIED", "PARTIALLY_VERIFIED", "UNKNOWN", "SUSPICIOUS"]
-    original_source_found: bool
-    notes: str
-
-
-class ImageExtractedContent(BaseModel):
-    headline: str
-    body_text: str
-    publisher: str
-    speaker: str
-    quote: str
-    date: str
-    entities: list[str]
-
-
-class QuoteVerificationResponse(BaseModel):
-    is_quote: bool
-    speaker: str
-    attribution: Literal["VERIFIED", "FALSE", "UNVERIFIED"]
-    context: Literal["ACCURATE", "PARTIAL", "MISLEADING", "ALTERED", "UNKNOWN"]
-
-
-class ImageDateAnalysisResponse(BaseModel):
-    post_date: str
-    event_date: str
-    source_dates: list[str]
-    consistent: bool
-    notes: str
-
-
-class PhilippineImageFactCheckResponse(BaseModel):
-    analysis_type: Literal["philippine_news_image_fact_check"]
-    classification: Literal["REAL", "QUOTE", "FAKE", "INSUFFICIENT_EVIDENCE"]
-    confidence: int = Field(ge=0, le=100)
-    content_type: Literal[
-        "FACTUAL_NEWS",
-        "DIRECT_QUOTE",
-        "ATTRIBUTED_QUOTE",
-        "PREDICTION",
-        "OPINION",
-        "ANNOUNCEMENT",
-        "SATIRE",
-        "OTHER",
-    ]
-    extracted: ImageExtractedContent
-    ocr: ImageOcrResponse
-    entities: list[FactCheckEntity]
-    claims: list[FactCheckClaim]
-    quote_verification: QuoteVerificationResponse
-    date_analysis: ImageDateAnalysisResponse
-    primary_source_found: bool
-    independent_corroboration_count: int = Field(ge=0)
-    credible_contradiction_found: bool
-    reasoning_summary: str
-    user_explanation: str
-    source_independence: SourceIndependenceResponse
-    image_provenance: ImageProvenanceResponse
-    overall_verdict: Literal[
-        "SUPPORTED",
-        "MOSTLY_SUPPORTED",
-        "PARTLY_TRUE",
-        "NEEDS_CONTEXT",
-        "MISLEADING",
-        "MOSTLY_FALSE",
-        "FALSE",
-        "UNVERIFIABLE",
-    ]
-    overall_confidence: Literal["HIGH", "MEDIUM", "LOW"]
-    summary: str
-    key_context: list[str]
-    recommendation: str
-    closest_real_story: ClosestRealStory | None = None
-    debug: dict[str, Any] | None = None
+# Backward-compatible alias for the image verification response schema
+PhilippineImageFactCheckResponse = ImageVerificationResponse
 
 
 class RegisterRequest(StrictRequest):

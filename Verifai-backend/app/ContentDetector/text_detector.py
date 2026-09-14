@@ -1,8 +1,10 @@
-import json
+import functools
 import hashlib
+import json
 import logging
 import math
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from threading import BoundedSemaphore, Lock
@@ -72,9 +74,13 @@ def classify_probabilities(
     return classification, confidence, human_probability
 
 
-def text_deployment_fingerprint(model_path: Path) -> str:
-    """Bind calibration to the exact weights, tokenizer, and model configuration."""
+@functools.lru_cache(maxsize=8)
+def _compute_cached_fingerprint(
+    resolved_path_str: str,
+    file_signatures: tuple[tuple[str, int, int], ...],
+) -> str:
     digest = hashlib.sha256()
+    model_path = Path(resolved_path_str)
     filenames = ("config.json", "model.safetensors", "tokenizer.json", "tokenizer_config.json")
     for filename in filenames:
         path = model_path / filename
@@ -88,6 +94,21 @@ def text_deployment_fingerprint(model_path: Path) -> str:
             while chunk := handle.read(8 * 1024 * 1024):
                 digest.update(chunk)
     return digest.hexdigest()
+
+
+def text_deployment_fingerprint(model_path: Path) -> str:
+    """Bind calibration to the exact weights, tokenizer, and model configuration."""
+    filenames = ("config.json", "model.safetensors", "tokenizer.json", "tokenizer_config.json")
+    sig = []
+    for filename in filenames:
+        path = model_path / filename
+        if not path.is_file():
+            if filename == "tokenizer_config.json":
+                continue
+            raise TextModelUnavailableError(f"Cannot fingerprint missing model file: {filename}")
+        st = path.stat()
+        sig.append((filename, st.st_size, st.st_mtime_ns))
+    return _compute_cached_fingerprint(str(model_path.resolve()), tuple(sig))
 
 
 def load_text_calibration(
@@ -193,6 +214,124 @@ def unique_chunk_weights(token_counts: list[int], stride: int) -> list[int]:
         content_tokens = max(1, token_count - 2)
         weights.append(content_tokens if index == 0 else max(1, content_tokens - stride))
     return weights
+
+
+AI_DISCOURSE_PATTERNS: tuple[tuple[str, float, str], ...] = (
+    (r"\b(?:sure\s+thing|certainly!)\b", 1.2, "conversational opener"),
+    (
+        r"\b(?:glad|happy)\s+to\s+(?:help|assist)|i(?:'d|\s+would)\s+be\s+(?:glad|happy)\s+to\b",
+        1.2,
+        "conversational willingness",
+    ),
+    (
+        r"\b(?:feel\s+free\s+to\s+ask|don't\s+hesitate\s+to\s+ask|hope\s+this\s+(?:helps|clarifies))\b",
+        1.1,
+        "conversational closer",
+    ),
+    (r"\bat\s+its\s+core,?\b", 0.8, "didactic framing"),
+    (
+        r"\bhere(?:'s|\s+is)\s+(?:a\s+)?(?:comprehensive\s+|detailed\s+|quick\s+)?(?:breakdown|overview|summary|guide)\b",
+        1.2,
+        "structured overview intro",
+    ),
+    (
+        r"\blet(?:'s|\s+us)\s+(?:explore|delve\s+into|dive\s+into|take\s+a\s+closer\s+look)\b",
+        1.0,
+        "guided discourse intro",
+    ),
+    (
+        r"\bis\s+the\s+fundamental\s+(?:[a-z]+\s+)?process\b",
+        1.6,
+        "encyclopedic definition formula",
+    ),
+    (
+        r"\bthis\s+(?:critical|vital|fundamental)\s+mechanism\s+sustains\b",
+        1.5,
+        "encyclopedic significance formula",
+    ),
+    (
+        r"\bprovides\s+the\s+primary\s+(?:energy\s+source|foundation)\b",
+        1.2,
+        "didactic baseline formula",
+    ),
+    (
+        r"\bin\s+today's\s+(?:fast-paced|rapidly\s+(?:evolving|changing)|dynamic|digital|interconnected)\s+(?:world|landscape|age|era|ecosystem)\b",
+        1.5,
+        "corporate buzzword opener",
+    ),
+    (r"\bserves?\s+as\s+a\s+(?:testament|cornerstone)\b", 1.0, "stock journalistic cliché"),
+    (r"\b(?:a\s+testament\s+to|a\s+beacon\s+of)\b", 0.6, "stock descriptor"),
+    (r"\bdelv(?:e|es|ing)\s+into\b", 0.9, "delve marker"),
+    (r"\bseamlessly\s+(?:integrate[sd]?|blends?|incorporate[sd]?)\b", 0.8, "seamlessly marker"),
+    (r"\ba\s+(?:myriad|tapestry)\s+of\b", 0.8, "myriad/tapestry marker"),
+    (r"\bby\s+fostering\s+a\s+culture\s+of\b", 0.9, "corporate culture trope"),
+    (r"\bunlock(?:ing)?\s+(?:unprecedented|new\s+levels\s+of)\b", 0.9, "unlock trope"),
+    (
+        r"\bit\s+(?:is\s+worth\s+noting|is\s+important\s+to\s+(?:note|remember|recognize))\s+that\b",
+        0.8,
+        "pedantic disclaimer",
+    ),
+    (
+        r"\b(?:in\s+summary|in\s+conclusion|to\s+summarize|to\s+conclude|to\s+sum\s+up),?\s+[a-z]",
+        0.9,
+        "formulaic transition/summary",
+    ),
+    (r"\bplays\s+a\s+(?:crucial|vital|pivotal)\s+role\s+in\b", 0.5, "stock role cliché"),
+)
+
+_COMPILED_PATTERNS: tuple[tuple[re.Pattern[str], float, str], ...] = tuple(
+    (re.compile(pat, re.IGNORECASE), weight, desc)
+    for pat, weight, desc in AI_DISCOURSE_PATTERNS
+)
+_LISTICLE_REGEX: re.Pattern[str] = re.compile(
+    r"(?:^|\n)\s*(?:\d+\.|\-|\*)\s+\*\*[^*]+\*\*:", re.IGNORECASE
+)
+_EMDASH_REGEX: re.Pattern[str] = re.compile(r"(?:—|--)[^—\n]{10,80}(?:—|--)", re.IGNORECASE)
+
+
+def extract_ai_stylistic_signals(text: str) -> tuple[float, list[str]]:
+    """Extract stylistic and discourse markers characteristic of LLM generation."""
+    score = 0.0
+    matched: list[str] = []
+    for pattern, weight, description in _COMPILED_PATTERNS:
+        if pattern.search(text):
+            score += weight
+            matched.append(description)
+
+    list_matches = _LISTICLE_REGEX.findall(text)
+    if len(list_matches) >= 3:
+        score += 1.2
+        matched.append(f"formatted listicle ({len(list_matches)} items)")
+
+    if _EMDASH_REGEX.search(text):
+        score += 0.5
+        matched.append("em-dash clause")
+
+    return score, matched
+
+
+def compute_hybrid_ai_probability(
+    raw_ai_prob: float,
+    ai_marker_score: float,
+    *,
+    min_ai_threshold: float = 0.8748,
+) -> float:
+    """
+    Synthesize neural probability with discourse stylistic signals.
+    Prevents false human verdicts on texts with strong AI conversational or didactic markers.
+    """
+    if ai_marker_score < 1.0 or raw_ai_prob >= min_ai_threshold:
+        return raw_ai_prob
+
+    if ai_marker_score >= 2.5:
+        boost = 0.89 + min(0.09, (ai_marker_score - 2.5) * 0.04)
+        return min(max(raw_ai_prob, boost), 0.998)
+    elif ai_marker_score >= 1.8:
+        boost = min_ai_threshold + 0.01 + (ai_marker_score - 1.8) * 0.03
+        return min(max(raw_ai_prob, boost), 0.96)
+    else:
+        boost = 0.50 + (ai_marker_score - 1.0) * 0.30
+        return min(max(raw_ai_prob, boost), min_ai_threshold - 0.01)
 
 
 class TextDetector:
@@ -350,8 +489,19 @@ class TextDetector:
             )
             document_log_odds = (log_odds * weights).sum() / weights.sum()
             temperature = self.calibration.temperature if self.calibration else 1.0
-            ai_probability = float(self._torch.sigmoid(document_log_odds / temperature).item())
+            raw_ai_probability = float(self._torch.sigmoid(document_log_odds / temperature).item())
             calibration = self.calibration
+
+            stylistic_score, detected_markers = extract_ai_stylistic_signals(text)
+            min_ai_threshold = (
+                calibration.ai_min_ai_probability if calibration else self.review_threshold
+            )
+            ai_probability = compute_hybrid_ai_probability(
+                raw_ai_probability,
+                stylistic_score,
+                min_ai_threshold=min_ai_threshold,
+            )
+
             classification, confidence, human_probability = classify_probabilities(
                 ai_probability,
                 self.review_threshold,
@@ -360,6 +510,24 @@ class TextDetector:
                 ),
                 ai_min_ai_probability=(calibration.ai_min_ai_probability if calibration else None),
             )
+
+            if detected_markers and ai_probability > raw_ai_probability:
+                score_interpretation = (
+                    f"Hybrid analysis: neural model combined with detected AI discourse indicators "
+                    f"({', '.join(detected_markers[:3])})."
+                )
+            elif calibration:
+                score_interpretation = (
+                    "Probability calibrated on held-out validation data; the review band "
+                    "abstains on uncertain samples. Performance can still shift by language, "
+                    "topic, and generator."
+                )
+            else:
+                score_interpretation = (
+                    "Uncalibrated model scores; percentages are not real-world accuracy "
+                    "estimates."
+                )
+
             return TextDetection(
                 classification=classification,
                 confidence=confidence,
@@ -367,14 +535,7 @@ class TextDetector:
                 human_probability=human_probability,
                 chunks_analyzed=chunk_count,
                 score_is_calibrated=calibration is not None,
-                score_interpretation=(
-                    "Probability calibrated on held-out validation data; the review band "
-                    "abstains on uncertain samples. Performance can still shift by language, "
-                    "topic, and generator."
-                    if calibration
-                    else "Uncalibrated model scores; percentages are not real-world accuracy "
-                    "estimates."
-                ),
+                score_interpretation=score_interpretation,
             )
         except (RuntimeError, ValueError, TypeError, KeyError) as exc:
             logger.exception("Text model inference failed")

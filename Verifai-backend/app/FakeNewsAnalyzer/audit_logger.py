@@ -45,6 +45,13 @@ class VerificationAuditRecord:
     adjudication_source: str = "rules"
     stopping_reason: str = "completed"
     duration_ms: float = 0.0
+    # --- Image pipeline instrumentation (optional, set by ImageScanner) ---
+    input_type: str = "text"
+    ocr_provider: str | None = None
+    ocr_duration_ms: float | None = None
+    ocr_success: bool | None = None
+    ocr_fallback_used: bool | None = None
+    cleaned_text_length: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

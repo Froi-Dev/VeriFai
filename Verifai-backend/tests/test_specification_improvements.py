@@ -9,7 +9,6 @@ import pytest
 
 from app.FakeNewsAnalyzer.audit_logger import AuditLogger, VerificationAuditRecord
 from app.FakeNewsAnalyzer.image_fact_checker import (
-    _understanding_claims,
     clean_ocr_text,
 )
 from app.FakeNewsAnalyzer.news_verifier import (
@@ -415,14 +414,8 @@ def test_are_results_semantically_related_detects_topic_match():
 
 
 def test_understanding_claims_preserves_full_headline_as_first_candidate():
-    understanding = {
-        "headline": "Philippines declares December 25 as the official birthday of Jose Rizal",
-        "atomic_claims": ["Jose Rizal birthday declared December 25"],
-        "direct_quotes": [],
-        "speaker": "",
-        "content_type": "NEWS",
-    }
-    claims = _understanding_claims(understanding, "Philippines declares December 25 as the official birthday of Jose Rizal")
+    headline = "Philippines declares December 25 as the official birthday of Jose Rizal"
+    claims = extract_atomic_claims(headline)
     assert len(claims) >= 1
     # Full headline should be preserved as candidate
     assert any("december 25" in c.lower() and "jose rizal" in c.lower() for c in claims)

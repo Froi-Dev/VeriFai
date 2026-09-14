@@ -144,7 +144,7 @@ type NewsVerificationResponse = {
   };
 };
 
-type ImageClassification = "REAL" | "QUOTE" | "FAKE" | "INSUFFICIENT_EVIDENCE";
+type ImageClassification = "REAL" | "QUOTE" | "FAKE" | "MISLEADING" | "INSUFFICIENT_EVIDENCE";
 
 type ImageFactCheckEvidence = {
   title?: string;
@@ -353,6 +353,9 @@ function resolveImageClassification(result: ImageFactCheckResponse): ImageClassi
   if (result.overall_verdict === "SUPPORTED" || result.overall_verdict === "MOSTLY_SUPPORTED") {
     return "REAL";
   }
+  if (result.overall_verdict === "MISLEADING") {
+    return "MISLEADING";
+  }
   if (result.overall_verdict === "FALSE" || result.overall_verdict === "MOSTLY_FALSE") {
     return "FAKE";
   }
@@ -376,6 +379,7 @@ function formatImageVerdict(classification: ImageClassification) {
 
 function imageVerdictTone(classification: ImageClassification) {
   if (classification === "REAL" || classification === "QUOTE") return "real";
+  if (classification === "MISLEADING") return "misleading";
   if (classification === "INSUFFICIENT_EVIDENCE") return "uncertain";
   return "fake";
 }
@@ -854,8 +858,8 @@ export function DashboardPage() {
   const imageEvidence = imageFactCheck
     ? Array.from(
         new Map(
-          imageFactCheck.claims
-            .flatMap((claim) => claim.evidence)
+          (imageFactCheck.claims || [])
+            .flatMap((claim) => claim.evidence || [])
             .map((evidence) => [evidence.url, evidence]),
         ).values(),
       )
@@ -1557,9 +1561,11 @@ export function DashboardPage() {
                       </div>
                       <h3>
                         {imageClassification === "REAL"
-                          ? "This news is supported by reliable reporting."
+                          ? "This news matches reliable reporting."
                           : imageClassification === "QUOTE"
                             ? "This is a verified quotation."
+                          : imageClassification === "MISLEADING"
+                            ? "This claim or quote is misleading."
                           : imageClassification === "FAKE"
                             ? imageFactCheck.quote_verification?.is_quote
                               ? "The Quote contains False or Debunked Claim"

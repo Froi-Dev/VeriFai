@@ -60,3 +60,65 @@ def test_ambiguous_model_labels_require_an_explicit_mapping() -> None:
 
 def test_overflow_windows_are_weighted_by_unique_tokens() -> None:
     assert unique_chunk_weights([512, 512, 102], stride=64) == [510, 446, 36]
+
+
+def test_extract_ai_stylistic_signals_detects_conversational_and_didactic_markers() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    text = (
+        "Sure thing! I would be glad to help you understand this concept. "
+        "At its core, it leverages fundamental principles—such as modularity and encapsulation—to operate. "
+        "Feel free to ask if you have any questions!"
+    )
+    score, markers = extract_ai_stylistic_signals(text)
+    assert score >= 2.5
+    assert "conversational opener" in markers
+    assert "conversational willingness" in markers
+    assert "conversational closer" in markers
+    assert "didactic framing" in markers
+
+
+def test_extract_ai_stylistic_signals_detects_listicles_and_encyclopedic_formulas() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    text = (
+        "Photosynthesis is the fundamental biological process by which organisms convert light. "
+        "This critical mechanism sustains life. Here is a breakdown:\n"
+        "1. **Light Reactions**: Capture energy.\n"
+        "2. **Calvin Cycle**: Fix carbon.\n"
+        "3. **Oxygen Release**: Generates oxygen.\n"
+        "In conclusion, it plays a vital role."
+    )
+    score, markers = extract_ai_stylistic_signals(text)
+    assert score >= 3.0
+    assert any("listicle" in m for m in markers)
+
+
+def test_extract_ai_stylistic_signals_ignores_clean_human_text() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    human_text = (
+        "UPDATE! THE LEMERY DOG IS SAFE! The dog who was allegedly ordered to be captured "
+        "by his owner Hart Yu on September 13 in Lemery, Batangas, has been returned and is now safe! "
+        "This was confirmed by Animal Kingdom Foundation."
+    )
+    score, markers = extract_ai_stylistic_signals(human_text)
+    assert score == 0.0
+    assert len(markers) == 0
+
+
+def test_compute_hybrid_ai_probability_boosts_formulaic_ai() -> None:
+    from app.ContentDetector.text_detector import compute_hybrid_ai_probability
+
+    # Low raw probability (e.g. 0.05) with high stylistic score (3.0) should boost above AI threshold
+    boosted = compute_hybrid_ai_probability(0.05, 3.0, min_ai_threshold=0.8748)
+    assert boosted >= 0.89
+
+    # Already confident AI score is preserved
+    confident = compute_hybrid_ai_probability(0.95, 3.0, min_ai_threshold=0.8748)
+    assert confident == 0.95
+
+    # Human score with 0 stylistic score is completely untouched
+    human = compute_hybrid_ai_probability(0.002, 0.0, min_ai_threshold=0.8748)
+    assert human == 0.002
+

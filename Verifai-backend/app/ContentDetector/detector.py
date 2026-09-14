@@ -73,7 +73,7 @@ async def detect_text(
                 cache_key(
                     "text",
                     f"{settings.text_model_path.resolve()}\0{payload.text}",
-                    version="v4",
+                    version="v5",
                 ),
                 settings.text_result_cache_seconds,
                 produce,

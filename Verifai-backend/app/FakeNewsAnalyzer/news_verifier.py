@@ -98,6 +98,10 @@ NEGATION_WORDS = {
     "without",
     "hasn't",
     "hasnt",
+    "hindi",
+    "di",
+    "wala",
+    "walang",
 }
 DEBUNK_PHRASES = (
     "fact check",
@@ -111,6 +115,10 @@ DEBUNK_PHRASES = (
     "misleading claim",
     "hoax",
     "untrue",
+    "hindi totoo",
+    "walang batayan",
+    "peke",
+    "di totoo",
 )
 RELATIVE_DATES = (
     "today",
@@ -225,12 +233,28 @@ EVENT_KEYWORDS: dict[str, tuple[str, ...]] = {
         "coming home",
         "uuwi",
         "released from custody",
+        "released",
+        "release",
+        "freed",
+        "freedom",
+        "laya",
+        "paglaya",
+        "nagpapalaya",
+        "palayain",
     ),
     "INSTITUTION_DISMANTLED": (
         "will be dismantled",
         "being dismantled",
         "madidismantle",
         "abolish the court",
+        "dismantle",
+        "dismantled",
+        "abolish",
+        "abolished",
+        "dissolve",
+        "dissolved",
+        "buwagin",
+        "pagbuwag",
     ),
     "SATIRE": (
         "satire",
@@ -1346,6 +1370,15 @@ def extract_claim_features(cleaned_text: str) -> ClaimFeatures:
         cleaned_text,
     )
     attributed_entity = attribution_match.group("name").strip() if attribution_match else ""
+    if attributed_entity:
+        title_split = re.split(
+            r"\b(?:President|Pangulong|Sen(?:ator)?|Sec(?:retary)?|Gov(?:ernor)?|Mayor|Atty)\b",
+            attributed_entity,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )
+        if len(title_split) > 1 and title_split[0].strip():
+            attributed_entity = title_split[0].strip()
     if attributed_entity.casefold() == "castro":
         attributed_entity = "Claire Castro"
 
@@ -3125,10 +3158,17 @@ def _speaker_appears_in_document(speaker: str, document: str) -> bool:
         "vp",
     }
     speaker_tokens = [token for token in tokenize(speaker) if token not in titles]
+    if not speaker_tokens:
+        return True
     document_tokens = tokenize(document[:30_000])
-    return bool(speaker_tokens) and (
-        _longest_common_token_run(speaker_tokens, document_tokens) == len(speaker_tokens)
-    )
+    if _longest_common_token_run(speaker_tokens, document_tokens) == len(speaker_tokens):
+        return True
+    doc_token_set = set(document_tokens)
+    key_tokens = [t for t in speaker_tokens if len(t) >= 4 and t not in STOPWORDS]
+    if key_tokens and any(t in doc_token_set for t in key_tokens):
+        if speaker_tokens[-1] in doc_token_set:
+            return True
+    return False
 
 
 POLICY_EVENT_STATES = {
@@ -3348,26 +3388,59 @@ def _relationship(
     # Article extractors can retain unrelated-story links near the footer. Limit
     # debunk rules to the headline, snippet, and opening article context.
     debunk_scope = lowered[:2000]
-    strong_debunk_match = similarity >= 55
     explicit_fact_check = bool(
-        re.search(r"\b(?:fact[ -]?check|debunk(?:ed)?|false claim)\b", debunk_scope)
+        re.search(
+            r"\b(?:fact[ -]?check|debunk(?:ed)?|false claim|fake news|misleading(?: claim)?|hindi totoo)\b",
+            debunk_scope,
+        )
     )
+    has_debunk_phrase = (
+        any(phrase in debunk_scope for phrase in DEBUNK_PHRASES)
+        or explicit_fact_check
+    )
+    death_condition_met = (
+        "DEATH" not in claim.event_categories
+        or not death_subjects
+        or death_status == "DENIED"
+    )
+    has_event_negation = any(
+        _negates_category(document, cat) for cat in claim.event_categories
+    )
+    has_event_match = bool(set(claim.event_categories) & set(document_features.event_categories))
+
+    quote_run = _longest_common_token_run(
+        _canonical_quote_tokens(claim.tokens),
+        _canonical_quote_tokens(document[:2000]),
+    )
+    quote_condition_met = claim.claim_type != "QUOTE" or quote_run >= 4
+
+    debunk_matched = False
     if (
         relevant_context
-        and strong_debunk_match
         and explicit_fact_check
-        and any(phrase in debunk_scope for phrase in DEBUNK_PHRASES)
-        and (
-            "DEATH" not in claim.event_categories or not death_subjects or death_status == "DENIED"
-        )
+        and has_debunk_phrase
+        and death_condition_met
+        and quote_condition_met
     ):
+        if similarity >= 55:
+            debunk_matched = True
+        elif similarity >= 40 and entity_overlap > 0:
+            debunk_matched = True
+        elif entity_overlap > 0 and (has_event_negation or (has_event_match and similarity >= 35)):
+            debunk_matched = True
+
+    if debunk_matched:
         rule_matches.append("Explicit fact-check or debunk language matched the claim context.")
         return "DEBUNKS", rule_matches, None
 
-    # An explicit fact check that addresses a DIFFERENT claim (e.g. low similarity or
-    # distinct entities) must not trigger a false contradiction through generic category negation.
-    if explicit_fact_check and not strong_debunk_match:
-        return "IRRELEVANT", ["Fact-check article addresses a different claim."], None
+    # An explicit fact check that addresses a different claim must not trigger
+    # a false contradiction through generic category negation, but should be
+    # surfaced as RELATED if it shares subject entities, keywords, or moderate similarity.
+    if explicit_fact_check:
+        if entity_overlap > 0 or keyword_overlap >= 0.20 or similarity >= 35:
+            rule_matches.append("Fact-check report covers related topic or entities.")
+            return "RELATED", rule_matches, None
+        return "IRRELEVANT", ["Fact-check article addresses an unrelated claim."], None
 
     for category in claim.event_categories:
         if category == "DEATH" and death_subjects:

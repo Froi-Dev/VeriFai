@@ -18,9 +18,9 @@ from app.Global.dependencies import CurrentPrincipal
 from app.Global.providers import gemini_vision_client
 from app.Global.rate_limit import limiter
 from app.Global.schemas import (
+    ImageVerificationResponse,
     NewsVerificationRequest,
     NewsVerificationResponse,
-    PhilippineImageFactCheckResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,14 +91,14 @@ async def verify_news(
     return validated
 
 
-@router.post("/verify-image", response_model=PhilippineImageFactCheckResponse)
+@router.post("/verify-image", response_model=ImageVerificationResponse)
 @limiter.limit(settings.rate_limit_news_verification)
 async def verify_news_image(
     request: Request,
     response: Response,
     user: CurrentPrincipal,
     image: Annotated[UploadFile, File()],
-) -> PhilippineImageFactCheckResponse:
+) -> ImageVerificationResponse:
     if image.content_type not in SUPPORTED_IMAGE_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -122,13 +122,9 @@ async def verify_news_image(
     try:
         async with asyncio.timeout(settings.image_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("image", image_bytes, version="v10"),
+                cache_key("image", image_bytes, version="v12"),
                 settings.image_result_cache_seconds,
                 produce,
-                cache_when=lambda value: not any(
-                    claim.get("explanation", "").startswith("Search services were unavailable")
-                    for claim in value.get("claims", [])
-                ),
             )
     except TimeoutError as exc:
         logger.warning("Image fact-check exceeded its end-to-end deadline")
@@ -151,16 +147,17 @@ async def verify_news_image(
             detail="Image fact-checking could not be completed",
         ) from exc
     response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
-    validated = PhilippineImageFactCheckResponse.model_validate(result)
+    validated = ImageVerificationResponse.model_validate(result)
     record_scan(
         user_id=user.user_id,
         filename=image.filename or "news_image",
         media_type="news",
         confidence_score=float(validated.confidence),
         is_synthetic=(
-            validated.classification == "FAKE"
+            validated.classification in ("FAKE", "FALSE")
             or validated.overall_verdict in ("FALSE", "MOSTLY_FALSE")
         ),
         artifacts=validated.model_dump(),
     )
     return validated
+
