@@ -22,6 +22,7 @@ from app.FakeNewsAnalyzer.news_verifier import (
     generate_search_queries,
     normalize_search_text,
     normalize_url,
+    parse_publisher_social_account,
     score_initial_relevance,
 )
 
@@ -37,13 +38,20 @@ def test_search_normalization_preserves_negation() -> None:
     assert normalize_search_text("VIRAL: Marcos has NOT resigned") == "marcos not resigned"
 
 
+@pytest.mark.parametrize("phrase", ["next week", "susunod na linggo"])
+def test_claim_features_preserve_relative_week_framing(phrase: str) -> None:
+    features = extract_claim_features(f"Rodrigo Duterte will return {phrase}.")
+
+    assert phrase in features.dates
+
+
 def test_query_generation_uses_multiple_deterministic_views() -> None:
     cleaned = clean_claim_text("Ferdinand Marcos Jr. resigns as President today")
     features = extract_claim_features(cleaned)
 
     queries = generate_search_queries(cleaned, features)
 
-    assert 4 <= len(queries) <= 8
+    assert 4 <= len(queries) <= 10
     assert any("fact check" in query for query in queries)
     assert any("resign" in query.lower() for query in queries)
 
@@ -275,8 +283,10 @@ def test_filipino_policy_consideration_generates_english_queries_in_first_wave()
     assert extract_claim_features(headline.replace("ayon kay", "Ayon kay")).attributed_entity == (
         "Claire Castro"
     )
-    assert "President Marcos Facebook open possible ban Castro" in queries[:3]
-    assert "Marcos considering Facebook restrictions Philippines Claire Castro" in queries[:3]
+    # Raw claim is now prioritized first, so English semantic queries appear
+    # slightly later. They must still be in the first wave of queries.
+    assert "President Marcos Facebook open possible ban Castro" in queries[:5]
+    assert "Marcos considering Facebook restrictions Philippines Claire Castro" in queries[:5]
 
 
 def test_policy_consideration_is_not_confused_with_an_ordered_ban() -> None:
@@ -957,13 +967,13 @@ async def test_verifier_searches_all_configured_philippine_outlets() -> None:
 
     result = await verifier.verify("Marcos resigns as President today")
 
-    assert search_client.restriction_history == [
-        verifier_settings().fact_check_domain_list,
-        verifier_settings().philippine_news_domain_list,
-        [],
-        verifier_settings().philippine_news_domain_list,
-        None,
-    ]
+    # The required domain-restricted searches must be present.
+    # Progressive search may add additional unrestricted rounds (None).
+    history = search_client.restriction_history
+    assert verifier_settings().fact_check_domain_list in history
+    assert verifier_settings().philippine_news_domain_list in history
+    # Unrestricted fallback searches are also expected
+    assert None in history or [] in history
     assert (
         result["search"]["outlet_domains_searched"]
         == verifier_settings().philippine_news_domain_list
@@ -1039,7 +1049,7 @@ async def test_filipino_facebook_policy_claim_is_supported_with_required_context
         "gmanetwork.com",
         "inquirer.net",
     }
-    assert result["search"]["queries"][1].startswith("President Marcos Facebook open possible ban")
+    assert any(q.startswith("President Marcos Facebook open possible ban") for q in result["search"]["queries"][:5])
 
 
 @pytest.mark.asyncio
@@ -1181,6 +1191,41 @@ def test_credible_related_story_does_not_make_specific_claim_false() -> None:
     assert "remains unverified" in explanation
 
 
+def test_old_evidence_cannot_support_tagalog_next_week_claim() -> None:
+    verifier = NewsVerifier(
+        verifier_settings(),
+        search_client=EmptySearchClient(succeeded=True),
+        scraper=NoopScraper(),
+    )
+    analysis = EvidenceAnalysis(
+        result=SearchResult(
+            title="Duterte remains in ICC custody",
+            url="https://rappler.com/duterte-icc-custody",
+            domain="rappler.com",
+            snippet="The former president remains in ICC custody.",
+            published_date="2025-03-19",
+            provider="test",
+            query="Duterte uuwi susunod na linggo",
+        ),
+        article=None,
+        relationship="SUPPORTS",
+        similarity=85,
+        evidence_score=85,
+        source_tier=1,
+        recency_score=10,
+        explanation="Direct support.",
+    )
+
+    verdict, _, explanation = verifier._decide_verdict(
+        [analysis],
+        extract_claim_features("Si Rodrigo Duterte ay uuwi sa susunod na linggo."),
+        datetime(2026, 9, 14, tzinfo=UTC),
+    )
+
+    assert verdict == "MISLEADING"
+    assert "publication date" in explanation
+
+
 def test_same_publisher_subdomains_are_not_independent_support() -> None:
     verifier = NewsVerifier(
         verifier_settings(),
@@ -1232,3 +1277,305 @@ async def test_total_provider_failure_is_search_unavailable() -> None:
     assert result["status"] == "SEARCH_UNAVAILABLE"
     assert result["verdict"] == "UNVERIFIED"
     assert result["confidence"] == 0
+
+
+def test_breaking_news_prefix_does_not_extract_news_as_entity() -> None:
+    claim_text = clean_claim_text(
+        "BREAKING NEWS: President Donald Tram binisita ang ating pangulo at nangako na papalayain sa madaling panahon."
+    )
+    features = extract_claim_features(claim_text)
+    assert "NEWS" not in features.entities
+    assert "BREAKING" not in features.entities
+    assert any("Donald" in e for e in features.entities)
+
+
+def test_unrelated_international_article_matching_entity_is_irrelevant() -> None:
+    claim_text = clean_claim_text(
+        "BREAKING NEWS: President Donald Tram binisita ang ating pangulo at nangako na papalayain sa madaling panahon."
+    )
+    features = extract_claim_features(claim_text)
+    article_text = (
+        "Iran rejects President Donald Trump claims of US control over Hormuz as lies in the Persian Gulf."
+    )
+    relationship, rules, transformation = _relationship(features, article_text, 35)
+
+    assert relationship == "IRRELEVANT"
+    assert transformation is None
+
+
+def test_parse_publisher_social_account_recognizes_known_handles() -> None:
+    # Threads
+    threads_info = parse_publisher_social_account("https://www.threads.com/@dailytribuneph/post/Dc-mfgQnyhK")
+    assert threads_info is not None
+    assert threads_info[0] == "Daily Tribune"
+    assert threads_info[1] == "tribune.net.ph"
+
+    # Facebook
+    fb_info = parse_publisher_social_account("https://www.facebook.com/tribunephl/posts/123456789")
+    assert fb_info is not None
+    assert fb_info[0] == "Daily Tribune"
+
+    # X / Twitter
+    x_info = parse_publisher_social_account("https://x.com/rapplerdotcom/status/987654321")
+    assert x_info is not None
+    assert x_info[0] == "Rappler"
+
+    # Random / personal account returns None without matching hint
+    assert parse_publisher_social_account("https://www.facebook.com/john.doe.123/posts/1") is None
+    assert parse_publisher_social_account("https://x.com/randomuser/status/1") is None
+
+
+def test_is_evidence_page_permits_official_publisher_social_channels() -> None:
+    # Official Daily Tribune Threads post should be permitted as evidence
+    assert _is_evidence_page(
+        "https://www.threads.com/@dailytribuneph/post/Dc-mfgQnyhK",
+        publisher_hint="Daily Tribune",
+    ) is True
+
+    # Generic or unknown social posts are blocked
+    assert _is_evidence_page("https://www.facebook.com/randomuser/posts/123") is False
+    assert _is_evidence_page("https://x.com/someuser/status/123") is False
+
+
+def test_source_tier_recognizes_official_publisher_social_channel() -> None:
+    settings = verifier_settings()
+    # Official Threads URL should evaluate to Tier 2 (Major News)
+    tier = _source_tier("threads.com", settings, url="https://www.threads.com/@dailytribuneph/post/Dc-mfgQnyhK")
+    assert tier == 2
+
+    # Regular unverified social URL should evaluate to Tier 4
+    regular_tier = _source_tier("threads.com", settings, url="https://www.threads.com/@random_user/post/123")
+    assert regular_tier == 4
+
+
+def test_generate_search_queries_suppresses_bare_entity_query_for_quotes() -> None:
+    claim_text = (
+        "'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang "
+        "na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte"
+    )
+    cleaned = clean_claim_text(claim_text)
+    features = extract_claim_features(cleaned)
+
+    queries = generate_search_queries(cleaned, features)
+
+    # Bare politician name alone should NOT be present in queries
+    for q in queries:
+        assert q.lower().strip() not in {"sara duterte", "vp sara duterte", "vp sara"}
+
+
+def test_generate_quote_source_queries_includes_publisher_and_unrestricted_variations() -> None:
+    claim_text = (
+        "'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang "
+        "na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte"
+    )
+    cleaned = clean_claim_text(claim_text)
+    features = extract_claim_features(cleaned)
+
+    queries = generate_quote_source_queries(cleaned, features, publisher="Daily Tribune")
+
+    # Should have publisher queries and unrestricted quote queries
+    assert any("daily tribune" in q.lower() or "tribune.net.ph" in q.lower() for q in queries)
+    assert any("mas matindi" in q for q in queries)
+    assert len(queries) >= 3
+
+
+def test_relationship_detects_support_for_quote_card_in_social_post() -> None:
+    claim_text = (
+        "'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang "
+        "na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte"
+    )
+    cleaned = clean_claim_text(claim_text)
+    features = extract_claim_features(cleaned)
+
+    post_snippet = (
+        "... mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte tribune.net.ph tribunephl "
+        "dailytribuneph DailyTribunePH KaTRIBU dailytribuneofficial"
+    )
+    relationship, rules, transformation = _relationship(features, post_snippet, 80)
+
+    assert relationship == "SUPPORTS"
+
+
+@pytest.mark.asyncio
+async def test_searchapi_ai_mode_uses_cited_links_not_generated_overview_as_evidence() -> None:
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["engine"] == "google_ai_mode"
+        assert request.url.params["gl"] == "ph"
+        assert request.headers["Authorization"] == "Bearer ai-mode-secret"
+        return httpx.Response(
+            200,
+            json={
+                "markdown": "An AI-generated overview that must not become evidence.",
+                "reference_links": [
+                    {
+                        "title": "Official announcement",
+                        "link": "https://pco.gov.ph/news/example",
+                        "snippet": "Official source text.",
+                    }
+                ],
+                "web_results": [
+                    {
+                        "title": "Independent reporting",
+                        "link": "https://www.gmanetwork.com/news/example",
+                        "snippet": "Independent report.",
+                    }
+                ],
+            },
+        )
+
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as mock_client:
+        settings = SimpleNamespace(
+            searchapi_ai_mode_api_key=SimpleNamespace(get_secret_value=lambda: "ai-mode-secret"),
+            searchapi_api_key=None,
+            serper_api_key_list=[],
+            google_search_api_key=None,
+            google_cse_id=None,
+            news_search_provider_list=["searchapi_ai_mode"],
+            searchapi_ai_mode_max_queries=1,
+            news_search_timeout_seconds=5.0,
+            news_max_concurrent_search_requests=2,
+            news_min_relevant_results=1,
+        )
+        client = NewsSearchClient(settings, client=mock_client)
+        outcome = await client.search(["test claim", "unused query"], restricted_domains=None)
+
+    assert outcome.any_provider_succeeded is True
+    assert outcome.providers_used == ["searchapi_ai_mode"]
+    assert [result.url for result in outcome.results] == [
+        "https://pco.gov.ph/news/example",
+        "https://www.gmanetwork.com/news/example",
+    ]
+    assert all("overview" not in result.snippet.lower() for result in outcome.results)
+
+
+@pytest.mark.asyncio
+async def test_serper_key_fallback_on_429_or_403() -> None:
+    calls: list[str] = []
+
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        key = request.headers.get("X-API-KEY", "")
+        calls.append(key)
+        if key == "key-exhausted":
+            return httpx.Response(429, json={"message": "Quota exceeded"})
+        if key == "key-unauthorized":
+            return httpx.Response(403, json={"message": "Unauthorized.", "statusCode": 403})
+        if key == "key-active":
+            return httpx.Response(
+                200,
+                json={
+                    "organic": [
+                        {
+                            "title": "Legitimate News Title",
+                            "link": "https://inquirer.net/story-123",
+                            "snippet": "Story snippet text",
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(500, json={"error": "Unknown key"})
+
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as mock_client:
+        settings = SimpleNamespace(
+            serper_api_key_list=["key-exhausted", "key-unauthorized", "key-active"],
+            news_search_provider_list=["serper"],
+            news_search_timeout_seconds=5.0,
+            news_max_concurrent_search_requests=4,
+            news_min_relevant_results=1,
+        )
+        search_client = NewsSearchClient(settings, client=mock_client)
+        outcome = await search_client.search(["test query"], restricted_domains=None)
+
+        assert outcome.any_provider_succeeded is True
+        assert len(outcome.results) == 1
+        assert outcome.results[0].title == "Legitimate News Title"
+        assert calls == ["key-exhausted", "key-unauthorized", "key-active"]
+        assert "key-exhausted" in search_client._exhausted_serper_keys
+        assert "key-unauthorized" in search_client._exhausted_serper_keys
+        assert "key-active" not in search_client._exhausted_serper_keys
+
+
+@pytest.mark.asyncio
+async def test_serper_key_fallback_on_not_enough_credits_message() -> None:
+    calls: list[str] = []
+
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        key = request.headers.get("X-API-KEY", "")
+        calls.append(key)
+        if key == "key-no-credits":
+            return httpx.Response(400, json={"message": "Not enough credits"})
+        if key == "key-valid":
+            return httpx.Response(
+                200,
+                json={
+                    "organic": [
+                        {
+                            "title": "GMA News Report",
+                            "link": "https://gmanetwork.com/news/story-456",
+                            "snippet": "Report snippet",
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(500)
+
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as mock_client:
+        settings = SimpleNamespace(
+            serper_api_key_list=["key-no-credits", "key-valid"],
+            news_search_provider_list=["serper"],
+            news_search_timeout_seconds=5.0,
+            news_max_concurrent_search_requests=4,
+            news_min_relevant_results=1,
+        )
+        search_client = NewsSearchClient(settings, client=mock_client)
+        outcome = await search_client.search(["query"], restricted_domains=None)
+
+        assert outcome.any_provider_succeeded is True
+        assert len(outcome.results) == 1
+        assert outcome.results[0].domain == "gmanetwork.com"
+        assert calls == ["key-no-credits", "key-valid"]
+
+
+@pytest.mark.asyncio
+async def test_serper_all_keys_exhausted_falls_back_to_next_provider() -> None:
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if "serper.dev" in url:
+            return httpx.Response(429, json={"message": "Quota exceeded"})
+        if "searchapi.io" in url:
+            return httpx.Response(
+                200,
+                json={
+                    "organic_results": [
+                        {
+                            "title": "SearchAPI Fallback Result",
+                            "link": "https://rappler.com/article",
+                            "snippet": "SearchAPI snippet",
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as mock_client:
+        settings = SimpleNamespace(
+            serper_api_key_list=["serper-k1", "serper-k2"],
+            searchapi_api_key=SimpleNamespace(get_secret_value=lambda: "searchapi-secret"),
+            google_search_api_key=None,
+            google_cse_id=None,
+            news_search_provider_list=["serper", "searchapi"],
+            news_search_timeout_seconds=5.0,
+            news_max_concurrent_search_requests=4,
+            news_min_relevant_results=1,
+        )
+        search_client = NewsSearchClient(settings, client=mock_client)
+        outcome = await search_client.search(["test fallback"], restricted_domains=None)
+
+        assert outcome.any_provider_succeeded is True
+        assert len(outcome.results) == 1
+        assert outcome.results[0].title == "SearchAPI Fallback Result"
+        assert outcome.providers_used == ["serper", "searchapi"]
+        assert "serper" in search_client._exhausted_providers

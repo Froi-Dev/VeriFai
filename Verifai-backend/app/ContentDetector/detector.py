@@ -62,32 +62,6 @@ async def detect_text(
     response: Response,
     user: CurrentPrincipal,
 ) -> TextDetectionResponse:
-    if settings.mock_detector_results:
-        chunks = max(1, (len(payload.text) // 400) + 1)
-        mock_result = {
-            "classification": "Likely AI-generated",
-            "confidence": 0.99,
-            "ai_probability": 0.99,
-            "human_probability": 0.01,
-            "chunks_analyzed": chunks,
-            "score_is_calibrated": True,
-            "score_interpretation": (
-                "Probability calibrated on held-out validation data; strong AI-synthesized markers "
-                "and uniform perplexity characteristics detected across all analyzed text windows."
-            ),
-        }
-        response.headers["X-Cache"] = "MOCK"
-        validated = TextDetectionResponse(**mock_result)
-        record_scan(
-            user_id=user.user_id,
-            filename=payload.text[:54] + ("…" if len(payload.text) > 54 else ""),
-            media_type="text",
-            confidence_score=round(validated.confidence * 100, 2),
-            is_synthetic=True,
-            artifacts=validated.model_dump(),
-        )
-        return validated
-
     async def produce() -> dict:
         async with text_inference_semaphore:
             result = await asyncio.to_thread(text_detector.analyze, payload.text)
@@ -158,38 +132,6 @@ async def detect_image(
         )
     if not image_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The image is empty")
-
-    if settings.mock_detector_results:
-        mock_result = {
-            "classification": "Likely AI-generated",
-            "confidence": 98,
-            "ai_probability": 98,
-            "authentic_probability": 2,
-            "summary": (
-                "Visual analysis identified multiple distinct indicators of AI synthesis and digital "
-                "generation, including unnatural texture smoothing, boundary diffusion artifacts, and "
-                "geometric inconsistencies."
-            ),
-            "signals": [
-                "Unnatural smoothing and synthetic texture blending across surfaces",
-                "Irregularities in fine micro-details and boundary transitions",
-                "Generative lighting and diffusion artifacts detected",
-                "Inconsistencies in geometric patterns and anatomical features",
-            ],
-            "limitations": "Visual analysis is an estimate, not forensic proof. Check provenance and metadata too.",
-            "model": "Verif.Ai Generative Analysis Engine (Mock/Active)",
-        }
-        response.headers["X-Cache"] = "MOCK"
-        validated = ImageDetectionResponse.model_validate(mock_result)
-        record_scan(
-            user_id=user.user_id,
-            filename=image.filename or "image_scan",
-            media_type="media",
-            confidence_score=float(validated.confidence),
-            is_synthetic=True,
-            artifacts=validated.model_dump(),
-        )
-        return validated
 
     if not image_detector.configured:
         raise HTTPException(

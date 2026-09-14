@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
+from app.FakeNewsAnalyzer.adjudicator import GeminiAdjudicator
 from app.FakeNewsAnalyzer.image_fact_checker import (
     ImagePreprocessingError,
     OcrUnavailableError,
@@ -24,7 +25,8 @@ from app.Global.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["News verification"])
-news_verifier = NewsVerifier(settings)
+adjudicator = GeminiAdjudicator(settings)
+news_verifier = NewsVerifier(settings, adjudicator=adjudicator)
 image_fact_checker = PhilippineImageFactChecker(
     settings,
     vision_client=gemini_vision_client,

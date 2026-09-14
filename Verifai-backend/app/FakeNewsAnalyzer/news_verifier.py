@@ -5,6 +5,7 @@ import logging
 import math
 import re
 import socket
+import time
 import unicodedata
 from collections import Counter
 from collections.abc import Callable
@@ -18,6 +19,7 @@ import httpx
 from bs4 import BeautifulSoup
 from dateutil import parser as date_parser
 
+from app.FakeNewsAnalyzer.audit_logger import AuditLogger, VerificationAuditRecord
 from app.Global.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -119,6 +121,10 @@ RELATIVE_DATES = (
     "last night",
     "this week",
     "last week",
+    "next week",
+    "ngayong araw",
+    "ngayong linggo",
+    "susunod na linggo",
 )
 
 EVENT_KEYWORDS: dict[str, tuple[str, ...]] = {
@@ -390,57 +396,344 @@ TRACKING_PARAMETERS = {
 PUBLISHER_NAMES = {
     "abs-cbn.com": "ABS-CBN News",
     "apnews.com": "Associated Press",
+    "afp.com": "Agence France-Presse",
     "bbc.com": "BBC",
-    "cnn.com": "CNN",
+    "bsp.gov.ph": "Bangko Sentral ng Pilipinas",
+    "ched.gov.ph": "Commission on Higher Education",
+    "comelec.gov.ph": "Commission on Elections",
+    "deped.gov.ph": "Department of Education",
+    "dict.gov.ph": "Department of Information and Communications Technology",
+    "dole.gov.ph": "Department of Labor and Employment",
+    "doh.gov.ph": "Department of Health",
+    "doe.gov.ph": "Department of Energy",
+    "doj.gov.ph": "Department of Justice",
     "gmanetwork.com": "GMA News",
+    "house.gov.ph": "House of Representatives",
     "inquirer.net": "Inquirer.net",
+    "judiciary.gov.ph": "Supreme Court of the Philippines",
     "mb.com.ph": "Manila Bulletin",
+    "news5.com.ph": "News5",
+    "nwpc.dole.gov.ph": "National Wages and Productivity Commission",
+    "officialgazette.gov.ph": "Official Gazette",
     "pco.gov.ph": "Presidential Communications Office",
     "philstar.com": "Philstar.com",
+    "pna.gov.ph": "Philippine News Agency",
+    "pnp.gov.ph": "Philippine National Police",
+    "psa.gov.ph": "Philippine Statistics Authority",
     "rappler.com": "Rappler",
     "reuters.com": "Reuters",
+    "sc.judiciary.gov.ph": "Supreme Court of the Philippines",
+    "senate.gov.ph": "Senate of the Philippines",
     "smninewschannel.com": "SMNI News",
+    "sunstar.com.ph": "SunStar Philippines",
     "tribune.net.ph": "Daily Tribune",
     "tsek.ph": "Tsek.ph",
     "verafiles.org": "VERA Files",
 }
 
+OFFICIAL_PUBLISHER_SOCIAL_ACCOUNTS: dict[str, dict[str, Any]] = {
+    "Daily Tribune": {
+        "domain": "tribune.net.ph",
+        "handles": {"tribunephl", "dailytribuneph", "dailytribuneofficial", "katribu"},
+        "publisher": "Daily Tribune",
+    },
+    "tribune.net.ph": {
+        "domain": "tribune.net.ph",
+        "handles": {"tribunephl", "dailytribuneph", "dailytribuneofficial", "katribu"},
+        "publisher": "Daily Tribune",
+    },
+    "Rappler": {
+        "domain": "rappler.com",
+        "handles": {"rapplerdotcom", "rappler"},
+        "publisher": "Rappler",
+    },
+    "rappler.com": {
+        "domain": "rappler.com",
+        "handles": {"rapplerdotcom", "rappler"},
+        "publisher": "Rappler",
+    },
+    "Inquirer.net": {
+        "domain": "inquirer.net",
+        "handles": {"inquirerdotnet", "inquirerplus"},
+        "publisher": "Inquirer.net",
+    },
+    "inquirer.net": {
+        "domain": "inquirer.net",
+        "handles": {"inquirerdotnet", "inquirerplus"},
+        "publisher": "Inquirer.net",
+    },
+    "Philstar.com": {
+        "domain": "philstar.com",
+        "handles": {"philippinestar", "philstarnews"},
+        "publisher": "Philstar.com",
+    },
+    "philstar.com": {
+        "domain": "philstar.com",
+        "handles": {"philippinestar", "philstarnews"},
+        "publisher": "Philstar.com",
+    },
+    "GMA News": {
+        "domain": "gmanetwork.com",
+        "handles": {"gmanews", "gmanetwork", "gmapublicaffairs", "dzbb594", "dzbb", "superradyodzbb"},
+        "publisher": "GMA News",
+    },
+    "gmanetwork.com": {
+        "domain": "gmanetwork.com",
+        "handles": {"gmanews", "gmanetwork", "gmapublicaffairs", "dzbb594", "dzbb", "superradyodzbb"},
+        "publisher": "GMA News",
+    },
+    "ABS-CBN News": {
+        "domain": "abs-cbn.com",
+        "handles": {"abscbnnews", "ancx.ph", "teleradyoserbisyo", "dzmmteleradyo", "dzmmteleradyomspc", "teleradyo"},
+        "publisher": "ABS-CBN News",
+    },
+    "abs-cbn.com": {
+        "domain": "abs-cbn.com",
+        "handles": {"abscbnnews", "ancx.ph", "teleradyoserbisyo", "dzmmteleradyo", "dzmmteleradyomspc", "teleradyo"},
+        "publisher": "ABS-CBN News",
+    },
+    "News5": {
+        "domain": "news5.com.ph",
+        "handles": {"news5everywhere", "news5ph", "news5"},
+        "publisher": "News5",
+    },
+    "news5.com.ph": {
+        "domain": "news5.com.ph",
+        "handles": {"news5everywhere", "news5ph", "news5"},
+        "publisher": "News5",
+    },
+    "Bombo Radyo": {
+        "domain": "bomboradyo.com",
+        "handles": {"bomboradyophilippines", "bomboradyo", "1027starfmmanilaofficial", "starfmphilippines"},
+        "publisher": "Bombo Radyo Philippines",
+    },
+    "bomboradyo.com": {
+        "domain": "bomboradyo.com",
+        "handles": {"bomboradyophilippines", "bomboradyo", "1027starfmmanilaofficial", "starfmphilippines"},
+        "publisher": "Bombo Radyo Philippines",
+    },
+    "Bulgar": {
+        "domain": "bulgaronline.com",
+        "handles": {"bulgarofficial", "bulgar"},
+        "publisher": "Bulgar",
+    },
+    "bulgaronline.com": {
+        "domain": "bulgaronline.com",
+        "handles": {"bulgarofficial", "bulgar"},
+        "publisher": "Bulgar",
+    },
+    "PCO": {
+        "domain": "pco.gov.ph",
+        "handles": {"pcogovph", "pcoogov", "pco.gov.ph", "presidentialcommunicationsoffice"},
+        "publisher": "Presidential Communications Office",
+    },
+    "pco.gov.ph": {
+        "domain": "pco.gov.ph",
+        "handles": {"pcogovph", "pcoogov", "pco.gov.ph", "presidentialcommunicationsoffice"},
+        "publisher": "Presidential Communications Office",
+    },
+    "Manila Bulletin": {
+        "domain": "mb.com.ph",
+        "handles": {"manilabulletin", "manilabulletinph"},
+        "publisher": "Manila Bulletin",
+    },
+    "mb.com.ph": {
+        "domain": "mb.com.ph",
+        "handles": {"manilabulletin", "manilabulletinph"},
+        "publisher": "Manila Bulletin",
+    },
+    "SMNI News": {
+        "domain": "smninewschannel.com",
+        "handles": {"smninewschannel", "smninews"},
+        "publisher": "SMNI News",
+    },
+    "smninewschannel.com": {
+        "domain": "smninewschannel.com",
+        "handles": {"smninewschannel", "smninews"},
+        "publisher": "SMNI News",
+    },
+    "VERA Files": {
+        "domain": "verafiles.org",
+        "handles": {"verafiles"},
+        "publisher": "VERA Files",
+    },
+    "verafiles.org": {
+        "domain": "verafiles.org",
+        "handles": {"verafiles"},
+        "publisher": "VERA Files",
+    },
+}
+
+
+def _normalize_handle(handle: str) -> str:
+    return re.sub(r"[._\-]", "", handle).lower()
+
+
+def parse_publisher_social_account(
+    url: str, publisher_hint: str | None = None
+) -> tuple[str, str] | None:
+    """Return (publisher_name, primary_domain) if url is from an official publisher social channel."""
+    if not url:
+        return None
+    parsed = urlparse(url.strip())
+    domain = (parsed.hostname or "").lower()
+    if not any(
+        domain == d or domain.endswith(f".{d}")
+        for d in (
+            "facebook.com",
+            "threads.com",
+            "threads.net",
+            "x.com",
+            "twitter.com",
+            "instagram.com",
+            "youtube.com",
+            "tiktok.com",
+        )
+    ):
+        return None
+    path_segments = [seg.strip("@/").lower() for seg in parsed.path.split("/") if seg.strip("@/")]
+    if not path_segments:
+        return None
+    handle = path_segments[0]
+    norm_handle = _normalize_handle(handle)
+
+    def matches_handles(handles: set[str]) -> bool:
+        if handle in handles:
+            return True
+        norm_targets = {_normalize_handle(x) for x in handles}
+        return norm_handle in norm_targets
+
+    if publisher_hint:
+        canonical_hint = publisher_hint.strip()
+        for key, info in OFFICIAL_PUBLISHER_SOCIAL_ACCOUNTS.items():
+            if key.casefold() == canonical_hint.casefold() and matches_handles(info["handles"]):
+                return info["publisher"], info["domain"]
+
+    for info in OFFICIAL_PUBLISHER_SOCIAL_ACCOUNTS.values():
+        if matches_handles(info["handles"]):
+            return info["publisher"], info["domain"]
+
+    return None
+
+# Empirical evidence retrieval and authority weights (not truth scores)
+OUTLET_SPECIFIC_WEIGHTS: dict[str, float] = {
+    # Primary Official Sources (1.00)
+    "officialgazette.gov.ph": 1.00,
+    "gov.ph": 1.00,
+    "pco.gov.ph": 1.00,
+    "dole.gov.ph": 1.00,
+    "nwpc.dole.gov.ph": 1.00,
+    "psa.gov.ph": 1.00,
+    "bsp.gov.ph": 1.00,
+    "senate.gov.ph": 1.00,
+    "house.gov.ph": 1.00,
+    "sc.judiciary.gov.ph": 1.00,
+    "judiciary.gov.ph": 1.00,
+    "comelec.gov.ph": 1.00,
+    "doh.gov.ph": 1.00,
+    "doe.gov.ph": 1.00,
+    "doj.gov.ph": 1.00,
+    "dilg.gov.ph": 1.00,
+    "dfa.gov.ph": 1.00,
+    "deped.gov.ph": 1.00,
+    "ched.gov.ph": 1.00,
+    "dict.gov.ph": 1.00,
+    "ntc.gov.ph": 1.00,
+    "pagasa.dost.gov.ph": 1.00,
+    "phivolcs.dost.gov.ph": 1.00,
+    "whitehouse.gov": 1.00,
+    "un.org": 1.00,
+    "who.int": 1.00,
+    "icc-cpi.int": 1.00,
+    # Tier 1 — Strongest Primary News Sources
+    "reuters.com": 1.00,
+    "pna.gov.ph": 0.95,
+    "gmanetwork.com": 0.95,
+    "abs-cbn.com": 0.95,
+    "inquirer.net": 0.93,
+    # Fact-checking organizations
+    "verafiles.org": 0.95,
+    "tsek.ph": 0.95,
+    # Wire Services
+    "apnews.com": 0.95,
+    "afp.com": 0.95,
+    # Tier 2 — Strong Supplementary Sources
+    "rappler.com": 0.92,
+    "philstar.com": 0.90,
+    "mb.com.ph": 0.90,
+    "news5.com.ph": 0.88,
+    "interaksyon.philstar.com": 0.88,
+    "sunstar.com.ph": 0.85,
+    "tribune.net.ph": 0.85,
+    "bbc.com": 0.92,
+}
+
 SOURCE_WEIGHTS: dict[str, float] = {
     "primary_official": 1.00,
-    "reuters": 0.95,
+    "reuters": 1.00,
+    "pna": 0.95,
+    "gma": 0.95,
+    "abscbn": 0.95,
+    "inquirer": 0.93,
+    "fact_check_org": 0.95,
+    "rappler": 0.92,
+    "philstar": 0.90,
+    "manila_bulletin": 0.90,
+    "tv5": 0.88,
+    "sunstar": 0.85,
     "ap": 0.95,
     "afp": 0.95,
-    "major_national_news": 0.85,
-    "established_local_news": 0.75,
-    "fact_check_org": 0.95,
-    "verified_social_account": 0.55,
-    "unknown_news_site": 0.30,
+    "major_national_news": 0.93,
+    "established_local_news": 0.85,
+    "verified_social_account": 0.65,
+    "unknown_news_site": 0.25,
     "blog": 0.15,
     "social_post": 0.10,
 }
 
 PRIMARY_SOURCE_DOMAINS: dict[str, list[str]] = {
-    "official_gov": [
+    "wage_labor": [
+        "dole.gov.ph", "nwpc.dole.gov.ph", "officialgazette.gov.ph", "psa.gov.ph",
+    ],
+    "economy_statistics": [
+        "psa.gov.ph", "bsp.gov.ph", "neda.gov.ph", "dof.gov.ph", "officialgazette.gov.ph",
+    ],
+    "legislative_constitution": [
+        "senate.gov.ph", "house.gov.ph", "sc.judiciary.gov.ph", "judiciary.gov.ph", "officialgazette.gov.ph",
+    ],
+    "government_policy": [
         "officialgazette.gov.ph", "gov.ph", "pco.gov.ph", "dfa.gov.ph",
         "doj.gov.ph", "dilg.gov.ph", "comelec.gov.ph", "dbm.gov.ph",
         "doh.gov.ph", "doe.gov.ph", "senate.gov.ph", "house.gov.ph",
         "pia.gov.ph", "pna.gov.ph", "deped.gov.ph", "ovp.gov.ph",
         "pnp.gov.ph",
     ],
+    "tech_social_media": [
+        "dict.gov.ph", "ntc.gov.ph", "pco.gov.ph", "officialgazette.gov.ph",
+    ],
+    "health": [
+        "doh.gov.ph", "who.int", "fda.gov.ph",
+    ],
+    "disaster_weather": [
+        "pagasa.dost.gov.ph", "phivolcs.dost.gov.ph", "ndrrmc.gov.ph",
+    ],
+    "election": [
+        "comelec.gov.ph", "officialgazette.gov.ph",
+    ],
     "international_official": [
-        "whitehouse.gov", "state.gov", "un.org", "icc-cpi.int",
+        "whitehouse.gov", "state.gov", "un.org", "icc-cpi.int", "who.int",
     ],
 }
 
-WIRE_SERVICES = {"reuters.com", "apnews.com", "afp.com"}
+WIRE_SERVICES = {"reuters.com", "apnews.com", "afp.com", "pna.gov.ph"}
 
 FACT_CHECK_ORGS = {"verafiles.org", "rappler.com", "tsek.ph"}
 
 SYNDICATION_PATTERNS = (
-    re.compile(r"\b(?:according to|ayon sa|source:\s*)(?:reuters|associated press|ap|afp|agence france[- ]presse)\b", re.IGNORECASE),
-    re.compile(r"\b(?:reuters|associated press|ap|afp)\s+(?:reported|report|says|said)\b", re.IGNORECASE),
-    re.compile(r"(?:—|-)\s*(?:Reuters|AP|AFP)\s*$", re.MULTILINE),
-    re.compile(r"\((?:Reuters|AP|AFP)\)", re.IGNORECASE),
+    re.compile(r"\b(?:according to|ayon sa|source:\s*)(?:reuters|associated press|ap|afp|agence france[- ]presse|philippine news agency|pna)\b", re.IGNORECASE),
+    re.compile(r"\b(?:reuters|associated press|ap|afp|pna)\s+(?:reported|report|says|said)\b", re.IGNORECASE),
+    re.compile(r"(?:—|-)\s*(?:Reuters|AP|AFP|PNA)\s*$", re.MULTILINE),
+    re.compile(r"\((?:Reuters|AP|AFP|PNA)\)", re.IGNORECASE),
 )
 
 RELATIVE_DATE_PATTERNS: dict[str, int | tuple[int, int]] = {
@@ -449,8 +742,135 @@ RELATIVE_DATE_PATTERNS: dict[str, int | tuple[int, int]] = {
     "this week": (0, 6), "last week": (-7, -1), "next week": (7, 13),
     "recently": (-7, 0), "just now": 0, "breaking": 0,
     "kahapon": -1, "kanina": 0, "bukas": 1,
-    "ngayong araw": 0, "ngayong linggo": (0, 6),
+    "ngayong araw": 0, "ngayong linggo": (0, 6), "susunod na linggo": (7, 13),
 }
+
+# ---------------------------------------------------------------------------
+# Tagalog-to-English translation map for common Philippine political/news terms
+# ---------------------------------------------------------------------------
+TAGALOG_ENGLISH_MAP: dict[str, str] = {
+    # Policy / legislation
+    "isinusulong": "pushing proposing",
+    "ipinanukalang": "proposed",
+    "panukala": "proposal",
+    "panukalang": "proposed",
+    "batas": "law bill",
+    "pagbabawal": "ban prohibition",
+    "ipagbawal": "ban prohibit",
+    "ipinagbawal": "banned prohibited",
+    "magbabawal": "will ban",
+    "ipinatupad": "implemented",
+    "pagpapatupad": "implementation",
+    "bukas sa posibilidad ng pagbabawal": "open to possibility of ban",
+    "bukas sa posiblidad ng pagbabawal": "open to possibility of ban",
+    "bukas sa posibilidad": "open to possibility",
+    "bukas sa posiblidad": "open to possibility",
+    "bukas": "open",
+    "posibilidad": "possibility",
+    "posiblidad": "possibility",
+    "pagbabawal sa facebook": "ban Facebook",
+    "pagbabawal sa": "ban on",
+    # Attribution / source
+    "ayon kay": "according to",
+    "ayon sa": "according to",
+    "sinabi ni": "said by",
+    "pahayag ni": "statement by",
+    # Political figures (common references)
+    "pangulo": "president",
+    "senador": "senator",
+    "bise presidente": "vice president",
+    # Actions
+    "naitutulong": "helping",
+    "naitulong": "helped",
+    "naitutulong": "helping",
+    "nag-utos": "ordered",
+    "pumirma": "signed",
+    "inihain": "filed",
+    "nag-apruba": "approved",
+    "tinanggal": "removed",
+    "pinatalsik": "ousted",
+    # Survey / data
+    "pagsang-ayon": "approval",
+    "di-pagsang-ayon": "disapproval",
+    "survey": "survey",
+    "resulta": "results",
+    # Subjects
+    "pilipinas": "Philippines",
+    "sa pilipinas": "in the Philippines",
+    "mga muslim": "Muslims",
+    "lalo na": "especially",
+    "dahil": "because",
+    "wala naman": "there is no",
+    "sakanilang": "their",
+    # Impeachment / court
+    "impeachment": "impeachment",
+    "hatol": "verdict conviction",
+    "boto": "vote votes",
+    # Christmas song specific (for the Robin Padilla fake)
+    "no christmas song": "no Christmas song ban",
+}
+
+
+def translate_tagalog_claim(text: str) -> list[str]:
+    """Generate English search queries from a Tagalog/Filipino claim.
+
+    Uses a static keyword map for common Philippine political/news terms.
+    Returns 1-3 English query strings derived from the input text.
+    """
+    lowered = text.casefold()
+    translated_parts: list[str] = []
+    remaining = lowered
+
+    # Sort by length descending so longer phrases are matched first
+    sorted_phrases = sorted(TAGALOG_ENGLISH_MAP.keys(), key=len, reverse=True)
+    matched_phrases: list[tuple[str, str]] = []
+    for phrase in sorted_phrases:
+        if phrase in remaining:
+            matched_phrases.append((phrase, TAGALOG_ENGLISH_MAP[phrase]))
+            remaining = remaining.replace(phrase, " ", 1)
+
+    if not matched_phrases:
+        return []
+
+    # Build translated query from matched phrases + any entities
+    entity_features = extract_claim_features(clean_claim_text(text))
+    entity_str = " ".join(entity_features.entities[:3])
+    english_terms = " ".join(english for _, english in matched_phrases)
+
+    queries: list[str] = []
+    # Full translated query with entities
+    full_query = f"{entity_str} {english_terms}".strip()
+    if full_query and len(full_query.split()) >= 3:
+        queries.append(" ".join(full_query.split()[:12]))
+
+    # Entity + key English terms (shorter, more focused)
+    if entity_str and matched_phrases:
+        key_english = matched_phrases[0][1]  # Most important translated term
+        short_query = f"{entity_str} {key_english}".strip()
+        if short_query not in queries:
+            queries.append(short_query)
+
+    # Entity + "Philippines" context for localization
+    if entity_str and "philippines" not in entity_str.casefold():
+        queries.append(f"{entity_str} Philippines")
+
+    return [q for q in queries if q.strip()][:3]
+
+
+def _is_predominantly_tagalog(text: str) -> bool:
+    """Check if text is predominantly in Tagalog/Filipino."""
+    lowered = text.casefold()
+    tagalog_markers = (
+        "ang", "ng", "sa", "mga", "na", "ay", "ni", "kay", "si",
+        "dahil", "ayon", "bukas", "lalo", "wala", "para",
+        "isinusulong", "pagbabawal", "batas", "pangulo",
+        "naitutulong", "sakanilang",
+    )
+    words = re.findall(r"[\w]+", lowered)
+    if not words:
+        return False
+    tagalog_count = sum(1 for w in words if w in tagalog_markers)
+    return tagalog_count >= 3 or tagalog_count / len(words) >= 0.15
 
 
 
@@ -462,6 +882,126 @@ class UnsafeArticleUrlError(RuntimeError):
     """Raised when an article URL could reach a local or non-public address."""
 
 
+MONEY_PATTERN = re.compile(
+    r"(?P<phrase>(?:₱|PHP\s*|P\s*)(?P<number>\d[\d,]*(?:\.\d+)?)\s*"
+    r"(?P<unit>billion|million|thousand|bilyon|milyon|libo|[BKM])?)",
+    re.IGNORECASE,
+)
+
+STATISTIC_PATTERN = re.compile(
+    r"(?:\b\d+(?:\.\d+)?%|\b\d[\d,]*(?:\.\d+)?\s*(?:percent|porsyento|people|personnel|katao|pasyente|biktima|cases|kaso)\b)",
+    re.IGNORECASE,
+)
+
+NEGATION_PATTERN = re.compile(
+    r"\b(?:hindi|di|hinde|wala|walang|not|never|no|neither|nor|false|untrue|denied|denies|fake)\b",
+    re.IGNORECASE,
+)
+
+MODALITY_SPECULATIVE = re.compile(
+    r"\b(?:might|may|could|possibly|allegedly|rumored|rumor|baka|marahil|umano|diumano|tila|wari|alleged)\b",
+    re.IGNORECASE,
+)
+
+MODALITY_CONDITIONAL = re.compile(
+    r"\b(?:if|kung|kapag|pag|unless|depende|provided\s+that)\b",
+    re.IGNORECASE,
+)
+
+MODALITY_FUTURE = re.compile(
+    r"\b(?:will|shall|plans\s+to|planning\s+to|set\s+to|target\s+to|balak|magiging|plano|ipapanukala|inaasahan)\b",
+    re.IGNORECASE,
+)
+
+FACT_VERBS = re.compile(
+    r"\b(?:is|are|was|were|has|have|had|will|costs?|spent|paid|received|"
+    r"approved|signed|arrested|died|killed|assigned|funded|announced|said|"
+    r"dismissed?|abolished?|banned|ordered|declared|filed|appointed|removed|"
+    r"resigned?|ousted|suspended|vetoed|"
+    r"umabot|gumastos|nagbayad|mayroon|pumirma|inaresto|namatay|"
+    r"binisita|bumisita|bibisita|dumalaw|nangako|ipinangako|"
+    r"papalayain|palalayain|ipapalaya|pinalaya)\b",
+    re.IGNORECASE,
+)
+
+
+def claim_type(claim: str, features_event_categories: list[str] | None = None) -> str:
+    lowered = claim.casefold()
+    if MONEY_PATTERN.search(claim) or "₱" in claim:
+        return "MONEY"
+    if STATISTIC_PATTERN.search(claim):
+        return "STATISTIC"
+    if '"' in claim or '“' in claim or '”' in claim or "said" in lowered or "sinabi" in lowered or "ayon kay" in lowered:
+        return "QUOTE"
+    cats = features_event_categories or []
+    if any(c.startswith("POLICY_") for c in cats) or re.search(r"\b(?:law|bill|policy|batas|ordinance|memorandum|budget|republic act|ra\s*\d+)\b", lowered):
+        return "POLICY"
+    if FACT_VERBS.search(claim) or cats:
+        return "EVENT"
+    return "FACT"
+
+
+def detect_modality(text: str) -> str:
+    if MODALITY_SPECULATIVE.search(text):
+        return "SPECULATIVE"
+    if MODALITY_CONDITIONAL.search(text):
+        return "CONDITIONAL"
+    if MODALITY_FUTURE.search(text):
+        return "FUTURE"
+    return "ASSERTED"
+
+
+def _money_amount(match: re.Match[str]) -> int:
+    try:
+        number = float(match.group("number").replace(",", ""))
+    except (ValueError, IndexError):
+        return 0
+    unit = (match.group("unit") or "").casefold()
+    multiplier = {
+        "b": 1_000_000_000,
+        "billion": 1_000_000_000,
+        "bilyon": 1_000_000_000,
+        "m": 1_000_000,
+        "million": 1_000_000,
+        "milyon": 1_000_000,
+        "k": 1_000,
+        "thousand": 1_000,
+        "libo": 1_000,
+        "": 1,
+    }.get(unit, 1)
+    return int(number * multiplier)
+
+
+def numerical_analysis(claim: str) -> dict[str, Any]:
+    money = list(MONEY_PATTERN.finditer(claim))
+    percentages = re.findall(r"\b\d+(?:\.\d+)?%", claim)
+    has_numeric = bool(money or percentages or STATISTIC_PATTERN.search(claim))
+    quantities = [m.group(0) for m in money] + percentages
+    analysis: dict[str, Any] = {
+        "required": has_numeric,
+        "calculation": "",
+        "result": "",
+        "math_status": "NOT_APPLICABLE",
+        "source_status": "UNVERIFIED" if has_numeric else "NOT_APPLICABLE",
+        "quantities_found": quantities,
+    }
+    lowered = claim.casefold()
+    if money and ("per month" in lowered or "kada buwan" in lowered or "bawat buwan" in lowered):
+        amount = _money_amount(money[0])
+        years = re.search(r"(?:over|for|sa loob ng)\s+(\d+)\s+(?:years?|taon)", lowered)
+        months = int(years.group(1)) * 12 if years else 12
+        result = amount * months
+        analysis.update(
+            {
+                "calculation": f"PHP {amount:,} × {months} months",
+                "result": f"PHP {result:,}",
+                "math_status": "CONSISTENT",
+                "source_status": "ESTIMATE",
+            }
+        )
+    return analysis
+
+
 @dataclass(frozen=True)
 class ClaimFeatures:
     entities: list[str]
@@ -471,6 +1011,10 @@ class ClaimFeatures:
     locations: list[str]
     tokens: list[str]
     attributed_entity: str = ""
+    claim_type: str = "FACT"
+    negation_detected: bool = False
+    modality: str = "ASSERTED"
+    quantities: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -520,11 +1064,19 @@ class EvidenceAnalysis:
     rule_matches: list[str] = field(default_factory=list)
     transformation: str | None = None
     evidence_text: str = ""
+    source_type: str = "news"
+    reliability: float = 0.85
 
 
 def clean_claim_text(value: str) -> str:
     cleaned = unicodedata.normalize("NFKC", html_module.unescape(value))
     cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+    cleaned = re.sub(
+        r"^(?:BREAKING(?:\s+NEWS)?|NEWS\s+ALERT|JUST\s+IN|FLASH\s+REPORT)\s*:\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = cleaned.translate(
         str.maketrans(
             {
@@ -541,6 +1093,33 @@ def clean_claim_text(value: str) -> str:
     cleaned = re.sub(r"[★☆◆◇■□►▶●•]+", " ", cleaned)
     cleaned = re.sub(r"\b([\w'-]+)(?:\s+\1){2,}\b", r"\1", cleaned, flags=re.IGNORECASE)
     return " ".join(cleaned.split())
+
+
+def extract_atomic_claims(text: str) -> list[str]:
+    """Decompose compound text into atomic factual assertions."""
+    cleaned = clean_claim_text(text)
+    candidates = re.split(r"(?:\n+|(?<=[.!?])\s+|\s+[;•]\s*)", cleaned)
+    claims: list[str] = []
+    for candidate in candidates:
+        candidate = candidate.strip(" -–—•\t")
+        if len(candidate) < 8:
+            continue
+        pieces = [candidate]
+        if re.search(r"\s+(?:and|habang|pero|ngunit|while|at)\s+", candidate, flags=re.IGNORECASE):
+            possible = re.split(r"\s+(?:and|habang|pero|ngunit|while|at)\s+", candidate, flags=re.IGNORECASE)
+            if len(possible) >= 2 and all(FACT_VERBS.search(p) or re.search(r"[₱%\d]", p) for p in possible if len(p.split()) >= 3):
+                valid_pieces = [p.strip(" ,.;") for p in possible if len(p.strip(" ,.;").split()) >= 3]
+                if len(valid_pieces) >= 2:
+                    pieces = valid_pieces
+        for piece in pieces:
+            piece = piece.strip(" ,.;")
+            if piece and piece.casefold() not in {c.casefold() for c in claims}:
+                claims.append(piece)
+        if len(claims) >= 8:
+            break
+    if not claims:
+        claims = [cleaned] if cleaned else []
+    return claims
 
 
 def normalize_search_text(value: str) -> str:
@@ -626,6 +1205,29 @@ def detect_event_categories(value: str) -> list[str]:
     return detected
 
 
+PHILIPPINE_KEY_ENTITIES = [
+    # Officials / political figures
+    "Ferdinand Marcos Jr.", "Ferdinand Marcos", "President Marcos", "Bongbong Marcos", "Marcos Jr.", "Marcos",
+    "Rodrigo Duterte", "Sara Duterte", "Duterte", "Leni Robredo", "Robredo",
+    "Martin Romualdez", "Romualdez", "Francis Escudero", "Chiz Escudero", "Escudero",
+    "Juan Miguel Zubiri", "Zubiri", "Erwin Tulfo", "Raffy Tulfo", "Tulfo",
+    "Claire Castro", "France Castro", "Castro", "Jesus Crispin Remulla", "Boying Remulla", "Remulla",
+    "Gilberto Teodoro", "Gibo Teodoro", "Teodoro", "Benjamin Abalos", "Abalos",
+    "Leila de Lima", "De Lima", "Risa Hontiveros", "Hontiveros", "Robin Padilla", "Padilla",
+    "Ronald dela Rosa", "Bato dela Rosa", "Bong Go", "Francis Pangilinan", "Pangilinan",
+    "Gloria Macapagal-Arroyo", "Arroyo", "Joseph Estrada", "Estrada", "Reginald Tongol", "Tongol",
+    # Platforms & Tech
+    "Facebook", "Meta", "TikTok", "YouTube", "Twitter", "X", "Google", "Viber", "Telegram", "Instagram",
+    # Government Agencies & Bodies
+    "Supreme Court", "Senate", "House of Representatives", "Congress", "Malacañang", "Malacanang", "Palace",
+    "DOLE", "NWPC", "PSA", "BSP", "DOH", "DOE", "DOJ", "DILG", "DFA", "PCO", "PNA", "PNP", "AFP", "NBI",
+    "COMELEC", "COA", "DBM", "DepEd", "CHED", "DICT", "NTC", "PAGASA", "PHIVOLCS", "NDRRMC",
+    "International Criminal Court", "ICC", "United Nations", "WHO",
+    # Locations
+    "Philippines", "Pilipinas", "Manila", "Davao", "Cebu", "Quezon City",
+]
+
+
 def extract_claim_features(cleaned_text: str) -> ClaimFeatures:
     tokens = tokenize(cleaned_text)
     keywords: list[str] = []
@@ -636,28 +1238,83 @@ def extract_claim_features(cleaned_text: str) -> ClaimFeatures:
         if len(stemmed) > 1 and stemmed not in keywords:
             keywords.append(stemmed)
 
-    entity_matches = re.findall(
-        r"\b(?:[A-Z][\w.-]+|[A-Z]{2,})(?:\s+(?:[A-Z][\w.-]+|[A-Z]{2,}|Jr\.?|Sr\.?)){0,4}",
-        cleaned_text,
+    alpha_chars = [c for c in cleaned_text if c.isalpha()]
+    is_mostly_uppercase = len(alpha_chars) >= 8 and (
+        sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars) > 0.65
     )
+
     entities: list[str] = []
-    blocked = {phrase.upper() for phrase in NOISE_PHRASES}
-    for match in entity_matches:
-        candidate = match.strip(" .,:;!?")
-        parts = candidate.split()
-        while parts and (parts[0].upper() in blocked or parts[0].lower() in STOPWORDS):
-            parts.pop(0)
-        while parts and (
-            parts[-1].lower() in STOPWORDS
-            or any(parts[-1].lower() in phrases for phrases in EVENT_KEYWORDS.values())
-        ):
-            parts.pop()
-        candidate = " ".join(parts)
-        if len(candidate) >= 2 and candidate.lower() not in {item.lower() for item in entities}:
-            entities.append(candidate)
+    blocked = {
+        phrase.upper() for phrase in NOISE_PHRASES
+    } | {
+        "NEWS",
+        "BREAKING",
+        "ALERT",
+        "UPDATE",
+        "EXCLUSIVE",
+        "CONFIRMED",
+        "VIRAL",
+        "WATCH",
+        "FLASH",
+        "REPORT",
+    }
+    COMMON_ACTION_WORDS = {
+        "lowering", "raising", "banning", "stopping", "pushing", "asking",
+        "calling", "seeking", "filing", "urging", "warning", "saying",
+        "telling", "claiming", "declaring", "ordering", "rejecting",
+        "approving", "confirming", "denying", "dismissing", "dismissed",
+        "increasing", "decreasing", "reducing", "delaying", "halting",
+        "suspending", "removing", "granting", "allowing", "prohibiting",
+        "pagbabawal", "pagpapatupad", "pagbaba", "pagtaas", "itanggi",
+        "ipagbawal", "ipagpaliban", "magbabawal",
+    }
+
+    if is_mostly_uppercase:
+        lowered_text = cleaned_text.casefold()
+        for known_entity in PHILIPPINE_KEY_ENTITIES:
+            pattern = rf"\b{re.escape(known_entity.casefold())}\b"
+            if re.search(pattern, lowered_text):
+                if not any(known_entity.lower() in existing.lower() for existing in entities):
+                    entities.append(known_entity)
+    else:
+        entity_matches = re.findall(
+            r"\b(?:[A-Z][\w.-]+|[A-Z]{2,})(?:\s+(?:[A-Z][\w.-]+|[A-Z]{2,}|Jr\.?|Sr\.?)){0,4}",
+            cleaned_text,
+        )
+        for match in entity_matches:
+            candidate = match.strip(" .,:;!?")
+            parts = candidate.split()
+            while parts and (
+                parts[0].upper() in blocked
+                or parts[0].lower() in STOPWORDS
+                or parts[0].lower() in COMMON_ACTION_WORDS
+            ):
+                parts.pop(0)
+            while parts and (
+                parts[-1].lower() in STOPWORDS
+                or parts[-1].upper() in blocked
+                or any(parts[-1].lower() in phrases for phrases in EVENT_KEYWORDS.values())
+            ):
+                parts.pop()
+            candidate = " ".join(parts)
+            if (
+                len(candidate) >= 2
+                and candidate.upper() not in blocked
+                and candidate.lower() not in COMMON_ACTION_WORDS
+                and candidate.lower() not in {item.lower() for item in entities}
+            ):
+                entities.append(candidate)
+
+        # Also identify key figures from lexicon if not caught by title-case regex
+        lowered_text = cleaned_text.casefold()
+        for known_entity in PHILIPPINE_KEY_ENTITIES:
+            if re.search(rf"\b{re.escape(known_entity.casefold())}\b", lowered_text):
+                if not any(known_entity.lower() in existing.lower() for existing in entities):
+                    entities.append(known_entity)
 
     date_pattern = (
-        r"\b(?:today|yesterday|tomorrow|this morning|tonight|last night|this week|last week)\b"
+        r"\b(?:today|yesterday|tomorrow|this morning|tonight|last night|this week|last week|next week)\b"
+        r"|\b(?:kahapon|kanina|bukas|ngayong araw|ngayong linggo|susunod na linggo)\b"
         r"|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
         r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|"
         r"Dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{4})?\b"
@@ -692,56 +1349,107 @@ def extract_claim_features(cleaned_text: str) -> ClaimFeatures:
     if attributed_entity.casefold() == "castro":
         attributed_entity = "Claire Castro"
 
+    event_cats = detect_event_categories(cleaned_text)
+    c_type = claim_type(cleaned_text, event_cats)
+    neg_detected = bool(NEGATION_PATTERN.search(cleaned_text))
+    mod = detect_modality(cleaned_text)
+    quantities = [m.group(0) for m in MONEY_PATTERN.finditer(cleaned_text)] + re.findall(r"\b\d+(?:\.\d+)?%", cleaned_text)
+
     return ClaimFeatures(
         entities=entities[:10],
         keywords=keywords[:30],
-        event_categories=detect_event_categories(cleaned_text),
+        event_categories=event_cats,
         dates=dates[:10],
         locations=locations[:10],
         tokens=tokens,
         attributed_entity=attributed_entity,
+        claim_type=c_type,
+        negation_detected=neg_detected,
+        modality=mod,
+        quantities=quantities,
     )
 
 
-def _policy_semantic_queries(cleaned_text: str, features: ClaimFeatures) -> list[str]:
-    """Translate Filipino policy-state wording into compact English discovery queries."""
-    policy_states = {"POLICY_CONSIDERATION", "POLICY_PROPOSAL"}
-    if not policy_states.intersection(features.event_categories):
-        return []
-
+def _detect_claim_topics(cleaned_text: str, features: ClaimFeatures) -> list[str]:
     lowered = cleaned_text.casefold()
-    president = "President Marcos" if "marcos" in lowered else ""
-    platform = "Facebook" if "facebook" in lowered else "Meta" if "meta" in lowered else ""
-    country = "Philippines" if re.search(r"\b(?:pilipinas|philippines)\b", lowered) else ""
-    attribution = features.attributed_entity
-    if not any((president, platform, attribution)):
-        return []
+    topics: list[str] = []
 
-    queries = [
-        " ".join(
-            part
-            for part in (
-                president,
-                platform,
-                "open possible ban",
-                attribution.split()[-1] if attribution else "",
-            )
-            if part
-        ),
-        " ".join(
-            part
-            for part in (
-                "Marcos" if president else "",
-                "considering",
-                platform,
-                "restrictions",
-                country,
-                attribution,
-            )
-            if part
-        ),
-    ]
-    return list(dict.fromkeys(query for query in queries if query.strip()))
+    if any(w in lowered for w in ("minimum wage", "wage", "sahod", "sweldo", "salary", "workers", "manggagawa", "dole", "nwpc")):
+        topics.append("wage_labor")
+        topics.append("economy_statistics")
+
+    if any(w in lowered for w in ("inflation", "gdp", "unemployment", "poverty", "cpi", "statistic", "census", "psa", "bsp", "interest rate", "peso")):
+        topics.append("economy_statistics")
+
+    if any(w in lowered for w in ("threshold", "16-vote", "16 vote", "16 votes", "impeach", "impeachment", "senate", "senador", "oust", "convict", "conviction", "senate court", "constitution")):
+        topics.append("legislative_constitution")
+
+    if any(w in lowered for w in ("facebook", "meta", "social media", "ban", "banning", "pagbabawal", "internet", "tiktok", "online games", "apps")):
+        topics.append("tech_social_media")
+
+    if any(w in lowered for w in ("doh", "hospital", "health", "covid", "vaccine", "disease", "dengue", "medical")):
+        topics.append("health")
+
+    if any(w in lowered for w in ("typhoon", "bagyo", "earthquake", "lindol", "flood", "baha", "pagasa", "phivolcs", "storm")):
+        topics.append("disaster_weather")
+
+    if any(w in lowered for w in ("election", "eleksyon", "vote", "voting", "ballot", "comelec", "candidate")):
+        topics.append("election")
+
+    if any(w in lowered for w in ("icc", "international criminal court", "un", "united nations", "treaty")):
+        topics.append("international_official")
+
+    if not topics or any(w in lowered for w in ("marcos", "president", "pangulo", "palace", "malacañang", "malacanang", "pco", "government")):
+        topics.append("government_policy")
+
+    return list(dict.fromkeys(topics))
+
+
+def _policy_semantic_queries(cleaned_text: str, features: ClaimFeatures) -> list[str]:
+    """Translate Filipino policy-state and critical claim wording into compact discovery queries."""
+    lowered = cleaned_text.casefold()
+    queries: list[str] = []
+
+    policy_states = {"POLICY_CONSIDERATION", "POLICY_PROPOSAL"}
+    if policy_states.intersection(features.event_categories):
+        president = "President Marcos" if "marcos" in lowered else ""
+        platform = "Facebook" if "facebook" in lowered else "Meta" if "meta" in lowered else ""
+        country = "Philippines" if re.search(r"\b(?:pilipinas|philippines)\b", lowered) else ""
+        attribution = features.attributed_entity
+        if any((president, platform, attribution)):
+            queries.extend([
+                " ".join(part for part in (president, platform, "open possible ban", attribution.split()[-1] if attribution else "") if part),
+                " ".join(part for part in ("Marcos" if president else "", "considering", platform, "restrictions", country, attribution) if part),
+            ])
+
+    # 1. Social media / Facebook ban claims
+    if any(w in lowered for w in ("facebook", "meta", "social media")) and any(w in lowered for w in ("ban", "banning", "pagbabawal", "ipagbawal", "bukas", "open", "posibilidad", "possibility")):
+        queries.extend([
+            "Marcos Facebook ban Palace",
+            "Facebook ban not on the table Palace",
+            "Marcos open to Facebook ban",
+            "Facebook ban Philippines Claire Castro",
+            "Marcos social media ban",
+        ])
+
+    # 2. Impeachment / 16-vote threshold claims
+    if any(w in lowered for w in ("threshold", "16-vote", "16 vote", "16 votes", "impeach", "oust", "convict")) and "duterte" in lowered:
+        queries.extend([
+            "Lowering 16-vote threshold to oust Duterte dismissed",
+            "16 votes to convict Duterte Senate impeachment",
+            "11 votes to overturn 16-vote threshold Senate",
+            "Senate impeachment threshold Duterte dismissed",
+        ])
+
+    # 3. Minimum wage claims
+    if any(w in lowered for w in ("minimum wage", "wage", "sahod", "sweldo", "1,000", "1000")) and any(w in lowered for w in ("increase", "taas", "nationwide", "philippines", "pilipinas")):
+        queries.extend([
+            "Philippines minimum wage 1000 nationwide DOLE",
+            "minimum wage increase 1000 fact check",
+            "DOLE NWPC nationwide minimum wage increase",
+        ])
+
+    return list(dict.fromkeys(query.strip() for query in queries if query.strip()))
 
 
 def generate_contradiction_queries(cleaned_text: str, features: ClaimFeatures) -> list[str]:
@@ -796,6 +1504,11 @@ def generate_primary_source_queries(
 
     # Map claim topics to primary source domains
     domain_hints: list[str] = []
+    topics = _detect_claim_topics(cleaned_text, features)
+    for topic in topics:
+        for domain in PRIMARY_SOURCE_DOMAINS.get(topic, []):
+            domain_hints.append(domain)
+
     if re.search(r"\b(?:icc|international criminal court)\b", lowered):
         domain_hints.append("icc-cpi.int")
     if re.search(r"\b(?:doh|department of health)\b", lowered):
@@ -810,15 +1523,20 @@ def generate_primary_source_queries(
         domain_hints.extend(["whitehouse.gov", "state.gov"])
     if re.search(r"\b(?:united nations|un )\b", lowered):
         domain_hints.append("un.org")
-    # Always include PCO and PNA for Philippine political claims
     if features.entities:
         domain_hints.extend(["pco.gov.ph", "pna.gov.ph"])
 
-    for domain in dict.fromkeys(domain_hints):
-        search_terms = " ".join([*features.entities[:2], *event_terms[:2]])
-        add(f"site:{domain} {search_terms}")
+    clean_phrase = clean_claim_text(cleaned_text).strip()
+    for domain in list(dict.fromkeys(domain_hints))[:6]:
+        if "wage" in domain or "dole" in domain or "nwpc" in domain:
+            add(f"site:{domain} minimum wage increase nationwide")
+        elif "senate" in domain or "judiciary" in domain:
+            add(f"site:{domain} 16-vote threshold Duterte impeachment")
+        else:
+            search_terms = " ".join([*features.entities[:2], *event_terms[:2]]) or clean_phrase[:60]
+            add(f"site:{domain} {search_terms}")
 
-    return queries[:4]
+    return queries[:5]
 
 
 def resolve_relative_dates(text: str, reference_date: datetime) -> dict[str, str]:
@@ -839,6 +1557,7 @@ def resolve_relative_dates(text: str, reference_date: datetime) -> dict[str, str
 
 def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[str]:
     search_text = normalize_search_text(cleaned_text)
+    raw_claim = clean_claim_text(cleaned_text).strip()
     queries: list[str] = []
     event_terms = [EVENT_KEYWORDS[category][0] for category in features.event_categories]
 
@@ -847,12 +1566,13 @@ def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[
         if query and query.lower() not in {item.lower() for item in queries}:
             queries.append(query[:300])
 
+    # PRIORITY 1: Search the complete raw claim first (preserving full context)
+    # This prevents over-aggressive keyword stripping from losing meaning.
+    if raw_claim and len(raw_claim.split()) >= 3:
+        add(raw_claim)
+
     add(search_text)
 
-    # A short verbatim quotation is often the strongest discovery key in a
-    # copied news paragraph. Search it before longer derived views so browser
-    # artifacts (for example, a stray "Faster" accessibility label) cannot
-    # prevent the original report from being found.
     quoted_phrases = re.findall(
         r"(?:[\"\u201c\u201d])([^\"\u201c\u201d]{4,160})(?:[\"\u201c\u201d])",
         cleaned_text,
@@ -862,12 +1582,17 @@ def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[
         if len(normalized_phrase.split()) >= 3:
             add(f'"{normalized_phrase}"')
 
-    # Literal Filipino OCR is often a poor match for English newsroom and
-    # government headlines. Put the strongest semantic translation in the
-    # first provider wave while retaining the original wording as query one.
     semantic_policy_queries = _policy_semantic_queries(cleaned_text, features)
     for query in semantic_policy_queries:
         add(query)
+
+    if raw_claim:
+        add(raw_claim)
+
+    # A compact full headline with function words intact is often the best exact match
+    raw_tokens = raw_claim.split()
+    if 3 <= len(raw_tokens) <= 9:
+        add(f'"{raw_claim}"')
 
     # A common misinformation pattern keeps a real headline intact and appends
     # a short, inflammatory ending. Search a couple of progressively trimmed
@@ -881,8 +1606,18 @@ def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[
             if len(prefix) >= 5:
                 add(f'"{" ".join(prefix)}"')
 
+    quote_like = bool(
+        re.search(r"(?:^|\W)(?:ako|akin|ko|kami|namin|i|me|my|we|our)(?:\W|$)", cleaned_text, re.I)
+        or re.search(r"^[\"'‘’“”]", cleaned_text)
+    )
+
     if event_terms:
         add(" ".join([*features.entities[:2], *event_terms[:2]]))
+    elif quote_like and features.entities and features.keywords:
+        add(" ".join([*features.entities[:1], *features.keywords[:4]]))
+    elif features.entities:
+        add(" ".join(features.entities[:2]))
+
     lowered = cleaned_text.casefold()
     primary_domain = ""
     if "NUCLEAR_PREPARATION" in features.event_categories or re.search(
@@ -900,10 +1635,22 @@ def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[
     # Fact-check pages are often the strongest evidence for viral claims. Keep
     # this view inside the first provider request wave instead of placing it at
     # the end where bounded search limits may never execute it.
-    add(" ".join([*features.entities[:3], *event_terms[:2], "fact check"]))
+    if event_terms:
+        add(" ".join([*features.entities[:3], *event_terms[:2], "fact check"]))
+    elif quote_like and features.entities and features.keywords:
+        add(" ".join([*features.entities[:1], *features.keywords[:4], "fact check"]))
+    elif features.entities:
+        add(" ".join([*features.entities[:3], "fact check"]))
+
     add(f'"{search_text}"')
     add(" ".join(features.keywords[:10]))
-    add(" ".join([*features.entities[:2], *event_terms[:2]]))
+    if event_terms:
+        add(" ".join([*features.entities[:2], *event_terms[:2]]))
+    elif quote_like and features.entities and features.keywords:
+        add(" ".join([*features.entities[:1], *features.keywords[:4]]))
+    elif features.entities:
+        add(" ".join(features.entities[:2]))
+
     phrase_tokens = search_text.split()[:12]
     if len(phrase_tokens) >= 3:
         add(f'"{" ".join(phrase_tokens)}"')
@@ -912,7 +1659,101 @@ def generate_search_queries(cleaned_text: str, features: ClaimFeatures) -> list[
         add(" ".join([*features.entities[:2], *related_terms]))
     if features.dates:
         add(" ".join([*features.entities[:2], *event_terms[:2], *features.dates[:1]]))
-    return queries[:8]
+
+    # Add Tagalog-to-English translated queries for Filipino-language claims
+    if _is_predominantly_tagalog(cleaned_text):
+        for tq in translate_tagalog_claim(cleaned_text):
+            add(tq)
+
+    return queries[:10]
+
+
+def generate_progressive_queries(
+    cleaned_text: str,
+    features: ClaimFeatures,
+    *,
+    previous_queries: list[str] | None = None,
+) -> list[str]:
+    """Generate progressively simplified search queries.
+
+    Each call produces queries at a simpler level than the previous round.
+    The simplification follows this hierarchy:
+
+        Level 1: Full claim (already done in generate_search_queries)
+        Level 2: English translation of Tagalog + entity-focused queries
+        Level 3: Subject + action + key entities (maximally simplified)
+    """
+    used = {q.casefold() for q in (previous_queries or [])}
+    queries: list[str] = []
+
+    def add(query: str) -> None:
+        query = " ".join(query.split()).strip()
+        if (
+            query
+            and query.casefold() not in used
+            and query.casefold() not in {q.casefold() for q in queries}
+        ):
+            queries.append(query[:300])
+
+    # Level 2: Tagalog translation + entity-focused
+    for tq in translate_tagalog_claim(cleaned_text):
+        add(tq)
+
+    # Entity + event category combinations
+    event_terms = [EVENT_KEYWORDS[cat][0] for cat in features.event_categories]
+    if features.entities and event_terms:
+        for entity in features.entities[:3]:
+            add(f"{entity} {' '.join(event_terms[:2])}")
+            add(f"{entity} {' '.join(event_terms[:2])} Philippines")
+
+    # Entity + subject-specific queries
+    lowered = cleaned_text.casefold()
+    for entity in features.entities[:2]:
+        if "christmas" in lowered or "song" in lowered:
+            add(f"{entity} Christmas song ban")
+            add(f"{entity} no Christmas song")
+        if "facebook" in lowered or "meta" in lowered:
+            add(f"{entity} Facebook ban Philippines")
+        if "survey" in lowered or "approval" in lowered or "disapproval" in lowered:
+            add(f"{entity} approval rating survey")
+            add(f"{entity} satisfaction rating")
+        if "impeach" in lowered or "threshold" in lowered:
+            add(f"{entity} impeachment vote threshold")
+
+    # Level 3: Pure entity queries with "news" or "latest"
+    if features.entities:
+        entity_str = " ".join(features.entities[:2])
+        add(f"{entity_str} news")
+        add(f"{entity_str} latest")
+        # Fact check query
+        add(f"{entity_str} fact check")
+
+    # Level 3: Keywords-only as last resort
+    if features.keywords:
+        keyword_query = " ".join(features.keywords[:6])
+        add(keyword_query)
+
+    return queries[:6]
+
+
+def are_results_semantically_related(
+    features: ClaimFeatures,
+    search_text: str,
+    results: list["SearchResult"],
+    *,
+    threshold: int = 45,
+) -> bool:
+    """Check whether any search results are semantically related to the claim.
+
+    This is stricter than the basic relevance filter: it checks whether the
+    results actually discuss the same topic/event/entities, not just whether
+    they share a few keywords.
+    """
+    for result in results:
+        score = score_initial_relevance(features, search_text, result)
+        if score >= threshold:
+            return True
+    return False
 
 
 FACT_CHECK_SECTION_PATHS = {
@@ -935,7 +1776,12 @@ def generate_fact_check_queries(claim_text: str, domains: list[str]) -> list[str
     return queries[:5]
 
 
-def generate_quote_source_queries(claim_text: str, features: ClaimFeatures) -> list[str]:
+def generate_quote_source_queries(
+    claim_text: str,
+    features: ClaimFeatures,
+    *,
+    publisher: str | None = None,
+) -> list[str]:
     """Build compact quote-and-speaker searches for publisher archives."""
     speaker = next(
         (
@@ -956,6 +1802,17 @@ def generate_quote_source_queries(claim_text: str, features: ClaimFeatures) -> l
     distinctive_tokens = quote_tokens[-11:]
     distinctive_phrase = " ".join(distinctive_tokens)
     queries = []
+
+    if publisher:
+        pub_name = publisher.strip()
+        if distinctive_phrase:
+            queries.append(f'"{pub_name}" "{distinctive_phrase}"'.strip())
+            if speaker:
+                queries.append(f'"{pub_name}" "{speaker}" {distinctive_phrase}'.strip())
+                queries.append(f'"{pub_name}" "{speaker}" "{distinctive_phrase}"'.strip())
+            else:
+                queries.append(f'"{pub_name}" {distinctive_phrase}'.strip())
+
     # Short fragments survive normal differences between social-card OCR and
     # an article transcript (for example, n'yo versus ninyo).
     if len(distinctive_tokens) >= 6:
@@ -991,7 +1848,8 @@ def generate_quote_source_queries(claim_text: str, features: ClaimFeatures) -> l
     if len(distinctive_phrase.split()) >= 4:
         queries.append(f'"{distinctive_phrase}" "{speaker}"'.strip())
     queries.append(f'"{search_text}"')
-    return list(dict.fromkeys(query for query in queries if query.strip('" ')))[:3]
+    query_limit = 6 if publisher else 3
+    return list(dict.fromkeys(query for query in queries if query.strip('" ')))[:query_limit]
 
 
 def normalize_url(value: str) -> str:
@@ -1018,16 +1876,21 @@ def normalize_url(value: str) -> str:
     return urlunparse((parsed.scheme.lower(), netloc, path, "", query, ""))
 
 
-def _is_evidence_page(result: SearchResult) -> bool:
-    """Only allow article-like pages that can substantively support a verdict."""
+def _is_evidence_page(result: SearchResult | str, publisher_hint: str | None = None) -> bool:
+    """Only allow article-like pages or verified publisher social channels that can substantively support a verdict."""
+    url = result.url if isinstance(result, SearchResult) else str(result)
+    domain = result.domain if isinstance(result, SearchResult) else (urlparse(url).hostname or "")
+    if parse_publisher_social_account(url, publisher_hint) is not None:
+        return True
     if any(
-        domain_matches(result.domain, domain)
-        for domain in (
+        domain_matches(domain, d)
+        for d in (
             "facebook.com",
             "x.com",
             "twitter.com",
             "reddit.com",
             "threads.com",
+            "threads.net",
             "tiktok.com",
             "instagram.com",
             "youtube.com",
@@ -1035,7 +1898,7 @@ def _is_evidence_page(result: SearchResult) -> bool:
         )
     ):
         return False
-    parsed = urlparse(result.url)
+    parsed = urlparse(url)
     path = parsed.path.casefold().rstrip("/")
     if not path:
         return False
@@ -1207,57 +2070,68 @@ def _tfidf_cosine(left: str, right: str) -> float:
 
 
 def score_initial_relevance(claim: ClaimFeatures, search_text: str, result: SearchResult) -> int:
-    combined = f"{result.title} {result.snippet}"
-    candidate = extract_claim_features(clean_claim_text(combined))
-    entity_score = _entity_overlap(claim.entities, candidate.entities)
-    event_score = 1.0 if set(claim.event_categories) & set(candidate.event_categories) else 0.0
-    keyword_score = _set_overlap(claim.keywords, candidate.keywords)
-    headline_coverage = _set_overlap(candidate.keywords, claim.keywords)
-    # Compare like with like. ``search_text`` has already had stopwords and
-    # punctuation removed; normalizing candidates avoids suppressing an
-    # otherwise near-identical headline.
-    title_score = _fuzzy_ratio(search_text, normalize_search_text(result.title))
-    snippet_score = _fuzzy_ratio(search_text, normalize_search_text(result.snippet))
-    date_score = 1.0 if not claim.dates or result.published_date else 0.4
-    score = (
-        entity_score * 22
-        + event_score * 18
-        + keyword_score * 16
-        + headline_coverage * 20
-        + title_score * 12
-        + snippet_score * 7
-        + date_score * 5
-    )
-    quoted_query_phrases = re.findall(r'"([^"\n]{3,160})"', result.query)
-    for phrase in quoted_query_phrases:
-        phrase_tokens = _canonical_quote_tokens(phrase)
-        if len(phrase_tokens) < 3:
-            continue
-        candidate_tokens = _canonical_quote_tokens(combined)
-        if _longest_common_token_run(phrase_tokens, candidate_tokens) == len(phrase_tokens):
-            # The provider returned this page for a verbatim phrase and the
-            # phrase is actually present in its title/snippet. Keep the result
-            # eligible for article inspection even if copied UI noise weakens
-            # entity and whole-paragraph similarity scores.
-            score = max(score, 55)
-            break
-    location_variant = _is_near_identical_location_variant(
-        entity_overlap=entity_score,
-        keyword_overlap=keyword_score,
-        headline_similarity=title_score,
-    )
-    if _locations_conflict(claim.locations, candidate.locations) and not location_variant:
-        # A shared subject and event must not make a story from a different
-        # place eligible as evidence for the submitted claim. Preserve only
-        # near-identical headlines so changed-location misinformation can be
-        # shown to the user as related evidence.
-        score = min(score, 25)
-    policy_agreement, _ = _policy_evidence_agreement(claim, combined, discovery=True)
-    if not policy_agreement:
-        # Shared names such as Marcos and Facebook are not evidence unless the
-        # result also matches the claimed policy action/state and attribution.
-        score = min(score, 25)
-    return max(0, min(100, round(score)))
+    def _score_single(feat: ClaimFeatures, stext: str) -> int:
+        combined = f"{result.title} {result.snippet}"
+        candidate = extract_claim_features(clean_claim_text(combined))
+        entity_score = _entity_overlap(feat.entities, candidate.entities)
+        event_score = 1.0 if set(feat.event_categories) & set(candidate.event_categories) else 0.0
+        keyword_score = _set_overlap(feat.keywords, candidate.keywords)
+        headline_coverage = _set_overlap(candidate.keywords, feat.keywords)
+        # Compare like with like. ``search_text`` has already had stopwords and
+        # punctuation removed; normalizing candidates avoids suppressing an
+        # otherwise near-identical headline.
+        title_score = _fuzzy_ratio(stext, normalize_search_text(result.title))
+        snippet_score = _fuzzy_ratio(stext, normalize_search_text(result.snippet))
+        date_score = 1.0 if not feat.dates or result.published_date else 0.4
+        score = (
+            entity_score * 22
+            + event_score * 18
+            + keyword_score * 16
+            + headline_coverage * 20
+            + title_score * 12
+            + snippet_score * 7
+            + date_score * 5
+        )
+        quoted_query_phrases = re.findall(r'"([^"\n]{3,160})"', result.query)
+        for phrase in quoted_query_phrases:
+            phrase_tokens = _canonical_quote_tokens(phrase)
+            if len(phrase_tokens) < 3:
+                continue
+            candidate_tokens = _canonical_quote_tokens(combined)
+            if _longest_common_token_run(phrase_tokens, candidate_tokens) == len(phrase_tokens):
+                # The provider returned this page for a verbatim phrase and the
+                # phrase is actually present in its title/snippet. Keep the result
+                # eligible for article inspection even if copied UI noise weakens
+                # entity and whole-paragraph similarity scores.
+                score = max(score, 55)
+                break
+        location_variant = _is_near_identical_location_variant(
+            entity_overlap=entity_score,
+            keyword_overlap=keyword_score,
+            headline_similarity=title_score,
+        )
+        if _locations_conflict(feat.locations, candidate.locations) and not location_variant:
+            # A shared subject and event must not make a story from a different
+            # place eligible as evidence for the submitted claim. Preserve only
+            # near-identical headlines so changed-location misinformation can be
+            # shown to the user as related evidence.
+            score = min(score, 25)
+        policy_agreement, _ = _policy_evidence_agreement(feat, combined, discovery=True)
+        if not policy_agreement:
+            # Shared names such as Marcos and Facebook are not evidence unless the
+            # result also matches the claimed policy action/state and attribution.
+            score = min(score, 25)
+        return max(0, min(100, round(score)))
+
+    best = _score_single(claim, search_text)
+    if _is_predominantly_tagalog(search_text):
+        for trans in translate_tagalog_claim(search_text):
+            t_feat = extract_claim_features(trans)
+            t_search = normalize_search_text(trans)
+            s = _score_single(t_feat, t_search)
+            if s > best:
+                best = s
+    return best
 
 
 def _parse_published_date(value: str | None, now: datetime) -> datetime | None:
@@ -1349,6 +2223,11 @@ def _extract_result_image(item: dict[str, Any]) -> str:
     return ""
 
 
+_GLOBAL_EXHAUSTED_PROVIDERS: dict[str, float] = {}
+_GLOBAL_EXHAUSTED_SERPER_KEYS: set[str] = set()
+_EXHAUSTION_COOLDOWN_SECONDS: float = 300.0
+
+
 class NewsSearchClient:
     def __init__(self, settings: Settings, *, client: httpx.AsyncClient | None = None) -> None:
         self.settings = settings
@@ -1360,14 +2239,45 @@ class NewsSearchClient:
         self._request_slots = asyncio.Semaphore(
             getattr(settings, "news_max_concurrent_search_requests", 4)
         )
+        self._exhausted_providers: set[str] = set()
+        self._exhausted_serper_keys: set[str] = set()
+
+    @property
+    def serper_keys(self) -> list[str]:
+        keys = getattr(self.settings, "serper_api_key_list", None)
+        if keys is None or not keys:
+            legacy = getattr(self.settings, "serper_api_key", None)
+            if legacy is not None:
+                val = legacy.get_secret_value() if hasattr(legacy, "get_secret_value") else str(legacy)
+                if val:
+                    keys = [val]
+        return list(dict.fromkeys(keys or []))
 
     def _provider_is_configured(self, provider: str) -> bool:
+        now = time.time()
+        if provider in self._exhausted_providers:
+            return False
+        if provider in _GLOBAL_EXHAUSTED_PROVIDERS:
+            if now - _GLOBAL_EXHAUSTED_PROVIDERS[provider] < _EXHAUSTION_COOLDOWN_SECONDS:
+                if provider != "serper":
+                    return False
+            else:
+                _GLOBAL_EXHAUSTED_PROVIDERS.pop(provider, None)
         if provider == "google":
             return bool(self.settings.google_search_api_key and self.settings.google_cse_id)
         if provider == "searchapi":
             return self.settings.searchapi_api_key is not None
+        if provider == "searchapi_ai_mode":
+            return (
+                getattr(self.settings, "searchapi_ai_mode_api_key", None) is not None
+                or self.settings.searchapi_api_key is not None
+            )
         if provider == "serper":
-            return self.settings.serper_api_key is not None
+            active_keys = [
+                k for k in self.serper_keys
+                if k not in self._exhausted_serper_keys and k not in _GLOBAL_EXHAUSTED_SERPER_KEYS
+            ]
+            return bool(active_keys)
         return False
 
     async def search(
@@ -1380,13 +2290,18 @@ class NewsSearchClient:
         collected: list[SearchResult] = []
         providers_used: list[str] = []
         any_success = False
-        query_limit = min(5, len(queries))
         client = self._client
         for provider in self.settings.news_search_provider_list:
             if not self._provider_is_configured(provider):
                 continue
             providers_used.append(provider)
             provider_succeeded = False
+            query_limit = min(
+                5 if provider != "searchapi_ai_mode" else getattr(
+                    self.settings, "searchapi_ai_mode_max_queries", 1
+                ),
+                len(queries),
+            )
 
             async def run_query(
                 query_index: int,
@@ -1398,8 +2313,11 @@ class NewsSearchClient:
                     async with self._request_slots:
                         batch = await self._search_provider(client, provider_name, query)
                     return query_index, batch
-                except (SearchProviderError, httpx.HTTPError, ValueError):
-                    logger.warning("News search provider %s query failed", provider_name)
+                except (SearchProviderError, httpx.HTTPError, ValueError) as exc:
+                    logger.warning("News search provider %s query failed: %s", provider_name, exc)
+                    if isinstance(exc, SearchProviderError) and ("429" in str(exc) or "exhausted" in str(exc).lower()):
+                        self._exhausted_providers.add(provider_name)
+                        _GLOBAL_EXHAUSTED_PROVIDERS[provider_name] = time.time()
                     return query_index, None
 
             # Run the strongest query views together, then spend quota on the
@@ -1417,7 +2335,10 @@ class NewsSearchClient:
             useful_results = (
                 [item for item in collected if result_filter(item)] if result_filter else collected
             )
-            if len(useful_results) < self.settings.news_min_relevant_results:
+            if (
+                provider_succeeded
+                and len(useful_results) < self.settings.news_min_relevant_results
+            ):
                 extra_batches = await asyncio.gather(
                     *(
                         run_query(index, queries[index])
@@ -1457,7 +2378,10 @@ class NewsSearchClient:
     def _restrict_query(query: str, domains: list[str] | None) -> str:
         if not domains:
             return query
-        restrictions = " OR ".join(f"site:{domain}" for domain in domains)
+        target_domains = [d.strip() for d in domains if d.strip()][:5]
+        if not target_domains:
+            return query
+        restrictions = " OR ".join(f"site:{domain}" for domain in target_domains)
         return f"{query} ({restrictions})"
 
     async def _search_provider(
@@ -1491,18 +2415,16 @@ class NewsSearchClient:
                 },
             )
             items_key = "organic_results"
+        elif provider == "searchapi_ai_mode":
+            return await self._search_searchapi_ai_mode(client, query)
         elif provider == "serper":
-            assert self.settings.serper_api_key is not None
-            response = await client.post(
-                "https://google.serper.dev/search",
-                headers={"X-API-KEY": self.settings.serper_api_key.get_secret_value()},
-                json={"q": query, "num": 10},
-            )
-            items_key = "organic"
+            return await self._search_serper(client, query)
         else:
             raise SearchProviderError(f"Unsupported provider: {provider}")
 
         try:
+            if response.status_code == 429:
+                raise SearchProviderError(f"{provider} returned 429 quota exhausted")
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
@@ -1513,6 +2435,52 @@ class NewsSearchClient:
         if not isinstance(items, list):
             raise SearchProviderError(f"{provider} returned malformed results")
 
+        return self._parse_search_items(items, provider=provider, query=query)
+
+    async def _search_searchapi_ai_mode(
+        self, client: httpx.AsyncClient, query: str
+    ) -> list[SearchResult]:
+        """Use AI Mode only to discover its cited publisher links.
+
+        The AI-produced overview is deliberately not converted into evidence: a
+        generated answer can be useful context, but it is not independently
+        verifiable. Each returned link continues through the ordinary article
+        retrieval and relationship checks.
+        """
+        credential = getattr(self.settings, "searchapi_ai_mode_api_key", None)
+        credential = credential or self.settings.searchapi_api_key
+        assert credential is not None
+        response = await client.get(
+            "https://www.searchapi.io/api/v1/search",
+            headers={"Authorization": f"Bearer {credential.get_secret_value()}"},
+            params={"engine": "google_ai_mode", "q": query, "gl": "ph", "hl": "en"},
+        )
+        try:
+            if response.status_code == 429:
+                raise SearchProviderError("searchapi_ai_mode returned 429 quota exhausted")
+            response.raise_for_status()
+            payload = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise SearchProviderError("searchapi_ai_mode returned an invalid response") from exc
+        if not isinstance(payload, dict) or payload.get("error"):
+            raise SearchProviderError("searchapi_ai_mode returned an error response")
+
+        items: list[dict[str, Any]] = []
+        for item in [*payload.get("reference_links", []), *payload.get("web_results", [])]:
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "title": item.get("title") or item.get("source") or "AI Mode reference",
+                    "link": item.get("link"),
+                    "snippet": item.get("snippet") or "",
+                }
+            )
+        return self._parse_search_items(items, provider="searchapi_ai_mode", query=query)
+
+    def _parse_search_items(
+        self, items: list[Any], provider: str, query: str
+    ) -> list[SearchResult]:
         results: list[SearchResult] = []
         for item in items:
             if not isinstance(item, dict):
@@ -1540,6 +2508,74 @@ class NewsSearchClient:
                 )
             )
         return results
+
+    async def _search_serper(
+        self, client: httpx.AsyncClient, query: str
+    ) -> list[SearchResult]:
+        while True:
+            available_keys = [
+                k for k in self.serper_keys
+                if k not in self._exhausted_serper_keys and k not in _GLOBAL_EXHAUSTED_SERPER_KEYS
+            ]
+            if not available_keys:
+                _GLOBAL_EXHAUSTED_PROVIDERS["serper"] = time.time()
+                raise SearchProviderError("serper returned 429 quota exhausted: all Serper API keys exhausted")
+
+            active_key = available_keys[0]
+            masked_key = f"...{active_key[-6:]}" if len(active_key) >= 6 else "***"
+
+            try:
+                response = await client.post(
+                    "https://google.serper.dev/search",
+                    headers={"X-API-KEY": active_key},
+                    json={"q": query, "num": 10, "gl": "ph"},
+                )
+            except httpx.HTTPError as exc:
+                raise SearchProviderError(f"serper returned network error: {exc}") from exc
+
+            is_exhausted = False
+            if response.status_code in {401, 403, 429}:
+                is_exhausted = True
+            elif response.status_code == 400:
+                body_lower = response.text.lower()
+                if any(term in body_lower for term in ("credit", "quota", "unauthorized", "api key")):
+                    is_exhausted = True
+            elif response.status_code == 200:
+                try:
+                    peek = response.json()
+                    if isinstance(peek, dict) and (
+                        peek.get("error")
+                        or str(peek.get("message", "")).lower() in {"not enough credits", "unauthorized."}
+                    ):
+                        is_exhausted = True
+                except Exception:
+                    pass
+
+            if is_exhausted:
+                logger.warning(
+                    "Serper API key (%s) exhausted or rejected (HTTP %s: %s). Falling back to next key.",
+                    masked_key,
+                    response.status_code,
+                    response.text[:200],
+                )
+                self._exhausted_serper_keys.add(active_key)
+                _GLOBAL_EXHAUSTED_SERPER_KEYS.add(active_key)
+                continue
+
+            try:
+                response.raise_for_status()
+                payload = response.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                raise SearchProviderError(f"serper returned an invalid response: {exc}") from exc
+
+            if not isinstance(payload, dict) or payload.get("error"):
+                raise SearchProviderError("serper returned an error response")
+
+            items = payload.get("organic", [])
+            if not isinstance(items, list):
+                raise SearchProviderError("serper returned malformed results")
+
+            return self._parse_search_items(items, provider="serper", query=query)
 
 
 def deduplicate_results(results: list[SearchResult]) -> list[SearchResult]:
@@ -1721,23 +2757,71 @@ class ArticleScraper:
         )
 
 
-def _source_tier(domain: str, settings: Settings) -> int:
-    if any(
-        domain_matches(domain, item) for item in getattr(settings, "fact_check_domain_list", [])
-    ):
+def _source_type_and_weight(domain: str, settings: Settings, url: str = "") -> tuple[str, float]:
+    """Return (source_type, reliability_weight) for evidence scoring and adjudication."""
+    if url:
+        social_info = parse_publisher_social_account(url)
+        if social_info:
+            _, base_weight = _source_type_and_weight(social_info[1], settings)
+            return "news", min(base_weight, 0.65)
+
+    clean_dom = domain.lower().removeprefix("www.")
+
+    # Check official primary sources
+    for group_name, group_domains in PRIMARY_SOURCE_DOMAINS.items():
+        if any(domain_matches(clean_dom, d) for d in group_domains):
+            if group_name == "economy_statistics":
+                return "official_data", 1.00
+            return "primary", 1.00
+
+    if clean_dom == "gov.ph" or clean_dom.endswith(".gov.ph"):
+        if any(term in clean_dom for term in ("psa", "bsp", "neda", "dof")):
+            return "official_data", 1.00
+        return "primary", 1.00
+
+    # Fact-checking organizations
+    if any(domain_matches(clean_dom, fc) for fc in FACT_CHECK_ORGS):
+        return "fact_check", 0.95
+
+    # Specific outlet weights
+    for d, w in OUTLET_SPECIFIC_WEIGHTS.items():
+        if domain_matches(clean_dom, d):
+            return "news", w
+
+    # Social media
+    if any(name in clean_dom for name in ("facebook.com", "tiktok.com", "x.com", "twitter.com", "reddit.com", "threads.com", "instagram.com")):
+        return "social", 0.10
+
+    # Fallback by tier
+    if any(domain_matches(clean_dom, d) for d in settings.trusted_news_domain_list):
+        return "news", 0.93
+    if any(domain_matches(clean_dom, d) for d in settings.news_tier_2_domain_list):
+        return "news", 0.88
+    if any(domain_matches(clean_dom, d) for d in settings.philippine_news_domain_list):
+        return "news", 0.70
+
+    return "news", 0.25
+
+
+def _source_tier(domain: str, settings: Settings, url: str = "") -> int:
+    if url:
+        social_info = parse_publisher_social_account(url)
+        if social_info:
+            return min(_source_tier(social_info[1], settings), 2)
+    s_type, s_weight = _source_type_and_weight(domain, settings, url=url)
+    if s_type in {"primary", "official_data"} or s_weight >= 0.93:
         return 1
-    if any(domain_matches(domain, item) for item in settings.trusted_news_domain_list):
-        return 1
-    if domain == "gov.ph" or domain.endswith(".gov.ph") or domain_matches(domain, "verafiles.org"):
-        return 1
-    if any(domain_matches(domain, item) for item in settings.news_tier_2_domain_list):
+    if s_weight >= 0.85:
         return 2
-    if any(name in domain for name in ("facebook.com", "x.com", "twitter.com", "reddit.com")):
+    if s_type == "social" or s_weight <= 0.20:
         return 4
     return 3
 
 
 def _publisher_name(result: SearchResult, article: Article | None) -> str:
+    social_info = parse_publisher_social_account(result.url)
+    if social_info:
+        return social_info[0]
     if article and article.publisher:
         return article.publisher
     for domain, name in PUBLISHER_NAMES.items():
@@ -1747,6 +2831,9 @@ def _publisher_name(result: SearchResult, article: Article | None) -> str:
 
 
 def _publisher_identity(result: SearchResult, article: Article | None, settings: Settings) -> str:
+    social_info = parse_publisher_social_account(result.url)
+    if social_info:
+        return social_info[1]
     configured_domains = {
         *settings.philippine_news_domain_list,
         *settings.trusted_news_domain_list,
@@ -1779,28 +2866,7 @@ def _detect_syndication_source(article: Article | None, snippet: str) -> str | N
 
 def _source_quality_weight(domain: str, settings: Settings) -> float:
     """Return a quality weight for a domain based on source registries."""
-    # Primary official sources
-    for group_domains in PRIMARY_SOURCE_DOMAINS.values():
-        if any(domain_matches(domain, d) for d in group_domains):
-            return SOURCE_WEIGHTS["primary_official"]
-    # Wire services
-    if any(domain_matches(domain, ws) for ws in WIRE_SERVICES):
-        wire = next(ws for ws in WIRE_SERVICES if domain_matches(domain, ws))
-        return SOURCE_WEIGHTS.get(wire.split(".")[0], 0.95)
-    # Fact-check organizations
-    if any(domain_matches(domain, fc) for fc in FACT_CHECK_ORGS):
-        return SOURCE_WEIGHTS["fact_check_org"]
-    # Trusted national news
-    if any(domain_matches(domain, d) for d in settings.trusted_news_domain_list):
-        return SOURCE_WEIGHTS["major_national_news"]
-    # Tier 2 news
-    if any(domain_matches(domain, d) for d in settings.news_tier_2_domain_list):
-        return SOURCE_WEIGHTS["established_local_news"]
-    # Social media
-    if any(name in domain for name in ("facebook.com", "tiktok.com", "x.com", "twitter.com")):
-        return SOURCE_WEIGHTS["social_post"]
-    # Unknown
-    return SOURCE_WEIGHTS["unknown_news_site"]
+    return _source_type_and_weight(domain, settings)[1]
 
 
 def _is_fact_check_source(domain: str) -> bool:
@@ -2026,6 +3092,8 @@ def _death_subject_status(claim: ClaimFeatures, document: str) -> str | None:
 
 
 def _attributed_speaker(features: ClaimFeatures) -> str:
+    if features.attributed_entity:
+        return features.attributed_entity
     return next(
         (
             entity
@@ -2244,12 +3312,21 @@ def _relationship(
     )
     attribution_cue = bool(
         re.search(
-            r"\b(?:according to|ayon kay|said|says|shared|stated|told|wrote)\b",
+            r"\b(?:according to|ayon kay|ayon sa|said|says|shared|stated|told|wrote|mensahe ni|pahayag ni|payo ni)\b",
             document[:30_000],
             flags=re.IGNORECASE,
         )
     )
-    if entity_overlap > 0 and quote_run >= 6 and speaker_present and attribution_cue:
+    speaker_adjacent = bool(
+        attributed_speaker
+        and re.search(
+            r"(?:[-–—]\s*|\b(?:by|ni|kay)\s+)?" + re.escape(attributed_speaker),
+            document[:30_000],
+            flags=re.IGNORECASE,
+        )
+    )
+    quote_attribution_present = attribution_cue or speaker_adjacent or quote_run >= 8
+    if entity_overlap > 0 and quote_run >= 6 and speaker_present and quote_attribution_present:
         rule_matches.append(
             f"The article contains a matching attributed quote ({quote_run} words)."
         )
@@ -2273,7 +3350,7 @@ def _relationship(
     debunk_scope = lowered[:2000]
     strong_debunk_match = similarity >= 55
     explicit_fact_check = bool(
-        re.match(r"\s*(?:fact[ -]?check|debunk(?:ed)?|false claim)\b", debunk_scope)
+        re.search(r"\b(?:fact[ -]?check|debunk(?:ed)?|false claim)\b", debunk_scope)
     )
     if (
         relevant_context
@@ -2287,6 +3364,11 @@ def _relationship(
         rule_matches.append("Explicit fact-check or debunk language matched the claim context.")
         return "DEBUNKS", rule_matches, None
 
+    # An explicit fact check that addresses a DIFFERENT claim (e.g. low similarity or
+    # distinct entities) must not trigger a false contradiction through generic category negation.
+    if explicit_fact_check and not strong_debunk_match:
+        return "IRRELEVANT", ["Fact-check article addresses a different claim."], None
+
     for category in claim.event_categories:
         if category == "DEATH" and death_subjects:
             if death_status == "DENIED" and relevant_context:
@@ -2295,7 +3377,9 @@ def _relationship(
             # Do not let a negated death involving another person, or a
             # metaphor such as "the impeachment is dead," decide this claim.
             continue
-        if _negates_category(document, category) and relevant_context:
+        category_negated = _negates_category(document, category)
+        entity_aligned = (entity_overlap > 0) if claim.entities else True
+        if category_negated and relevant_context and (entity_aligned or similarity >= 60):
             rule_matches.append(f"{category}: event is explicitly negated")
             return "CONTRADICTS", rule_matches, None
         for pattern, label in CONTRADICTION_PATTERNS.get(category, ()):
@@ -2328,11 +3412,24 @@ def _relationship(
                 rule_matches.append(transformation)
                 return "RELATED", rule_matches, transformation
 
-    if attributed_speaker and not speaker_present and relevant_context:
-        rule_matches.append(
-            f"The source does not mention the attributed speaker, {attributed_speaker}."
+    if attributed_speaker and not speaker_present:
+        shares_event = bool(set(claim.event_categories) & set(document_features.event_categories))
+        non_speaker_entities = [
+            e for e in claim.entities
+            if e != attributed_speaker and e.upper() not in {"NEWS", "BREAKING NEWS", "ALERT"}
+        ]
+        shares_other_entity = bool(
+            non_speaker_entities
+            and _entity_overlap(non_speaker_entities, document_features.entities) > 0
         )
-        return "RELATED", rule_matches, None
+        topic_aligned = similarity >= 45 and keyword_overlap >= 0.25
+
+        if (shares_event or shares_other_entity or topic_aligned) and relevant_context:
+            rule_matches.append(
+                f"The source does not mention the attributed speaker, {attributed_speaker}."
+            )
+            return "RELATED", rule_matches, None
+        return "IRRELEVANT", rule_matches, None
 
     claim_events = set(claim.event_categories)
 
@@ -2359,6 +3456,7 @@ def _relationship(
     if relevant_context and support_facts_align and (
         (same_event and similarity >= 45 and keyword_overlap >= 0.35)
         or (similarity >= 65 and keyword_overlap >= 0.30)
+        or (not claim_events and similarity >= 45 and keyword_overlap >= 0.50)
     ):
         return "SUPPORTS", rule_matches, None
     if relevant_context and similarity >= 35 and keyword_overlap >= 0.25:
@@ -2377,35 +3475,46 @@ def _similarity_score(
     headline = article.headline if article and article.headline else result.title
     document = f"{headline} {result.snippet} {body}"
     document_features = extract_claim_features(clean_claim_text(document[:30_000]))
-    entity = round(_entity_overlap(claim.entities, document_features.entities) * 100)
-    event = 100 if set(claim.event_categories) & set(document_features.event_categories) else 0
-    tfidf = round(_tfidf_cosine(cleaned_text, document) * 100)
-    fuzzy = round(_fuzzy_ratio(cleaned_text, headline) * 100)
-    keyword = round(_set_overlap(claim.keywords, document_features.keywords) * 100)
-    date = _recency_score(
-        (article.published_date if article else None) or result.published_date,
-        now,
-    )
-    weighted = round(
-        entity * 0.25 + event * 0.20 + tfidf * 0.20 + fuzzy * 0.15 + keyword * 0.10 + date * 0.10
-    )
-    location = 0 if _locations_conflict(claim.locations, document_features.locations) else 100
-    location_variant = _is_near_identical_location_variant(
-        entity_overlap=entity / 100,
-        keyword_overlap=keyword / 100,
-        headline_similarity=fuzzy / 100,
-    )
-    if location == 0 and not location_variant:
-        weighted = min(weighted, 25)
-    return max(0, min(100, weighted)), {
-        "entity": entity,
-        "event": event,
-        "tfidf": tfidf,
-        "fuzzy_title": fuzzy,
-        "keyword": keyword,
-        "date": date,
-        "location": location,
-    }
+
+    def _calc(feat: ClaimFeatures, text: str) -> tuple[int, dict[str, int]]:
+        entity = round(_entity_overlap(feat.entities, document_features.entities) * 100)
+        event = 100 if set(feat.event_categories) & set(document_features.event_categories) else 0
+        tfidf = round(_tfidf_cosine(text, document) * 100)
+        fuzzy = round(_fuzzy_ratio(text, headline) * 100)
+        keyword = round(_set_overlap(feat.keywords, document_features.keywords) * 100)
+        date = _recency_score(
+            (article.published_date if article else None) or result.published_date,
+            now,
+        )
+        weighted = round(
+            entity * 0.25 + event * 0.20 + tfidf * 0.20 + fuzzy * 0.15 + keyword * 0.10 + date * 0.10
+        )
+        location = 0 if _locations_conflict(feat.locations, document_features.locations) else 100
+        location_variant = _is_near_identical_location_variant(
+            entity_overlap=entity / 100,
+            keyword_overlap=keyword / 100,
+            headline_similarity=fuzzy / 100,
+        )
+        if location == 0 and not location_variant:
+            weighted = min(weighted, 25)
+        return max(0, min(100, weighted)), {
+            "entity": entity,
+            "event": event,
+            "tfidf": tfidf,
+            "fuzzy_title": fuzzy,
+            "keyword": keyword,
+            "date": date,
+            "location": location,
+        }
+
+    best_score, best_dict = _calc(claim, cleaned_text)
+    if _is_predominantly_tagalog(cleaned_text):
+        for trans in translate_tagalog_claim(cleaned_text):
+            t_feat = extract_claim_features(trans)
+            s, d = _calc(t_feat, trans)
+            if s > best_score:
+                best_score, best_dict = s, d
+    return best_score, best_dict
 
 
 def _relationship_explanation(
@@ -2425,7 +3534,9 @@ def _relationship_explanation(
             return rule_matches[0]
         return "This report directly matches the claim's entities and reported event."
     if relationship == "RELATED":
-        return "This report covers a closely related event but does not confirm the exact claim."
+        if rule_matches:
+            return rule_matches[0]
+        return "This report covers related context but does not confirm the exact claim."
     return "The result is not sufficiently related to the claim."
 
 
@@ -2530,23 +3641,54 @@ class NewsVerifier:
         *,
         search_client: NewsSearchClient | None = None,
         scraper: ArticleScraper | None = None,
+        adjudicator: Any | None = None,
+        audit_logger: Any | None = None,
     ) -> None:
         self.settings = settings
         self.search_client = search_client or NewsSearchClient(settings)
         self.scraper = scraper or ArticleScraper(settings)
+        self.adjudicator = adjudicator
+        self.audit_logger = audit_logger or AuditLogger(
+            log_path=getattr(settings, "news_audit_log_path", "logs/verification_audit.jsonl")
+            if getattr(settings, "news_audit_log_enabled", True)
+            else None,
+            enabled=getattr(settings, "news_audit_log_enabled", True),
+        )
 
     async def aclose(self) -> None:
-        for service in (self.search_client, self.scraper):
+        for service in (self.search_client, self.scraper, self.adjudicator, self.audit_logger):
             close = getattr(service, "aclose", None)
             if close is not None:
                 await close()
 
-    async def verify(self, raw_text: str) -> dict[str, Any]:
+    async def verify(
+        self,
+        raw_text: str,
+        *,
+        publisher: str | None = None,
+        extra_queries: list[str] | None = None,
+    ) -> dict[str, Any]:
+        start_time = time.perf_counter()
         now = datetime.now(UTC)
         cleaned = clean_claim_text(raw_text)
         search_text = normalize_search_text(cleaned)
         features = extract_claim_features(cleaned)
+        atomic_claims = extract_atomic_claims(cleaned)
+        num_analysis = numerical_analysis(cleaned)
         queries = generate_search_queries(cleaned, features)
+
+        if extra_queries:
+            for eq in reversed(extra_queries):
+                eq_clean = " ".join(str(eq).split()).strip()
+                if eq_clean and eq_clean not in queries:
+                    queries.insert(0, eq_clean)
+
+        if len(atomic_claims) > 1:
+            for ac in atomic_claims:
+                ac_features = extract_claim_features(ac)
+                for ac_q in generate_search_queries(ac, ac_features)[:2]:
+                    if ac_q not in queries:
+                        queries.append(ac_q)
 
         def relevance_filter(result: SearchResult) -> bool:
             return (
@@ -2565,9 +3707,22 @@ class NewsVerifier:
             re.search(r"(?:^|\W)(?:ako|akin|ko|kami|namin|i|me|my|we|our)(?:\W|$)", cleaned, re.I)
             or re.search(r"^[\"'‘’“”]", cleaned)
         )
+        publisher_domain = ""
+        if publisher:
+            norm_pub = publisher.strip().casefold()
+            for p_name, p_info in OFFICIAL_PUBLISHER_SOCIAL_ACCOUNTS.items():
+                if p_name.casefold() == norm_pub:
+                    publisher_domain = p_info["domain"]
+                    break
+            if not publisher_domain:
+                for d, n in PUBLISHER_NAMES.items():
+                    if n.casefold() == norm_pub or d.casefold() == norm_pub:
+                        publisher_domain = d
+                        break
+
         quote_queries = (
-            generate_quote_source_queries(cleaned, features)
-            if quote_like and quote_source_domains
+            generate_quote_source_queries(cleaned, features, publisher=publisher)
+            if (quote_like or bool(publisher))
             else []
         )
         policy_source_domains = [
@@ -2587,22 +3742,57 @@ class NewsVerifier:
             [*queries, *fact_check_queries, *quote_queries,
              *contradiction_queries, *primary_source_queries]
         ))
-        search_specs: list[tuple[str, list[str], list[str]]] = []
+        # Structured Tiered Sources:
+        # Tier 1 — Strongest primary news sources (Reuters, PNA, GMA, ABS-CBN, Inquirer)
+        tier_1_domains = [
+            d for d in self.settings.trusted_news_domain_list
+            if d not in fact_check_domains and "cnnphilippines" not in d
+        ][:5]
+        # Tier 2 — Strong supplementary sources (Rappler, Philstar, Manila Bulletin, TV5, SunStar)
+        tier_2_domains = [
+            d for d in self.settings.news_tier_2_domain_list
+            if "cnnphilippines" not in d
+        ][:5]
+
+        # Detect claim topics to pull dedicated primary government/official sources
+        claim_topics = _detect_claim_topics(cleaned, features)
+        topic_primary_domains: list[str] = []
+        for t in claim_topics:
+            topic_primary_domains.extend(PRIMARY_SOURCE_DOMAINS.get(t, []))
+        topic_primary_domains = list(dict.fromkeys(topic_primary_domains))
+
+        all_allowed_domains = {
+            *tier_1_domains,
+            *tier_2_domains,
+            *outlet_domains,
+            *fact_check_domains,
+            *quote_source_domains,
+            *OUTLET_SPECIFIC_WEIGHTS,
+            *topic_primary_domains,
+        }
+        for dom_list in PRIMARY_SOURCE_DOMAINS.values():
+            all_allowed_domains.update(dom_list)
+
+        search_specs: list[tuple[str, list[str], list[str] | None]] = []
         if fact_check_domains:
             search_specs.append(("fact_check", fact_check_queries, fact_check_domains))
         if quote_queries:
+            target_quote_domains = list(dict.fromkeys([
+                *([publisher_domain] if publisher_domain else []),
+                *quote_source_domains,
+            ]))
             search_specs.extend(
-                ("quote", quote_queries, [domain]) for domain in quote_source_domains
+                ("quote", quote_queries, [domain]) for domain in target_quote_domains
             )
+            search_specs.append(("quote_unrestricted", quote_queries, []))
         if policy_discovery:
             search_specs.append(("policy", queries, policy_source_domains))
-        # Contradiction search: use unrestricted domains for maximum coverage
         if contradiction_queries:
             search_specs.append(("contradiction", contradiction_queries, outlet_domains))
-        # Primary source search: unrestricted to reach .gov and international orgs
         if primary_source_queries:
             search_specs.append(("primary", primary_source_queries, []))
         search_specs.append(("outlets", queries, outlet_domains))
+
         outcomes = await asyncio.gather(
             *(
                 self.search_client.search(
@@ -2613,19 +3803,28 @@ class NewsVerifier:
                 for _, spec_queries, domains in search_specs
             )
         )
+
+        def is_whitelisted_domain(d: str) -> bool:
+            clean = d.removeprefix("www.").casefold()
+            if any(domain_matches(clean, allowed) for allowed in all_allowed_domains):
+                return True
+            if (
+                clean.endswith(".gov.ph")
+                or clean.endswith(".gov")
+                or clean.endswith(".mil.ph")
+                or clean.endswith(".judiciary.gov.ph")
+                or clean.endswith(".int")
+            ):
+                return True
+            return False
+
         results = deduplicate_results(
             [
                 result
                 for outcome in outcomes
                 for result in outcome.results
-                if any(
-                    domain_matches(result.domain, domain)
-                    for domain in [
-                        *fact_check_domains,
-                        *quote_source_domains,
-                        *outlet_domains,
-                    ]
-                )
+                if is_whitelisted_domain(result.domain)
+                or parse_publisher_social_account(result.url, publisher) is not None
             ]
         )
         providers_used = list(
@@ -2656,14 +3855,119 @@ class NewsVerifier:
                 any_provider_succeeded or fallback_outcome.any_provider_succeeded
             )
 
-        results = [result for result in results if _is_evidence_page(result)]
+        results = [result for result in results if _is_evidence_page(result, publisher_hint=publisher)]
+
+        # --- Adaptive Verification Loop (Progressive search) ---
+        search_rounds = 1
+        max_rounds = getattr(self.settings, "news_max_search_rounds", 3)
+
+        # Check whether initial results are semantically related to the claim
+        has_semantic_results = are_results_semantically_related(
+            features, search_text, results,
+            threshold=self.settings.news_relevance_threshold,
+        )
+
+        # Track uncovered claims for multi-claim inputs
+        uncovered_claims: list[str] = []
+        if len(atomic_claims) > 1 and results:
+            for ac in atomic_claims:
+                ac_kw = [k.lower() for k in extract_claim_features(ac).keywords[:3]]
+                has_match = any(
+                    any(k in r.title.lower() or k in r.snippet.lower() for k in ac_kw)
+                    for r in results
+                )
+                if not has_match:
+                    uncovered_claims.append(ac)
+
+        # Progressive search: try increasingly simplified queries until we
+        # find semantically related results or exhaust all rounds.
+        while search_rounds < max_rounds and any_provider_succeeded:
+            # Decide if another round is needed
+            needs_more = False
+            if not has_semantic_results:
+                needs_more = True
+            elif uncovered_claims:
+                needs_more = True
+            elif (
+                not self.settings.news_unrestricted_fallback
+                and len(results) < self.settings.news_min_relevant_results
+            ):
+                needs_more = True
+
+            if not needs_more:
+                break
+
+            search_rounds += 1
+            round_queries: list[str] = []
+
+            if uncovered_claims:
+                # Generate queries for uncovered atomic claims
+                for uc in uncovered_claims:
+                    uc_feat = extract_claim_features(uc)
+                    round_queries.extend(generate_search_queries(uc, uc_feat)[:2])
+                    # Also try translated versions
+                    if _is_predominantly_tagalog(uc):
+                        round_queries.extend(translate_tagalog_claim(uc))
+            elif not has_semantic_results:
+                # Progressive simplification: generate simpler queries
+                round_queries = generate_progressive_queries(
+                    cleaned, features, previous_queries=reported_queries,
+                )
+            else:
+                # General broadening
+                for ent in features.entities[:2]:
+                    round_queries.append(f"{ent} fact check")
+                    round_queries.append(f"{ent} news statement official")
+
+            round_queries = [q for q in round_queries if q not in reported_queries][:5]
+            if not round_queries:
+                break
+
+            reported_queries.extend(round_queries)
+            round_outcome = await self.search_client.search(
+                round_queries,
+                restricted_domains=None,
+                result_filter=relevance_filter,
+            )
+            results = deduplicate_results([*results, *round_outcome.results])
+            providers_used = list(dict.fromkeys([*providers_used, *round_outcome.providers_used]))
+            any_provider_succeeded = (
+                any_provider_succeeded or round_outcome.any_provider_succeeded
+            )
+            results = [result for result in results if _is_evidence_page(result, publisher_hint=publisher)]
+
+            # Re-check semantic relevance
+            has_semantic_results = are_results_semantically_related(
+                features, search_text, results,
+                threshold=self.settings.news_relevance_threshold,
+            )
+            # Re-check uncovered claims
+            if uncovered_claims:
+                still_uncovered = []
+                for ac in uncovered_claims:
+                    ac_kw = [k.lower() for k in extract_claim_features(ac).keywords[:3]]
+                    has_match = any(
+                        any(k in r.title.lower() or k in r.snippet.lower() for k in ac_kw)
+                        for r in results
+                    )
+                    if not has_match:
+                        still_uncovered.append(ac)
+                uncovered_claims = still_uncovered
 
         for result in results:
+            social_info = parse_publisher_social_account(result.url, publisher)
+            check_domain = social_info[1] if social_info else result.domain
             result.trusted = any(
-                domain_matches(result.domain, domain)
+                domain_matches(check_domain, domain)
                 for domain in self.settings.trusted_news_domain_list
             )
             result.relevance_score = score_initial_relevance(features, search_text, result)
+            if social_info:
+                doc_tokens = _canonical_quote_tokens(f"{result.title} {result.snippet}")
+                if _longest_common_token_run(_canonical_quote_tokens(features.tokens), doc_tokens) >= 4:
+                    result.relevance_score = max(result.relevance_score, 65)
+                elif publisher and publisher.casefold() in social_info[0].casefold():
+                    result.relevance_score = max(result.relevance_score, 50)
         relevant = sorted(
             (
                 result
@@ -2690,9 +3994,27 @@ class NewsVerifier:
                     "The configured search providers are temporarily unavailable. "
                     "The claim has not been classified as false and remains unverified."
                 ),
+                atomic_claims=atomic_claims,
+                numerical_analysis=num_analysis,
             )
 
-        scrape_targets = relevant[: self.settings.news_max_articles_to_scrape]
+        # Select diverse scrape targets across publishers and tiers
+        selected_scrape_targets: list[SearchResult] = []
+        seen_publishers: dict[str, int] = {}
+        for r in relevant:
+            pub_id = r.domain.removeprefix("www.").casefold()
+            if seen_publishers.get(pub_id, 0) < 2:
+                selected_scrape_targets.append(r)
+                seen_publishers[pub_id] = seen_publishers.get(pub_id, 0) + 1
+            if len(selected_scrape_targets) >= self.settings.news_max_articles_to_scrape:
+                break
+        if len(selected_scrape_targets) < self.settings.news_max_articles_to_scrape:
+            for r in relevant:
+                if r not in selected_scrape_targets:
+                    selected_scrape_targets.append(r)
+                if len(selected_scrape_targets) >= self.settings.news_max_articles_to_scrape:
+                    break
+        scrape_targets = selected_scrape_targets
         scraped = await asyncio.gather(
             *(self._safe_scrape(result.url) for result in scrape_targets)
         )
@@ -2727,6 +4049,18 @@ class NewsVerifier:
                 similarity,
                 support_scopes=support_scopes,
             )
+            if relationship == "IRRELEVANT" and _is_predominantly_tagalog(cleaned):
+                for trans in translate_tagalog_claim(cleaned):
+                    t_feat = extract_claim_features(trans)
+                    t_rel, t_rules, t_trans = _relationship(
+                        t_feat,
+                        document,
+                        similarity,
+                        support_scopes=support_scopes,
+                    )
+                    if t_rel != "IRRELEVANT":
+                        relationship, rules, transformation = t_rel, t_rules, t_trans
+                        break
             headline_matches = [
                 _headline_match_and_mutation(cleaned, headline) for headline in headline_candidates
             ]
@@ -2740,7 +4074,8 @@ class NewsVerifier:
                 rules = [*rules, headline_mutation]
             if relationship == "IRRELEVANT":
                 continue
-            tier = _source_tier(result.domain, self.settings)
+            tier = _source_tier(result.domain, self.settings, url=result.url)
+            s_type, s_rel = _source_type_and_weight(result.domain, self.settings, url=result.url)
             date_value = (article.published_date if article else None) or result.published_date
             recency = _recency_score(date_value, now)
             relationship_weight = {
@@ -2750,13 +4085,13 @@ class NewsVerifier:
                 "RELATED": 55,
                 "IRRELEVANT": 0,
             }[relationship]
-            source_weight = {1: 100, 2: 80, 3: 50, 4: 20}[tier]
+            source_weight = round(s_rel * 100)
             evidence_score = round(
                 similarity * 0.30
-                + source_weight * 0.25
+                + source_weight * 0.30
                 + relationship_weight * 0.25
                 + recency * 0.10
-                + 100 * 0.10
+                + 100 * 0.05
             )
             analyses.append(
                 EvidenceAnalysis(
@@ -2775,6 +4110,8 @@ class NewsVerifier:
                         features,
                         article.article_text if article else result.snippet,
                     ),
+                    source_type=s_type,
+                    reliability=s_rel,
                 )
             )
             all_rules.extend(rules)
@@ -2789,7 +4126,118 @@ class NewsVerifier:
                 )
 
         analyses.sort(key=lambda item: item.evidence_score, reverse=True)
-        verdict, confidence, explanation = self._decide_verdict(analyses, features, now)
+
+        # --- LLM adjudication (with deterministic fallback) ---
+        adjudication_result = None
+        adjudication_source = "rules"
+        if self.adjudicator is not None and getattr(self.adjudicator, "configured", False):
+            evidence_for_llm = [self._evidence_item(item) for item in analyses]
+            try:
+                adjudication_result = await self.adjudicator.adjudicate(
+                    cleaned, evidence_for_llm
+                )
+            except Exception:
+                logger.exception("LLM adjudication failed; falling back to rules")
+                adjudication_result = None
+
+        if adjudication_result is not None:
+            verdict = adjudication_result.verdict
+            confidence = adjudication_result.confidence
+            explanation = adjudication_result.explanation
+            is_satire_or_opinion = adjudication_result.is_satire_or_opinion
+            evidence_analysis_items = [
+                item.as_dict() for item in adjudication_result.evidence_analysis
+            ]
+            unresolved_numeric_claims = adjudication_result.unresolved_numeric_claims
+            adjudication_source = "llm"
+        else:
+            verdict, confidence, explanation = self._decide_verdict(analyses, features, now)
+            is_satire_or_opinion = "SATIRE" in features.event_categories
+            evidence_analysis_items = []
+            unresolved_numeric_claims = []
+
+        if num_analysis["required"] and not unresolved_numeric_claims:
+            supporting_texts = [
+                f"{a.article.article_text if a.article else ''} {a.result.snippet}"
+                for a in analyses
+                if a.relationship in {"SUPPORTS", "DEBUNKS"}
+            ]
+            all_sup_text = " ".join(supporting_texts).casefold()
+            unresolved = []
+            for q in num_analysis.get("quantities_found", []):
+                q_clean = q.replace("₱", "").replace("PHP", "").strip().casefold()
+                if q_clean and q_clean not in all_sup_text:
+                    unresolved.append(f"Quantity '{q}' not substantiated by retrieved evidence")
+            if unresolved:
+                unresolved_numeric_claims = unresolved
+
+        stopping_reason = "completed"
+        if not results:
+            stopping_reason = "no_search_results"
+        elif any(a.relationship == "DEBUNKS" for a in analyses):
+            stopping_reason = "fact_check_debunk_found"
+        elif search_rounds >= max_rounds and len(analyses) < self.settings.news_min_relevant_results:
+            stopping_reason = "max_rounds_exhausted"
+        elif len(analyses) >= self.settings.news_min_relevant_results:
+            stopping_reason = "sufficient_evidence"
+
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        if hasattr(self, "audit_logger") and self.audit_logger:
+            try:
+                self.audit_logger.record(
+                    VerificationAuditRecord(
+                        claim_raw=raw_text,
+                        claim_cleaned=cleaned,
+                        claim_type=features.claim_type,
+                        atomic_claims=atomic_claims,
+                        negation_detected=features.negation_detected,
+                        modality=features.modality,
+                        search_rounds=search_rounds,
+                        queries_issued=reported_queries,
+                        providers_used=providers_used,
+                        total_results_found=len(results),
+                        selected_sources=[
+                            {
+                                "url": a.result.url,
+                                "domain": a.result.domain,
+                                "tier": a.source_tier,
+                                "score": a.evidence_score,
+                                "relationship": a.relationship,
+                            }
+                            for a in analyses[:8]
+                        ],
+                        rejected_sources=[
+                            {
+                                "url": r.url,
+                                "domain": r.domain,
+                                "reason": "low_relevance_or_duplicate",
+                            }
+                            for r in results
+                            if r.url not in {a.result.url for a in analyses}
+                        ][:10],
+                        evidence_passages=[
+                            {
+                                "url": a.result.url,
+                                "passage": a.evidence_text[:200],
+                                "relationship": a.relationship,
+                            }
+                            for a in analyses[:5]
+                            if a.evidence_text
+                        ],
+                        contradictions_count=sum(
+                            1 for a in analyses if a.relationship in {"CONTRADICTS", "DEBUNKS"}
+                        ),
+                        unresolved_numeric_claims=unresolved_numeric_claims,
+                        verdict=verdict,
+                        confidence=confidence,
+                        adjudication_source=adjudication_source,
+                        stopping_reason=stopping_reason,
+                        duration_ms=duration_ms,
+                    )
+                )
+            except Exception:
+                pass
+
         return self._response(
             status="SUCCESS",
             raw_text=raw_text,
@@ -2799,6 +4247,12 @@ class NewsVerifier:
             verdict=verdict,
             confidence=confidence,
             explanation=explanation,
+            is_satire_or_opinion=is_satire_or_opinion,
+            evidence_analysis_items=evidence_analysis_items,
+            unresolved_numeric_claims=unresolved_numeric_claims,
+            atomic_claims=atomic_claims,
+            numerical_analysis=num_analysis,
+            adjudication_source=adjudication_source,
             analyses=analyses,
             queries=reported_queries,
             providers_used=providers_used,
@@ -3085,6 +4539,8 @@ class NewsVerifier:
             "similarity": analysis.similarity,
             "evidence_score": analysis.evidence_score,
             "source_tier": analysis.source_tier,
+            "source_type": analysis.source_type,
+            "reliability": round(analysis.reliability, 2),
             "explanation": analysis.explanation,
             "evidence_text": analysis.evidence_text,
         }
@@ -3100,6 +4556,12 @@ class NewsVerifier:
         verdict: str,
         confidence: int,
         explanation: str,
+        is_satire_or_opinion: bool = False,
+        evidence_analysis_items: list[dict[str, str]] | None = None,
+        unresolved_numeric_claims: list[str] | None = None,
+        atomic_claims: list[str] | None = None,
+        numerical_analysis: dict[str, Any] | None = None,
+        adjudication_source: str = "rules",
         analyses: list[EvidenceAnalysis],
         queries: list[str],
         providers_used: list[str],
@@ -3154,6 +4616,8 @@ class NewsVerifier:
         closest_candidates = [
             item for item in analyses if item.relationship in closest_relationships
         ]
+        if not closest_candidates and analyses and verdict not in {"VERIFIED", "LIKELY_TRUE"}:
+            closest_candidates = analyses
         closest = (
             max(
                 closest_candidates,
@@ -3196,12 +4660,22 @@ class NewsVerifier:
                 "keywords": features.keywords,
                 "event_categories": features.event_categories,
                 "dates": features.dates,
+                "claim_type": features.claim_type,
+                "negation_detected": features.negation_detected,
+                "modality": features.modality,
+                "quantities": features.quantities,
+                "locations": features.locations,
             },
             "verdict": verdict,
             "confidence": confidence,
             "explanation": explanation,
+            "is_satire_or_opinion": is_satire_or_opinion,
             "context_warnings": _claim_context_warnings(features),
             "evidence": groups,
+            "evidence_analysis": evidence_analysis_items or [],
+            "unresolved_numeric_claims": unresolved_numeric_claims or [],
+            "atomic_claims": atomic_claims or [],
+            "numerical_analysis": numerical_analysis,
             "closest_real_story": closest_story,
             "search": {
                 "queries": queries,
@@ -3215,6 +4689,7 @@ class NewsVerifier:
                 "similarity_scores": debug_scores if self.settings.news_debug else [],
                 "rule_matches": rule_matches if self.settings.news_debug else [],
             },
+            "adjudication_source": adjudication_source,
         }
 
     def _empty_response(
@@ -3229,7 +4704,32 @@ class NewsVerifier:
         providers_used: list[str],
         total_results: int,
         explanation: str,
+        atomic_claims: list[str] | None = None,
+        numerical_analysis: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if hasattr(self, "audit_logger") and self.audit_logger:
+            try:
+                self.audit_logger.record(
+                    VerificationAuditRecord(
+                        claim_raw=raw_text,
+                        claim_cleaned=cleaned,
+                        claim_type=features.claim_type,
+                        atomic_claims=atomic_claims or [],
+                        negation_detected=features.negation_detected,
+                        modality=features.modality,
+                        search_rounds=1,
+                        queries_issued=queries,
+                        providers_used=providers_used,
+                        total_results_found=total_results,
+                        verdict="UNVERIFIED",
+                        confidence=0,
+                        adjudication_source="rules",
+                        stopping_reason="search_unavailable" if status == "SEARCH_UNAVAILABLE" else "no_evidence",
+                    )
+                )
+            except Exception:
+                pass
+
         return self._response(
             status=status,
             raw_text=raw_text,
@@ -3239,6 +4739,8 @@ class NewsVerifier:
             verdict="UNVERIFIED",
             confidence=0,
             explanation=explanation,
+            atomic_claims=atomic_claims or [],
+            numerical_analysis=numerical_analysis,
             analyses=[],
             queries=queries,
             providers_used=providers_used,

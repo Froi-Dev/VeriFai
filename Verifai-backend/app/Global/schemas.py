@@ -1,7 +1,7 @@
 import re
 import unicodedata
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
@@ -64,6 +64,11 @@ class NewsDetectedFeatures(BaseModel):
     keywords: list[str]
     event_categories: list[str]
     dates: list[str]
+    claim_type: str = "FACT"
+    negation_detected: bool = False
+    modality: str = "ASSERTED"
+    quantities: list[str] = []
+    locations: list[str] = []
 
 
 class NewsEvidenceItem(BaseModel):
@@ -73,10 +78,12 @@ class NewsEvidenceItem(BaseModel):
     domain: str
     published_date: str | None
     image_url: str
-    relationship: Literal["SUPPORTS", "CONTRADICTS", "RELATED", "DEBUNKS"]
+    relationship: Literal["SUPPORTS", "CONTRADICTS", "RELATED", "DEBUNKS", "IRRELEVANT"]
     similarity: int = Field(ge=0, le=100)
     evidence_score: int = Field(ge=0, le=100)
     source_tier: int = Field(ge=1, le=4)
+    source_type: str = "news"
+    reliability: float = Field(default=0.85, ge=0.0, le=1.0)
     explanation: str
     evidence_text: str
 
@@ -113,6 +120,12 @@ class NewsDebugData(BaseModel):
     rule_matches: list[str]
 
 
+class NewsEvidenceAnalysisItem(BaseModel):
+    url: str
+    relationship: Literal["SUPPORTS", "CONTRADICTS", "DEBUNKS", "RELATED", "IRRELEVANT"]
+    reasoning: str
+
+
 class NewsVerificationResponse(BaseModel):
     status: Literal["SUCCESS", "SEARCH_UNAVAILABLE"]
     original_text: str
@@ -131,11 +144,17 @@ class NewsVerificationResponse(BaseModel):
     ]
     confidence: int = Field(ge=0, le=100)
     explanation: str
+    is_satire_or_opinion: bool = False
     context_warnings: list[str]
     evidence: NewsEvidenceGroups
+    evidence_analysis: list[NewsEvidenceAnalysisItem] = []
+    unresolved_numeric_claims: list[str] = []
+    atomic_claims: list[str] = []
+    numerical_analysis: dict[str, object] | None = None
     closest_real_story: ClosestRealStory
     search: NewsSearchMetadata
     debug: NewsDebugData
+    adjudication_source: Literal["llm", "rules"] = "rules"
 
 
 class OcrSegmentResponse(BaseModel):
@@ -186,6 +205,8 @@ class FactCheckEvidence(BaseModel):
     publication_date: str
     relationship: Literal["SUPPORTS", "CONTRADICTS", "PARTIAL", "UNRELATED"]
     reason: str
+    title: str = ""
+    similarity: int = 0
 
 
 class NumericalAnalysisResponse(BaseModel):
@@ -294,6 +315,8 @@ class PhilippineImageFactCheckResponse(BaseModel):
     summary: str
     key_context: list[str]
     recommendation: str
+    closest_real_story: ClosestRealStory | None = None
+    debug: dict[str, Any] | None = None
 
 
 class RegisterRequest(StrictRequest):

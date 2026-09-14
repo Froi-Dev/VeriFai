@@ -94,18 +94,22 @@ class Settings(BaseSettings):
     text_model_max_concurrent_inferences: int = Field(default=2, ge=1, le=8)
     text_model_warmup: bool = False
     text_model_review_threshold: float = Field(default=0.65, gt=0.5, lt=1.0)
-    mock_detector_results: bool = Field(default=True)
 
     google_search_api_key: SecretStr | None = None
     google_cse_id: str | None = None
     searchapi_api_key: SecretStr | None = None
+    # AI Mode summaries are supplementary discovery aids. Their cited links,
+    # not generated prose, are evaluated as evidence.
+    searchapi_ai_mode_api_key: SecretStr | None = None
+    searchapi_ai_mode_max_queries: int = Field(default=1, ge=1, le=3)
     serper_api_key: SecretStr | None = None
-    news_search_provider_order: str = "google,searchapi,serper"
+    serper_api_keys: SecretStr | None = None
+    news_search_provider_order: str = "serper,searchapi,google"
     fact_check_domains: str = "verafiles.org,rappler.com,tsek.ph"
     quote_source_domains: str = "tribune.net.ph,smninewschannel.com"
     philippine_news_domains: str = (
-        "abs-cbn.com,balita.net.ph,bilyonaryo.com,brigadanews.ph,bulatlat.com,"
-        "businessmirror.com.ph,bworldonline.com,cnnphilippines.com,dailyguardian.com.ph,"
+        "abs-cbn.com,balita.net.ph,bilyonaryo.com,bomboradyo.com,brigadanews.ph,bulatlat.com,"
+        "bulgaronline.com,businessmirror.com.ph,bworldonline.com,dailyguardian.com.ph,"
         "dailytribune.net.ph,davaotoday.com,dzrh.com.ph,gmanetwork.com,inquirer.net,"
         "journalnews.com.ph,malaya.com.ph,manilastandard.net,manilatimes.net,mb.com.ph,"
         "mindanews.com,news5.com.ph,onenews.ph,panaynews.net,philstar.com,pia.gov.ph,"
@@ -113,12 +117,12 @@ class Settings(BaseSettings):
         "tribune.net.ph,tsek.ph,verafiles.org,"
         "ched.gov.ph,coa.gov.ph,comelec.gov.ph,dbm.gov.ph,deped.gov.ph,dilg.gov.ph,"
         "doe.gov.ph,doh.gov.ph,house.gov.ph,icc-cpi.int,officialgazette.gov.ph,ovp.gov.ph,"
-        "pagasa.dost.gov.ph,phivolcs.dost.gov.ph,pnp.gov.ph,senate.gov.ph"
+        "pagasa.dost.gov.ph,phivolcs.dost.gov.ph,pnp.gov.ph,senate.gov.ph,dole.gov.ph,psa.gov.ph,bsp.gov.ph"
     )
-    trusted_news_domains: str = "verafiles.org,rappler.com,tsek.ph,inquirer.net,abs-cbn.com,cnn.com"
+    trusted_news_domains: str = "reuters.com,pna.gov.ph,pco.gov.ph,gmanetwork.com,abs-cbn.com,inquirer.net,verafiles.org,tsek.ph"
     news_tier_2_domains: str = (
-        "gmanetwork.com,philstar.com,mb.com.ph,smninewschannel.com,tribune.net.ph,"
-        "verafiles.org,reuters.com,apnews.com,bbc.com"
+        "rappler.com,philstar.com,mb.com.ph,news5.com.ph,sunstar.com.ph,tribune.net.ph,"
+        "bomboradyo.com,bulgaronline.com,apnews.com,afp.com,bbc.com"
     )
     news_min_relevant_results: int = Field(default=3, ge=1, le=10)
     news_relevance_threshold: int = Field(default=40, ge=0, le=100)
@@ -136,6 +140,13 @@ class Settings(BaseSettings):
     news_old_story_days: int = Field(default=30, ge=1, le=3650)
     news_unrestricted_fallback: bool = True
     news_debug: bool = False
+
+    gemini_adjudicator_model: str = "gemini-3.6-flash"
+    gemini_adjudicator_timeout_seconds: float = Field(default=25.0, ge=5.0, le=60.0)
+    news_use_llm_adjudicator: bool = True
+    news_max_search_rounds: int = Field(default=3, ge=1, le=5)
+    news_audit_log_enabled: bool = True
+    news_audit_log_path: str = "logs/verification_audit.jsonl"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -222,7 +233,7 @@ class Settings(BaseSettings):
 
     @property
     def news_search_provider_list(self) -> list[str]:
-        allowed = {"google", "searchapi", "serper"}
+        allowed = {"google", "searchapi", "searchapi_ai_mode", "serper"}
         return [
             provider
             for provider in self._csv_values(self.news_search_provider_order)
@@ -237,6 +248,22 @@ class Settings(BaseSettings):
             raw_values.append(self.gemini_api_keys.get_secret_value())
         if self.gemini_api_key is not None:
             raw_values.append(self.gemini_api_key.get_secret_value())
+        keys = [
+            key.strip()
+            for value in raw_values
+            for key in re.split(r"[,;\r\n]+", value)
+            if key.strip()
+        ]
+        return list(dict.fromkeys(keys))
+
+    @property
+    def serper_api_key_list(self) -> list[str]:
+        """Return the pooled Serper keys in fallback order without exposing them in settings reprs."""
+        raw_values: list[str] = []
+        if self.serper_api_key is not None:
+            raw_values.append(self.serper_api_key.get_secret_value())
+        if self.serper_api_keys is not None:
+            raw_values.append(self.serper_api_keys.get_secret_value())
         keys = [
             key.strip()
             for value in raw_values

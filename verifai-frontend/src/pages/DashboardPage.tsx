@@ -98,6 +98,8 @@ type NewsEvidenceItem = {
   similarity: number;
   evidence_score: number;
   source_tier: number;
+  source_type?: string;
+  reliability?: number;
   explanation: string;
   evidence_text: string;
 };
@@ -145,11 +147,13 @@ type NewsVerificationResponse = {
 type ImageClassification = "REAL" | "QUOTE" | "FAKE" | "INSUFFICIENT_EVIDENCE";
 
 type ImageFactCheckEvidence = {
+  title?: string;
   source: string;
   source_type: "PRIMARY" | "MAJOR_NEWS" | "SECONDARY" | "SOCIAL";
   url: string;
   publication_date: string;
   relationship: "SUPPORTS" | "CONTRADICTS" | "PARTIAL" | "UNRELATED";
+  similarity?: number;
   reason: string;
 };
 
@@ -224,6 +228,17 @@ type ImageFactCheckResponse = {
   summary: string;
   key_context: string[];
   recommendation: string;
+  closest_real_story?: {
+    found: boolean;
+    title: string;
+    publisher: string;
+    url: string;
+    date: string;
+    similarity: number;
+    explanation: string;
+    image_url: string;
+  };
+  debug?: Record<string, unknown>;
 };
 
 const MAX_FILE_SIZE = 10_000_000;
@@ -385,6 +400,22 @@ function formatEvidenceRelationship(relationship: NewsEvidenceItem["relationship
   if (relationship === "DEBUNKS") return "Fact-check";
   if (relationship === "CONTRADICTS") return "Reports different facts";
   return "Related report";
+}
+
+function formatSourceBadge(source: NewsEvidenceItem) {
+  if (source.source_type === "primary" || source.source_type === "official_data") {
+    return `Official Primary (${Math.round((source.reliability ?? 1.0) * 100)}%)`;
+  }
+  if (source.source_type === "fact_check") {
+    return `Fact Check (${Math.round((source.reliability ?? 0.95) * 100)}%)`;
+  }
+  if (source.source_tier === 1) {
+    return `Tier 1 News (${Math.round((source.reliability ?? 0.95) * 100)}%)`;
+  }
+  if (source.source_tier === 2) {
+    return `Tier 2 News (${Math.round((source.reliability ?? 0.90) * 100)}%)`;
+  }
+  return `Tier ${source.source_tier}`;
 }
 
 function sourceMonogram(publisher: string) {
@@ -694,63 +725,6 @@ export function DashboardPage() {
         return next;
       });
     } catch (requestError) {
-      if (kind === "text" || kind === "media") {
-        console.warn("Using mock All-AI result fallback:", requestError);
-        const fallbackResult: ScanResult =
-          kind === "text"
-            ? {
-                id: `VF-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
-                kind: "text",
-                name: text.trim().slice(0, 54) + (text.trim().length > 54 ? "…" : ""),
-                createdAt: new Date(),
-                classification: "Likely AI-generated",
-                confidence: 99,
-                aiConfidence: 99,
-                humanConfidence: 1,
-                chunksAnalyzed: 1,
-                scoreIsCalibrated: true,
-                scoreInterpretation:
-                  "Probability calibrated on held-out validation data; strong AI-synthesized markers and uniform perplexity characteristics detected across all analyzed text windows.",
-              }
-            : {
-                id: `VF-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
-                kind: "media",
-                name: files[0]?.name || "image_scan",
-                createdAt: new Date(),
-                classification: "Likely AI-generated",
-                confidence: 98,
-                aiConfidence: 98,
-                humanConfidence: 2,
-                mediaAnalysis: {
-                  classification: "Likely AI-generated",
-                  confidence: 98,
-                  ai_probability: 98,
-                  authentic_probability: 2,
-                  summary:
-                    "Visual analysis identified multiple distinct indicators of AI synthesis and digital generation, including unnatural texture smoothing, boundary diffusion artifacts, and geometric inconsistencies.",
-                  signals: [
-                    "Unnatural smoothing and synthetic texture blending across surfaces",
-                    "Irregularities in fine micro-details and boundary transitions",
-                    "Generative lighting and diffusion artifacts detected",
-                    "Inconsistencies in geometric patterns and anatomical features",
-                  ],
-                  limitations:
-                    "Visual analysis is an estimate, not forensic proof. Check provenance and metadata too.",
-                  model: "Verif.Ai Generative Analysis Engine (Mock/Active)",
-                },
-              };
-        setProgress(100);
-        setResult(fallbackResult);
-        setHistory((current) => {
-          const next = [
-            fallbackResult,
-            ...current.filter((item) => item.id !== fallbackResult.id),
-          ];
-          cacheHistory(next, user?.id);
-          return next;
-        });
-        return;
-      }
       setError(analysisErrorMessage(requestError));
       setProgress(0);
     } finally {
@@ -885,12 +859,30 @@ export function DashboardPage() {
             .map((evidence) => [evidence.url, evidence]),
         ).values(),
       )
+        .filter((evidence) => evidence.relationship !== "UNRELATED")
         .sort((left, right) => {
           const priority = { CONTRADICTS: 0, SUPPORTS: 1, PARTIAL: 2, UNRELATED: 3 };
           return priority[left.relationship] - priority[right.relationship];
         })
         .slice(0, 6)
     : [];
+  const imageClosestStory = imageFactCheck?.closest_real_story?.found
+    ? imageFactCheck.closest_real_story
+    : imageEvidence.length > 0
+      ? {
+          found: true,
+          title: imageEvidence[0].title || imageEvidence[0].reason,
+          publisher: imageEvidence[0].source,
+          url: imageEvidence[0].url,
+          date: imageEvidence[0].publication_date,
+          similarity: imageEvidence[0].similarity || 50,
+          explanation: imageEvidence[0].reason,
+          image_url: "",
+        }
+      : undefined;
+  const displayedImageEvidence = imageClosestStory
+    ? imageEvidence.filter((item) => item.url !== imageClosestStory.url)
+    : imageEvidence;
   const newsIsReal = newsVerification
     ? newsVerification.verdict === "VERIFIED" || newsVerification.verdict === "LIKELY_TRUE"
     : false;
@@ -1530,7 +1522,20 @@ export function DashboardPage() {
                           <a href={source.url} target="_blank" rel="noreferrer" key={`${source.relationship}-${source.url}`}>
                             <span className="source-monogram">{sourceMonogram(source.publisher)}</span>
                             <div>
-                              <strong>{source.publisher} · {formatEvidenceRelationship(source.relationship)}</strong>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
+                                <strong>{source.publisher} · {formatEvidenceRelationship(source.relationship)}</strong>
+                                <span style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 600,
+                                  padding: "1px 6px",
+                                  borderRadius: "4px",
+                                  backgroundColor: (source.source_type === "primary" || source.source_type === "official_data") ? "rgba(139, 92, 246, 0.12)" : source.source_tier === 1 ? "rgba(16, 185, 129, 0.12)" : source.source_tier === 2 ? "rgba(59, 130, 246, 0.12)" : "rgba(156, 163, 175, 0.12)",
+                                  color: (source.source_type === "primary" || source.source_type === "official_data") ? "#8b5cf6" : source.source_tier === 1 ? "#10b981" : source.source_tier === 2 ? "#3b82f6" : "#6b7280",
+                                  border: `1px solid ${(source.source_type === "primary" || source.source_type === "official_data") ? "rgba(139, 92, 246, 0.25)" : source.source_tier === 1 ? "rgba(16, 185, 129, 0.25)" : source.source_tier === 2 ? "rgba(59, 130, 246, 0.25)" : "rgba(156, 163, 175, 0.25)"}`,
+                                }}>
+                                  {formatSourceBadge(source)}
+                                </span>
+                              </div>
                               <p>{source.title}</p>
                             </div>
                             <ExternalLink size={14} />
@@ -1559,23 +1564,65 @@ export function DashboardPage() {
                             ? imageFactCheck.quote_verification?.is_quote
                               ? "The Quote contains False or Debunked Claim"
                               : "This news is fake."
-                            : "We could not check this image."}
+                            : (imageEvidence.length > 0 || Boolean(imageClosestStory))
+                              ? "There is not enough information to decide."
+                              : "We could not check this image."}
                       </h3>
                       <p>{imageFactCheck.reasoning_summary || imageFactCheck.summary}</p>
                     </div>
 
-                    {imageEvidence.length > 0 && (
+                    {imageClosestStory && (
+                      <div className="closest-story">
+                        <span className="closest-story-media">
+                          <Newspaper size={18} />
+                          {imageClosestStory.image_url && (
+                            <img
+                              src={imageClosestStory.image_url}
+                              alt={`Thumbnail for ${imageClosestStory.title}`}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              onError={(event) => { event.currentTarget.hidden = true; }}
+                            />
+                          )}
+                        </span>
+                        <div>
+                          <small>CLOSEST MATCHING REPORT</small>
+                          <h3>{imageClosestStory.title}</h3>
+                          <p>{imageClosestStory.explanation}</p>
+                          <a href={imageClosestStory.url} target="_blank" rel="noreferrer">
+                            Read on {imageClosestStory.publisher || "the original source"} <ExternalLink size={13} />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {displayedImageEvidence.length > 0 && (
                       <div className="source-list">
                         <div className="source-list-heading">
                           <h3>Evidence used for this result</h3>
-                          <span>{imageEvidence.length} {imageEvidence.length === 1 ? "source" : "sources"}</span>
+                          <span>{displayedImageEvidence.length} {displayedImageEvidence.length === 1 ? "source" : "sources"}</span>
                         </div>
-                        {imageEvidence.map((source) => (
+                        {displayedImageEvidence.map((source) => (
                           <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>
                             <span className="source-monogram">{sourceMonogram(source.source)}</span>
                             <div>
-                              <strong>{source.source}</strong>
-                              <p>{source.reason}</p>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
+                                <strong>{source.source}</strong>
+                                {source.relationship === "PARTIAL" && (
+                                  <span style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 600,
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                    backgroundColor: "rgba(59, 130, 246, 0.12)",
+                                    color: "#3b82f6",
+                                    border: "1px solid rgba(59, 130, 246, 0.25)",
+                                  }}>
+                                    Related report
+                                  </span>
+                                )}
+                              </div>
+                              <p>{source.title || source.reason}</p>
                             </div>
                             <ExternalLink size={14} />
                           </a>

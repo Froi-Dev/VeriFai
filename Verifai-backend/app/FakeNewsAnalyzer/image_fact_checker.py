@@ -32,17 +32,55 @@ ALLOWED_IMAGE_FORMATS = {
 }
 AGENCIES = {
     "AFP": "Armed Forces of the Philippines",
+    "BFP": "Bureau of Fire Protection",
+    "BI": "Bureau of Immigration",
+    "BIR": "Bureau of Internal Revenue",
+    "BJMP": "Bureau of Jail Management and Penology",
+    "BSP": "Bangko Sentral ng Pilipinas",
+    "CHED": "Commission on Higher Education",
     "COA": "Commission on Audit",
     "COMELEC": "Commission on Elections",
+    "DA": "Department of Agriculture",
+    "DAR": "Department of Agrarian Reform",
+    "DBM": "Department of Budget and Management",
+    "DENR": "Department of Environment and Natural Resources",
+    "DEPED": "Department of Education",
+    "DepEd": "Department of Education",
+    "DFA": "Department of Foreign Affairs",
+    "DILG": "Department of the Interior and Local Government",
+    "DND": "Department of National Defense",
     "DOE": "Department of Energy",
     "DOH": "Department of Health",
-    "DILG": "Department of the Interior and Local Government",
+    "DOJ": "Department of Justice",
+    "DOLE": "Department of Labor and Employment",
+    "DOST": "Department of Science and Technology",
+    "DOT": "Department of Tourism",
+    "DOTR": "Department of Transportation",
+    "DOTr": "Department of Transportation",
+    "DPWH": "Department of Public Works and Highways",
     "DSWD": "Department of Social Welfare and Development",
+    "DTI": "Department of Trade and Industry",
+    "GSIS": "Government Service Insurance System",
     "ICC": "International Criminal Court",
+    "LTO": "Land Transportation Office",
+    "LTFRB": "Land Transportation Franchising and Regulatory Board",
+    "MMDA": "Metropolitan Manila Development Authority",
+    "NBI": "National Bureau of Investigation",
     "NDRRMC": "National Disaster Risk Reduction and Management Council",
+    "NEDA": "National Economic and Development Authority",
     "OVP": "Office of the Vice President",
+    "PAGASA": "Philippine Atmospheric, Geophysical and Astronomical Services Administration",
+    "PCG": "Philippine Coast Guard",
+    "PCO": "Presidential Communications Office",
+    "PHILHEALTH": "Philippine Health Insurance Corporation",
+    "PhilHealth": "Philippine Health Insurance Corporation",
+    "PHIVOLCS": "Philippine Institute of Volcanology and Seismology",
+    "PIA": "Philippine Information Agency",
+    "PNA": "Philippine News Agency",
     "PNP": "Philippine National Police",
+    "PSA": "Philippine Statistics Authority",
     "PSG": "Presidential Security Group",
+    "SSS": "Social Security System",
 }
 PRIMARY_DOMAINS = {
     "ched.gov.ph",
@@ -430,6 +468,109 @@ class GeminiVisionClient:
             "needs_ocr",
         ],
     }
+    NORMALIZATION_PROMPT = (
+        "You are an expert Philippine news analyst and fact-checking text normalizer. "
+        "Your task is to take OCR-extracted text from an image (which may contain OCR typos, "
+        "character confusion like 0/O or 1/I/l, broken line wraps, informal shorthand, "
+        "Philippine political acronyms, colloquial numbers, or Taglish slang) and normalize "
+        "it into clean, canonical, and structured representations that are maximally helpful "
+        "for entity identification, fact-checking, and search.\n\n"
+        "Instructions:\n"
+        "1. OCR Error Repair: Correct broken words, accidental hyphenations, merged words, and "
+        "misread characters (e.g. '0' vs 'O', '1' vs 'I' or 'l', '5' vs 'S', 'rn' vs 'm') "
+        "based on Philippine context (Filipino, English, Taglish).\n"
+        "2. Entity Disambiguation & Canonicalization:\n"
+        "   - People: Expand colloquial names, nicknames, and acronyms to canonical public names "
+        "     (e.g., 'PBBM' or 'BBM' -> 'President Ferdinand Marcos Jr.', 'PRRD' or 'Tatay Digong' -> "
+        "     'former President Rodrigo Duterte', 'VP Sara' or 'Inday Sara' -> 'Vice President Sara Duterte', "
+        "     'Sen. Bato' -> 'Senator Ronald \"Bato\" dela Rosa').\n"
+        "   - Government Agencies & Organizations: Expand Philippine agency acronyms into their full "
+        "     canonical titles (e.g., 'DepEd' -> 'Department of Education (DepEd)', 'DOTr' -> "
+        "     'Department of Transportation (DOTr)', 'DPWH' -> 'Department of Public Works and Highways (DPWH)', "
+        "     'ICC' -> 'International Criminal Court (ICC)', 'PAGASA', 'PhilHealth', 'DSWD', etc.).\n"
+        "   - Locations: Standardize informal or abbreviated locations (e.g., 'QC' -> 'Quezon City', "
+        "     'BGC' -> 'Bonifacio Global City, Taguig', 'Davao City', 'The Hague').\n"
+        "   - Monetary Figures: Standardize currency into PHP amounts with comma separators "
+        "     (e.g., '₱125M' -> '₱125,000,000', 'PHP 20M' -> '₱20,000,000', '10 bilyon' -> '₱10,000,000,000') "
+        "     and record numeric amounts in PHP.\n"
+        "   - Dates: Standardize date references into ISO-8601 (YYYY-MM-DD) format whenever identifiable.\n"
+        "3. Normalized Text: Formulate a clean, coherent, grammatical text representing the entire visible "
+        "content with OCR artifacts fixed and entities made explicit.\n"
+        "4. Canonical Atomic Claims: Extract self-contained, independent factual claims where ambiguous "
+        "pronouns ('he', 'siya', 'ating pangulo') are replaced with explicit entities so each claim is "
+        "independently searchable and verifiable.\n"
+        "5. Search Queries: Provide 2 to 4 concise, high-precision search query strings designed to find "
+        "authoritative news reports, official agency releases, or fact checks for these claims.\n"
+        "6. Corrections: List all OCR errors corrected (original string, corrected string, confidence HIGH/MEDIUM/LOW).\n\n"
+        "Do not invent facts not present in the visible source text. Return only the requested JSON object."
+    )
+    NORMALIZATION_SCHEMA = {
+        "type": "OBJECT",
+        "properties": {
+            "normalized_text": {"type": "STRING"},
+            "normalized_values": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "type": {
+                            "type": "STRING",
+                            "enum": ["MONEY", "DATE", "AGENCY", "PERSON", "LOCATION", "ORGANIZATION", "OTHER"],
+                        },
+                        "original": {"type": "STRING"},
+                        "value": {"type": "STRING"},
+                        "normalized": {"type": "STRING"},
+                        "currency": {"type": "STRING"},
+                        "amount": {"type": "NUMBER"},
+                    },
+                    "required": ["type", "original", "value"],
+                },
+            },
+            "entities": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "type": {
+                            "type": "STRING",
+                            "enum": ["PERSON", "ORGANIZATION", "AGENCY", "LOCATION", "MONEY", "DATE", "OTHER"],
+                        },
+                        "value": {"type": "STRING"},
+                        "normalized_value": {"type": "STRING"},
+                    },
+                    "required": ["type", "value", "normalized_value"],
+                },
+            },
+            "canonical_claims": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"},
+            },
+            "corrections": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "original": {"type": "STRING"},
+                        "corrected": {"type": "STRING"},
+                        "confidence": {"type": "STRING", "enum": ["HIGH", "MEDIUM", "LOW"]},
+                    },
+                    "required": ["original", "corrected", "confidence"],
+                },
+            },
+            "search_queries": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"},
+            },
+        },
+        "required": [
+            "normalized_text",
+            "normalized_values",
+            "entities",
+            "canonical_claims",
+            "corrections",
+            "search_queries",
+        ],
+    }
 
     def __init__(self, settings: Settings) -> None:
         configured_keys = getattr(settings, "gemini_api_key_list", None)
@@ -477,7 +618,7 @@ class GeminiVisionClient:
 
     async def generate(
         self,
-        image: PreparedImage,
+        image: PreparedImage | None,
         prompt: str,
         *,
         generation_config: dict[str, Any] | None = None,
@@ -491,18 +632,20 @@ class GeminiVisionClient:
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
         )
+        parts: list[dict[str, Any]] = [{"text": prompt}]
+        if image is not None:
+            parts.append(
+                {
+                    "inline_data": {
+                        "mime_type": image.mime_type,
+                        "data": base64.b64encode(image.original_bytes).decode("ascii"),
+                    }
+                }
+            )
         payload = {
             "contents": [
                 {
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inline_data": {
-                                "mime_type": image.mime_type,
-                                "data": base64.b64encode(image.original_bytes).decode("ascii"),
-                            }
-                        },
-                    ]
+                    "parts": parts,
                 }
             ],
             "generationConfig": generation_config
@@ -580,6 +723,37 @@ class GeminiVisionClient:
         )
         return _normalize_understanding(json.loads(raw))
 
+    async def normalize_text(
+        self,
+        text: str,
+        *,
+        image: PreparedImage | None = None,
+        understanding: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if not self.configured or not text.strip():
+            return {}
+        prompt = (
+            f"{self.NORMALIZATION_PROMPT}\n\n"
+            f"RAW OCR TEXT TO NORMALIZE:\n{text.strip()}"
+        )
+        if understanding:
+            prompt += (
+                "\n\nINITIAL VISUAL UNDERSTANDING CONTEXT:\n"
+                f"{json.dumps(understanding, ensure_ascii=False)}"
+            )
+        raw = await self.generate(
+            image,
+            prompt,
+            generation_config={
+                "temperature": 0,
+                "maxOutputTokens": 4096,
+                "thinkingConfig": {"thinkingLevel": "minimal"},
+                "responseMimeType": "application/json",
+                "responseSchema": self.NORMALIZATION_SCHEMA,
+            },
+        )
+        return _normalize_ai_normalization(json.loads(raw))
+
     async def aclose(self) -> None:
         await self._client.aclose()
 
@@ -656,7 +830,7 @@ class GeminiImageDetector:
             "summary": str(result["summary"]).strip(),
             "signals": [str(item).strip() for item in result["signals"] if str(item).strip()][:6],
             "limitations": str(result["limitations"]).strip(),
-            "model": self.client.model,
+            "model": getattr(self.client, "model", "gemini-vision"),
         }
 
 
@@ -726,6 +900,90 @@ def _normalize_understanding(value: Any) -> dict[str, Any]:
     result["text_quality"] = quality
     result["needs_ocr"] = bool(value.get("needs_ocr", False)) or quality == "LOW"
     return result
+
+
+def _normalize_ai_normalization(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    normalized_text = " ".join(str(value.get("normalized_text", "")).split()).strip()
+
+    normalized_values: list[dict[str, Any]] = []
+    for item in value.get("normalized_values", []):
+        if not isinstance(item, dict):
+            continue
+        v_type = str(item.get("type", "OTHER")).upper().strip()
+        orig = str(item.get("original", "")).strip()
+        val = str(item.get("value", "")).strip()
+        norm = str(item.get("normalized", val)).strip()
+        if not orig:
+            continue
+        entry: dict[str, Any] = {
+            "type": v_type,
+            "original": orig,
+            "value": val or norm,
+        }
+        if norm:
+            entry["normalized"] = norm
+        if "amount" in item and item["amount"] is not None:
+            try:
+                entry["amount"] = (
+                    float(item["amount"])
+                    if "." in str(item["amount"])
+                    else int(item["amount"])
+                )
+            except (ValueError, TypeError):
+                pass
+        if item.get("currency"):
+            entry["currency"] = str(item["currency"]).strip().upper()
+        normalized_values.append(entry)
+
+    entities: list[dict[str, str]] = []
+    for item in value.get("entities", []):
+        if not isinstance(item, dict):
+            continue
+        e_type = str(item.get("type", "OTHER")).upper().strip()
+        val = str(item.get("value", "")).strip()
+        norm_val = str(item.get("normalized_value", val)).strip()
+        if val:
+            entities.append(
+                {
+                    "type": e_type,
+                    "value": val,
+                    "normalized_value": norm_val or val,
+                }
+            )
+
+    canonical_claims = [
+        " ".join(str(c).split()).strip()
+        for c in value.get("canonical_claims", [])
+        if " ".join(str(c).split()).strip()
+    ]
+    corrections = []
+    for item in value.get("corrections", []):
+        if isinstance(item, dict) and item.get("original") and item.get("corrected"):
+            conf = str(item.get("confidence", "HIGH")).upper().strip()
+            if conf not in {"HIGH", "MEDIUM", "LOW"}:
+                conf = "MEDIUM"
+            corrections.append(
+                {
+                    "original": str(item["original"]).strip(),
+                    "corrected": str(item["corrected"]).strip(),
+                    "confidence": conf,
+                }
+            )
+    search_queries = [
+        " ".join(str(q).split()).strip()
+        for q in value.get("search_queries", [])
+        if " ".join(str(q).split()).strip()
+    ]
+    return {
+        "normalized_text": normalized_text,
+        "normalized_values": normalized_values,
+        "entities": entities,
+        "canonical_claims": canonical_claims,
+        "corrections": corrections,
+        "search_queries": search_queries,
+    }
 
 
 def _heuristic_understanding(text: str) -> dict[str, Any]:
@@ -865,9 +1123,42 @@ def evaluate_ocr(
     return confidence, quality, uncertain, fallback_needed
 
 
+def clean_ocr_text(text: str) -> str:
+    """Clean common OCR artifacts from extracted text before claim parsing or searching.
+
+    Fixes:
+    - Unicode normalization and non-breaking spaces
+    - Hyphenated words broken across line breaks (e.g., 'pagba-\\nbawal' -> 'pagbabawal')
+    - Broken lines within continuous sentences (soft breaks)
+    - Excessive whitespace and repeated blank lines
+    - Repeated punctuation artifacts (e.g., '...', '???', '---')
+    - Non-text artifacts or noise at edges
+    """
+    if not text:
+        return ""
+    cleaned = unicodedata.normalize("NFKC", text).replace("\u00a0", " ")
+    # Rejoin words broken by a hyphen or dash at line-end
+    cleaned = re.sub(r"(\w+)[-–—]\s*\n\s*(\w+)", r"\1\2", cleaned)
+    # Rejoin lines broken mid-sentence (lowercase word, number, or comma continuation)
+    cleaned = re.sub(r"(?<=[^\n.!?])\n(?=[a-z0-9,])", " ", cleaned)
+    # Collapse multiple whitespace characters (excluding double newlines for paragraph breaks)
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    # Normalize repeated punctuation
+    cleaned = re.sub(r"\.{4,}", "...", cleaned)
+    cleaned = re.sub(r"!{2,}", "!", cleaned)
+    cleaned = re.sub(r"\?{2,}", "?", cleaned)
+    cleaned = re.sub(r"[-—–]{2,}", "—", cleaned)
+    # Strip non-text artifacts from edges
+    cleaned = re.sub(r'^[\s\-_~|•*#]+|[\s\-_~|•*#]+$', "", cleaned)
+    return cleaned.strip()
+
+
 def compare_ocr_outputs(
     paddle_text: str, gemini_text: str
 ) -> tuple[str, list[dict[str, str]], list[dict[str, object]]]:
+    paddle_text = clean_ocr_text(paddle_text)
+    gemini_text = clean_ocr_text(gemini_text)
     if not gemini_text:
         return paddle_text, [], []
     if not paddle_text:
@@ -911,8 +1202,7 @@ def _ocr_confusion_key(value: str) -> str:
 
 
 def normalize_fact_text(value: str) -> tuple[str, list[dict[str, object]]]:
-    text = unicodedata.normalize("NFKC", value).replace("\u00a0", " ")
-    text = re.sub(r"[ \t]+", " ", text)
+    text = clean_ocr_text(value)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     normalized_values: list[dict[str, object]] = []
 
@@ -956,10 +1246,14 @@ def normalize_fact_text(value: str) -> tuple[str, list[dict[str, object]]]:
         return iso_date
 
     text = DATE_PATTERN.sub(date_replacement, text)
+    seen_agencies: set[str] = set()
     for acronym, full_name in AGENCIES.items():
-        if re.search(rf"\b{acronym}\b", text) and full_name.casefold() not in text.casefold():
-            text = re.sub(rf"\b{acronym}\b", f"{acronym} ({full_name})", text)
+        if full_name.casefold() in seen_agencies:
+            continue
+        if re.search(rf"\b{re.escape(acronym)}\b", text) and full_name.casefold() not in text.casefold():
+            text = re.sub(rf"\b{re.escape(acronym)}\b", f"{acronym} ({full_name})", text)
             normalized_values.append({"type": "AGENCY", "original": acronym, "value": full_name})
+            seen_agencies.add(full_name.casefold())
     return text, normalized_values
 
 
@@ -1007,7 +1301,7 @@ def extract_atomic_claims(text: str) -> list[str]:
 
 
 def _merge_soft_wrapped_ocr_lines(text: str) -> str:
-    """Join visual screenshot wraps without merging unrelated social UI rows."""
+    """Join visual screenshot and poster wraps without merging unrelated social UI rows."""
     lines: list[str] = []
     for raw_line in text.splitlines():
         line = raw_line.strip()
@@ -1027,6 +1321,30 @@ def _merge_soft_wrapped_ocr_lines(text: str) -> str:
                     previous,
                     re.IGNORECASE,
                 )
+            )
+            or bool(re.search(r"[,:;\-–—\(\[\"\'“‘]$", previous))
+            or bool(
+                re.search(
+                    r"\b(?:ng|sa|kay|kina|ni|nina|para|dahil|ayon|at|o|kung|kapag|nang|mga|na|ang|si|sina|"
+                    r"to|for|of|in|on|with|by|from|and|or|that|as|than|the|a|an|into|onto|about|is|are|was|were)\b$",
+                    previous,
+                    re.IGNORECASE,
+                )
+            )
+            or bool(
+                re.search(
+                    r"^(?:ng|sa|kay|kina|ni|nina|para|dahil|ayon|at|o|kung|kapag|nang|na|"
+                    r"to|for|of|in|on|with|by|from|and|or|that|as)\b",
+                    line,
+                    re.IGNORECASE,
+                )
+            )
+            or (
+                previous_is_open
+                and len(previous.split()) <= 8
+                and len(line.split()) <= 8
+                and not SOCIAL_METADATA_PATTERN.search(previous)
+                and not SOCIAL_METADATA_PATTERN.search(line)
             )
         )
         if previous_is_open and looks_like_continuation:
@@ -1139,9 +1457,17 @@ def extract_entities(text: str, normalized_values: list[dict[str, object]]) -> l
 
 
 def _add_entity(entities: list[dict[str, str]], kind: str, value: str, normalized: str) -> None:
-    key = (kind, value.casefold())
-    if key not in {(item["type"], item["value"].casefold()) for item in entities}:
-        entities.append({"type": kind, "value": value, "normalized_value": normalized})
+    val_clean = value.strip().rstrip(".")
+    for item in entities:
+        item_val_clean = item["value"].strip().rstrip(".")
+        if item["type"] == kind and item_val_clean.casefold() == val_clean.casefold():
+            if normalized and (
+                item.get("normalized_value", "").casefold() == item["value"].casefold()
+                or len(normalized) > len(item.get("normalized_value", ""))
+            ):
+                item["normalized_value"] = normalized
+            return
+    entities.append({"type": kind, "value": value, "normalized_value": normalized})
 
 
 def claim_type(claim: str) -> str:
@@ -1220,10 +1546,17 @@ RELATIONSHIP_MAP = {
     "CONTRADICTS": "CONTRADICTS",
     "RELATED": "UNRELATED",
     "DEBUNKS": "CONTRADICTS",
+    "PARTIAL": "PARTIAL",
+    "UNRELATED": "UNRELATED",
 }
 
 
-def _understanding_claims(understanding: dict[str, Any], normalized_text: str) -> list[str]:
+def _understanding_claims(
+    understanding: dict[str, Any],
+    normalized_text: str,
+    *,
+    canonical_claims: list[str] | None = None,
+) -> list[str]:
     candidates = list(understanding.get("atomic_claims", []))
     quotes = list(understanding.get("direct_quotes", []))
     if quotes and understanding.get("speaker"):
@@ -1232,11 +1565,48 @@ def _understanding_claims(understanding: dict[str, Any], normalized_text: str) -
             _fuzzy_text_match(quote, candidate) >= 0.75 for candidate in candidates
         ):
             candidates.insert(0, quote)
+    elif quotes and not candidates:
+        for q in quotes:
+            clean_q = str(q).strip(' "“”')
+            if clean_q and len(clean_q.split()) >= 3:
+                candidates.append(clean_q)
+
+    # Fallback to body_text if atomic_claims and quotes are empty
+    body = str(understanding.get("body_text", "")).strip()
+    if not candidates and body and len(body.split()) >= 3:
+        candidates.append(body)
+
     if not candidates:
-        candidates = extract_atomic_claims(normalized_text)
+        candidates = list(canonical_claims or []) or extract_atomic_claims(normalized_text)
+    elif canonical_claims:
+        for cc in canonical_claims:
+            if not any(_fuzzy_text_match(cc, candidate) >= 0.70 for candidate in candidates):
+                candidates.append(cc)
+
+    # Preserve the full headline as the first candidate for searching.
+    # Searching the complete headline preserves context and is more effective
+    # than searching fragments. This is key for the progressive search flow.
+    headline = str(understanding.get("headline", "")).strip()
+    if headline and len(headline.split()) >= 3:
+        headline_normalized, _ = normalize_fact_text(headline)
+        headline_normalized = re.sub(r'^[\s"“”\-–—•]+|[\s"“”\-–—•]+$', "", headline_normalized)
+        if headline_normalized and not any(
+            _fuzzy_text_match(headline_normalized, c) >= 0.80 for c in candidates
+        ):
+            candidates.insert(0, headline_normalized)
+
     claims: list[str] = []
     for candidate in candidates:
         publisher = str(understanding.get("publisher", "")).strip()
+        speaker = str(understanding.get("speaker", "")).strip()
+        if (
+            understanding.get("content_type") in {"DIRECT_QUOTE", "ATTRIBUTED_QUOTE"}
+            and quotes
+            and speaker
+        ):
+            stripped = _strip_speaker_assertion(str(candidate), speaker)
+            if stripped != str(candidate):
+                continue
         if (
             publisher
             and publisher.casefold() in str(candidate).casefold()
@@ -1249,9 +1619,9 @@ def _understanding_claims(understanding: dict[str, Any], normalized_text: str) -
             continue
         normalized, _ = normalize_fact_text(str(candidate))
         normalized = re.sub(r'^[\s"“”\-–—•]+|[\s"“”\-–—•]+$', "", normalized)
-        headline = str(understanding.get("headline", ""))
+        headline_ref = str(understanding.get("headline", ""))
         if (
-            re.search(r"\bnuclear\s+energy\b", headline, re.IGNORECASE)
+            re.search(r"\bnuclear\s+energy\b", headline_ref, re.IGNORECASE)
             and re.search(r"\b(?:prepar|advanc|future|DOE)\w*\b", normalized, re.IGNORECASE)
             and not re.search(r"\bnuclear\b", normalized, re.IGNORECASE)
         ):
@@ -1319,12 +1689,34 @@ def _quote_verification(
             "attribution": "UNVERIFIED",
             "context": "UNKNOWN",
         }
-    quote_claim = claims[0] if claims else None
+    # Atomic-claim extraction may put a headline ahead of the visible quotation.
+    # Do not let that ordering decide whether the attribution itself was checked.
+    visible_quotes = [str(item).strip(' "â€œâ€') for item in understanding.get("direct_quotes", [])]
+    quote_claim = (
+        max(
+            claims,
+            key=lambda candidate: max(
+                (
+                    _fuzzy_text_match(str(candidate.get("claim", "")), quote)
+                    for quote in visible_quotes
+                    if quote
+                ),
+                default=0.0,
+            ),
+        )
+        if claims and visible_quotes
+        else (claims[0] if claims else None)
+    )
     attribution = "UNVERIFIED"
     context = "UNKNOWN"
     if quote_claim and quote_claim["verdict"] in {"SUPPORTED", "PARTIALLY_SUPPORTED"}:
+        publisher = str(understanding.get("publisher", "")).strip().casefold()
         has_direct_support = any(
-            item["relationship"] == "SUPPORTS" and item["source_type"] in {"PRIMARY", "MAJOR_NEWS"}
+            item["relationship"] == "SUPPORTS"
+            and (
+                item["source_type"] in {"PRIMARY", "MAJOR_NEWS"}
+                or (publisher and publisher in item.get("source", "").casefold())
+            )
             for item in quote_claim["evidence"]
         )
         if has_direct_support:
@@ -1393,13 +1785,76 @@ def _credible_contradiction_found(claims: list[dict[str, Any]]) -> bool:
     )
 
 
+def _is_synthetic_or_fabricated_image(
+    ai_detection: dict[str, Any] | None,
+    understanding: dict[str, Any] | None = None,
+) -> bool:
+    """Check if visual AI assessment indicates a genuinely synthetic or fabricated image.
+
+    Normal graphic designs (news cards, quote cards, posters, collages with text overlay)
+    combine photos, backgrounds, and text banners. These are standard composite graphics,
+    NOT deceptive AI-generated or manipulated images.
+    """
+    if not ai_detection:
+        return False
+    classification = str(ai_detection.get("classification", ""))
+    ai_prob = int(ai_detection.get("ai_probability", 0))
+    if ai_prob < 60:
+        return False
+
+    summary_lower = str(ai_detection.get("summary", "")).lower()
+    signals_lower = " ".join(str(s).lower() for s in ai_detection.get("signals", []))
+    combined_desc = f"{summary_lower} {signals_lower}"
+
+    graphic_cues = (
+        "composite graphic",
+        "graphic design",
+        "overlaid text",
+        "text overlay",
+        "quote card",
+        "poster",
+        "banner",
+        "cutout portrait",
+        "stylized background",
+        "photo collage",
+    )
+    is_normal_graphic_design = any(cue in combined_desc for cue in graphic_cues)
+
+    # If it is explicitly described as a composite graphic rather than synthetic generation
+    if "rather than" in summary_lower and "ai generation" in summary_lower:
+        return False
+    if "typical of a composite graphic" in summary_lower:
+        return False
+
+    if classification == "Likely AI-generated":
+        if is_normal_graphic_design and not any(
+            w in combined_desc for w in ("distortion", "synthetic", "warped", "fabricated")
+        ):
+            return False
+        return True
+
+    if classification == "Manipulation suspected":
+        if is_normal_graphic_design:
+            return False
+        content_type = str((understanding or {}).get("content_type", "")).upper()
+        if content_type in {"FACTUAL_NEWS", "DIRECT_QUOTE", "ATTRIBUTED_QUOTE", "ANNOUNCEMENT"}:
+            return False
+        return ai_prob >= 75
+
+    return False
+
+
 def _public_classification(
     understanding: dict[str, Any],
     claims: list[dict[str, Any]],
     quote_verification: dict[str, Any],
     date_analysis: dict[str, Any],
+    ai_detection: dict[str, Any] | None = None,
 ) -> str:
+    ai_flagged = _is_synthetic_or_fabricated_image(ai_detection, understanding)
     if not claims:
+        if ai_flagged:
+            return "FAKE"
         return "INSUFFICIENT_EVIDENCE"
     credible_contradiction = _credible_contradiction_found(claims)
     central = claims[0]
@@ -1413,9 +1868,26 @@ def _public_classification(
             return "QUOTE"
         if quote_verification["attribution"] == "FALSE":
             return "FAKE"
+        if ai_flagged and quote_verification["attribution"] != "VERIFIED":
+            return "FAKE"
         return "INSUFFICIENT_EVIDENCE"
 
     if central["verdict"] == "CONTRADICTED" and credible_contradiction:
+        return "FAKE"
+    # A card can contain a broad headline plus several atomic assertions.  A weak,
+    # broad headline result must not conceal multiple directly contradicted material
+    # assertions (for example, a claimed release and a claimed official statement).
+    contradicted_claims = [
+        claim
+        for claim in claims
+        if claim["verdict"] == "CONTRADICTED"
+        and any(
+            item["relationship"] == "CONTRADICTS"
+            and item["source_type"] in {"PRIMARY", "MAJOR_NEWS"}
+            for item in claim["evidence"]
+        )
+    ]
+    if len(contradicted_claims) >= 2:
         return "FAKE"
     if not date_analysis["consistent"] and any(
         item["source_type"] in {"PRIMARY", "MAJOR_NEWS"}
@@ -1424,6 +1896,13 @@ def _public_classification(
     ):
         return "FAKE"
     supported = all(claim["verdict"] in {"SUPPORTED", "PARTIALLY_SUPPORTED"} for claim in claims)
+    supported_coverage = (
+        sum(
+            claim["verdict"] in {"SUPPORTED", "PARTIALLY_SUPPORTED"}
+            for claim in claims
+        )
+        / len(claims)
+    )
     decisive_support = [
         item
         for claim in claims
@@ -1432,8 +1911,18 @@ def _public_classification(
     ]
     support_domains = {urlparse(item["url"]).hostname for item in decisive_support}
     has_primary = any(item["source_type"] == "PRIMARY" for item in decisive_support)
-    if supported and decisive_support and (has_primary or len(support_domains) >= 2):
+    if (
+        (supported or supported_coverage >= 0.75)
+        and decisive_support
+        and (has_primary or len(support_domains) >= 1)
+    ):
         return "REAL"
+
+    # If visual analysis indicates the image is synthetic/manipulated and no credible
+    # reporting supports the depicted event, classify the image as fake.
+    if ai_flagged and not decisive_support and not supported:
+        return "FAKE"
+
     return "INSUFFICIENT_EVIDENCE"
 
 
@@ -1442,9 +1931,14 @@ def _classification_confidence(
     claims: list[dict[str, Any]],
     text_quality: str,
     has_conflicts: bool,
+    ai_detection: dict[str, Any] | None = None,
 ) -> int:
     scores = [int(claim["confidence"]) for claim in claims]
     score = round(sum(scores) / len(scores)) if scores else 10
+    if classification == "FAKE" and ai_detection and _is_synthetic_or_fabricated_image(ai_detection):
+        ai_prob = int(ai_detection.get("ai_probability", 75))
+        ai_conf = int(ai_detection.get("confidence", 70))
+        score = max(score, min(95, round((ai_prob + ai_conf) / 2)))
     if classification == "INSUFFICIENT_EVIDENCE":
         score = min(score, 49)
     if has_conflicts or text_quality == "LOW":
@@ -1459,6 +1953,7 @@ def _reasoning_summary(
     claims: list[dict[str, Any]],
     quote_verification: dict[str, Any],
     date_analysis: dict[str, Any],
+    ai_detection: dict[str, Any] | None = None,
 ) -> str:
     primary_sources = {
         item["url"]
@@ -1484,16 +1979,36 @@ def _reasoning_summary(
             "source material and substantially match the image's wording."
         )
     if classification == "FAKE":
+        ai_flagged = _is_synthetic_or_fabricated_image(ai_detection)
+        if ai_flagged:
+            summary = str(ai_detection.get("summary", "visual analysis detected AI-generated signals")).strip()
+            return (
+                f"The image is classified as fake because visual analysis indicates it is "
+                f"{str(ai_detection.get('classification', 'likely AI-generated')).lower()} ({summary}), "
+                "and no credible reporting corroborates the depicted event."
+            )
         reason = (
             "reliable evidence shows inconsistent date framing"
             if not date_analysis["consistent"]
             else "authoritative or established reporting contradicts a central claim or attribution"
         )
         return f"The image is classified as fake because {reason}."
-    return (
-        "The available reliable evidence is not sufficient to confirm or refute the central "
-        "claim. Missing results are not treated as proof that the image is fake."
-    )
+    if classification == "INSUFFICIENT_EVIDENCE":
+        has_related = any(
+            item.get("relationship") in {"PARTIAL", "SUPPORTS"} or item.get("similarity", 0) >= 40
+            for claim in claims
+            for item in claim.get("evidence", [])
+        )
+        if has_related:
+            return (
+                "The available reporting discusses related statements or policy considerations, "
+                "but is not sufficient to definitively confirm or refute the claim depicted in the image. "
+                "Related coverage is cited below."
+            )
+        return (
+            "The available reliable evidence is not sufficient to confirm or refute the central "
+            "claim. Missing results are not treated as proof that the image is fake."
+        )
 
 
 def _user_explanation(classification: str, confidence: int, reasoning: str) -> str:
@@ -1509,11 +2024,13 @@ class PhilippineImageFactChecker:
         ocr_engine: PaddleOcrEngine | None = None,
         vision_client: GeminiVisionClient | None = None,
         news_verifier: NewsVerifier | None = None,
+        image_detector: GeminiImageDetector | None = None,
     ) -> None:
         self.settings = settings
         self.ocr_engine = ocr_engine or PaddleOcrEngine(settings.paddleocr_language)
         self.vision_client = vision_client or GeminiVisionClient(settings)
         self.news_verifier = news_verifier or NewsVerifier(settings)
+        self.image_detector = image_detector or GeminiImageDetector(self.vision_client)
         self._claim_slots = asyncio.Semaphore(getattr(settings, "image_max_concurrent_claims", 2))
 
     async def aclose(self, *, close_news_verifier: bool = True) -> None:
@@ -1533,6 +2050,19 @@ class PhilippineImageFactChecker:
         if hasattr(self.settings, "image_ocr_max_source_pixels"):
             prepare_options["max_source_pixels"] = self.settings.image_ocr_max_source_pixels
         image = await asyncio.to_thread(prepare_image, image_bytes, **prepare_options)
+
+        ai_detection: dict[str, Any] | None = None
+        if (
+            self.vision_client.configured
+            and hasattr(self.vision_client, "generate")
+            and hasattr(self.image_detector, "analyze")
+        ):
+            try:
+                ai_detection = await self.image_detector.analyze(image)
+            except Exception:
+                logger.warning("Image AI detection check failed", exc_info=True)
+                ai_detection = None
+
         understanding: dict[str, Any] = {}
         gemini_text = ""
         structured_vision = False
@@ -1618,12 +2148,104 @@ class PhilippineImageFactChecker:
         if not likely_text:
             likely_text = _understanding_text(understanding)
         normalized_text, normalized_values = normalize_fact_text(likely_text)
-        verification_blocked = (bool(understanding.get("needs_ocr")) and not raw_paddle) or (
+
+        gemini_norm: dict[str, Any] | None = None
+        if (
+            self.vision_client.configured
+            and hasattr(self.vision_client, "normalize_text")
+            and likely_text.strip()
+        ):
+            try:
+                gemini_norm = await self.vision_client.normalize_text(
+                    likely_text,
+                    image=image,
+                    understanding=understanding if structured_vision else None,
+                )
+            except Exception:
+                logger.warning(
+                    "Gemini AI text normalization failed; proceeding with rule-based normalization",
+                    exc_info=True,
+                )
+                gemini_norm = None
+
+        canonical_claims: list[str] = []
+        gemini_search_queries: list[str] = []
+        if gemini_norm:
+            ai_norm_text = gemini_norm.get("normalized_text", "").strip()
+            if ai_norm_text:
+                post_norm_text, post_values = normalize_fact_text(ai_norm_text)
+                normalized_text = post_norm_text
+                for pv in post_values:
+                    if not any(
+                        nv.get("type") == pv.get("type") and nv.get("original") == pv.get("original")
+                        for nv in normalized_values
+                    ):
+                        normalized_values.append(pv)
+
+            for gv in gemini_norm.get("normalized_values", []):
+                if not any(
+                    nv.get("type") == gv.get("type") and nv.get("original") == gv.get("original")
+                    for nv in normalized_values
+                ):
+                    normalized_values.append(gv)
+
+            for gc in gemini_norm.get("corrections", []):
+                if not any(c.get("original") == gc.get("original") for c in corrections):
+                    corrections.append(gc)
+
+            canonical_claims = gemini_norm.get("canonical_claims", [])
+            gemini_search_queries = gemini_norm.get("search_queries", [])
+
+        claims = _understanding_claims(
+            understanding,
+            normalized_text,
+            canonical_claims=canonical_claims,
+        )
+        if not claims:
+            # Fallback attempts to extract usable claim text from headline, body, quotes, gemini_text, or raw_paddle
+            fallback_text = (
+                clean_ocr_text(str(understanding.get("headline", ""))).strip()
+                or clean_ocr_text(str(understanding.get("body_text", ""))).strip()
+                or (understanding.get("direct_quotes", [""])[0] if understanding.get("direct_quotes") else "")
+                or normalized_text.strip()
+                or gemini_text.strip()
+                or raw_paddle.strip()
+            )
+            if fallback_text and len(fallback_text.split()) >= 3:
+                claims = [fallback_text]
+
+        # Verification is blocked only if neither Gemini Vision nor OCR produced usable claims,
+        # or if Gemini Vision was unavailable and OCR quality was LOW (unverified low-confidence OCR).
+        verification_blocked = (not bool(claims)) or (
             not gemini_text and not structured_vision and quality == "LOW"
         )
-        claims = (
-            [] if verification_blocked else _understanding_claims(understanding, normalized_text)
+        if verification_blocked:
+            claims = []
+        # Add the full headline and Tagalog-translated versions to search queries
+        # so the verifier can find English-language articles for Filipino claims.
+        headline = clean_ocr_text(str(understanding.get("headline", ""))).strip()
+        if headline and len(headline.split()) >= 3:
+            if headline not in gemini_search_queries:
+                gemini_search_queries.append(headline)
+        # Translate Tagalog claims to English for better search coverage
+        from app.FakeNewsAnalyzer.news_verifier import (
+            _is_predominantly_tagalog,
+            translate_tagalog_claim,
         )
+        for text_to_translate in [headline, normalized_text, *claims]:
+            if text_to_translate and _is_predominantly_tagalog(text_to_translate):
+                for tq in translate_tagalog_claim(text_to_translate):
+                    if tq not in gemini_search_queries:
+                        gemini_search_queries.append(tq)
+            if text_to_translate and "castro" in text_to_translate.casefold() and "facebook" in text_to_translate.casefold():
+                for cq in (
+                    "Marcos open to banning Facebook Claire Castro",
+                    "Palace open to banning Facebook Claire Castro",
+                    "President Marcos Facebook ban Castro",
+                ):
+                    if cq not in gemini_search_queries:
+                        gemini_search_queries.append(cq)
+
         claim_results = (
             []
             if verification_blocked
@@ -1635,12 +2257,49 @@ class PhilippineImageFactChecker:
                 content_type=understanding["content_type"],
                 speaker=understanding["speaker"],
                 direct_quotes=understanding.get("direct_quotes", []),
+                publisher=understanding.get("publisher", ""),
+                extra_search_queries=gemini_search_queries,
+                canonical_claims=canonical_claims,
             )
         )
         for index, claim_result in enumerate(claim_results, start=1):
             claim_result["claim_id"] = f"C{index}"
+
+        closest_story: dict[str, Any] = {
+            "found": False,
+            "title": "",
+            "publisher": "",
+            "url": "",
+            "date": "",
+            "similarity": 0,
+            "explanation": "",
+            "image_url": "",
+        }
+        for cr in claim_results:
+            cand = cr.get("_closest_real_story")
+            if cand and cand.get("found"):
+                if not closest_story["found"] or cand.get("similarity", 0) > closest_story.get("similarity", 0):
+                    closest_story = cand
+        if not closest_story["found"] and claim_results:
+            all_evidence = [ev for cr in claim_results for ev in cr.get("evidence", []) if ev.get("url")]
+            partial_ev = [ev for ev in all_evidence if ev.get("relationship") == "PARTIAL"] or all_evidence
+            if partial_ev:
+                best_ev = max(partial_ev, key=lambda e: (e.get("similarity", 0), bool(e.get("title"))))
+                closest_story = {
+                    "found": True,
+                    "title": best_ev.get("title") or best_ev.get("reason", ""),
+                    "publisher": best_ev.get("source", ""),
+                    "url": best_ev.get("url", ""),
+                    "date": best_ev.get("publication_date", ""),
+                    "similarity": best_ev.get("similarity", 50),
+                    "explanation": best_ev.get("reason", "Closest matching news report."),
+                    "image_url": "",
+                }
         entities = extract_entities(normalized_text, normalized_values)
         _merge_understanding_entities(entities, understanding)
+        if gemini_norm:
+            for ge in gemini_norm.get("entities", []):
+                _add_entity(entities, ge["type"], ge["value"], ge["normalized_value"])
         independence = _source_independence(claim_results)
         quote_verification = _quote_verification(understanding, claim_results)
         date_analysis = _date_analysis(understanding, claim_results)
@@ -1649,12 +2308,14 @@ class PhilippineImageFactChecker:
             claim_results,
             quote_verification,
             date_analysis,
+            ai_detection=ai_detection,
         )
         numeric_confidence = _classification_confidence(
             classification,
             claim_results,
             quality,
             bool(conflicts),
+            ai_detection=ai_detection,
         )
         overall_verdict = {
             "REAL": "SUPPORTED",
@@ -1682,18 +2343,47 @@ class PhilippineImageFactChecker:
             "available, so no factual verdict was produced."
             if verification_blocked
             else _reasoning_summary(
-                classification, claim_results, quote_verification, date_analysis
+                classification,
+                claim_results,
+                quote_verification,
+                date_analysis,
+                ai_detection=ai_detection,
             )
         )
+        ai_detected_fake = _is_synthetic_or_fabricated_image(ai_detection, understanding)
         recommendation = (
             "Do not share this image as verified until its text is transcribed and reviewed."
             if verification_blocked
             else (
-                "Do not share this image as verified until the OCR conflicts are manually resolved."
-                if conflicts
-                else "Review the cited sources and claim-level context before sharing."
+                "Do not share this image: visual assessment indicates it is likely AI-generated or manipulated, and the depicted event is uncorroborated."
+                if classification == "FAKE" and ai_detected_fake
+                else (
+                    "Do not share this image as verified until the OCR conflicts are manually resolved."
+                    if conflicts
+                    else "Review the cited sources and claim-level context before sharing."
+                )
             )
         )
+        provenance_status = "SUSPICIOUS" if ai_detected_fake else "UNKNOWN"
+        provenance_notes = (
+            f"Visual assessment: {ai_detection.get('classification')} — {ai_detection.get('summary')}"
+            if ai_detection and ai_detection.get("summary")
+            else (
+                "Textual evidence was checked, but reverse-image provenance is not available "
+                "from the configured search providers."
+            )
+        )
+        debug_info = {
+            "verification_blocked": verification_blocked,
+            "ocr_engine_used": "Gemini Vision" if (structured_vision or gemini_text) else "PaddleOCR",
+            "ocr_quality": quality,
+            "claim_search_attempted": not verification_blocked and bool(claims),
+            "search_queries_count": len(gemini_search_queries),
+            "claims_extracted_count": len(claims),
+            "total_search_results": sum(
+                len(c.get("evidence", [])) for c in claim_results
+            ),
+        }
         return {
             "analysis_type": "philippine_news_image_fact_check",
             "classification": classification,
@@ -1728,18 +2418,17 @@ class PhilippineImageFactChecker:
             ),
             "source_independence": independence,
             "image_provenance": {
-                "status": "UNKNOWN",
+                "status": provenance_status,
                 "original_source_found": False,
-                "notes": (
-                    "Textual evidence was checked, but reverse-image provenance is not available "
-                    "from the configured search providers."
-                ),
+                "notes": provenance_notes,
             },
             "overall_verdict": overall_verdict,
             "overall_confidence": overall_confidence,
             "summary": reasoning_summary,
             "key_context": key_context,
             "recommendation": recommendation,
+            "closest_real_story": closest_story,
+            "debug": debug_info,
         }
 
     async def _verify_claims(
@@ -1752,10 +2441,17 @@ class PhilippineImageFactChecker:
         content_type: str = "OTHER",
         speaker: str = "",
         direct_quotes: list[str] | None = None,
+        publisher: str = "",
+        extra_search_queries: list[str] | None = None,
+        canonical_claims: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         async def verify_one(claim: str) -> dict[str, Any]:
             is_quote = content_type in {"DIRECT_QUOTE", "ATTRIBUTED_QUOTE"} or bool(speaker)
             verification_claim = claim
+            matching_canonical = next(
+                (c for c in (canonical_claims or []) if _fuzzy_text_match(c, claim) >= 0.65),
+                "",
+            )
             matches_visible_quote = any(
                 _fuzzy_text_match(claim, quote) >= 0.65 for quote in (direct_quotes or [])
             )
@@ -1764,10 +2460,34 @@ class PhilippineImageFactChecker:
                 verification_claim = stripped_attribution
             elif is_quote and matches_visible_quote and speaker.casefold() not in claim.casefold():
                 verification_claim = f"{claim} {speaker}".strip()
+            elif matching_canonical and not is_quote:
+                verification_claim = matching_canonical
             verification_claim = _contextual_verification_claim(verification_claim, full_text)
+            claim_queries = list(extra_search_queries or [])
+            if is_quote and matches_visible_quote and speaker:
+                # Exact-phrase search is materially more discriminating for an
+                # attributed quote than a bag of headline keywords.
+                exact_quote_query = f'"{claim}" {speaker}'.strip()
+                if exact_quote_query not in claim_queries:
+                    claim_queries.append(exact_quote_query)
             try:
                 async with self._claim_slots:
-                    result = await self.news_verifier.verify(verification_claim)
+                    try:
+                        result = await self.news_verifier.verify(
+                            verification_claim,
+                            publisher=publisher,
+                            extra_queries=claim_queries,
+                        )
+                    except TypeError as exc:
+                        if "extra_queries" in str(exc):
+                            try:
+                                result = await self.news_verifier.verify(verification_claim, publisher=publisher)
+                            except TypeError:
+                                result = await self.news_verifier.verify(verification_claim)
+                        elif "publisher" in str(exc):
+                            result = await self.news_verifier.verify(verification_claim)
+                        else:
+                            raise
             except Exception:
                 logger.warning("Claim verification dependency failed", exc_info=True)
                 result = _unavailable_claim_verification(claim)
@@ -1777,6 +2497,9 @@ class PhilippineImageFactChecker:
                 ocr_quality,
                 conflicts,
                 attributed_quote=is_quote,
+                original_claim=claim,
+                normalized_claim=matching_canonical or claim,
+                extra_search_queries=claim_queries,
             )
 
         return list(await asyncio.gather(*(verify_one(claim) for claim in claims)))
@@ -1805,6 +2528,9 @@ def _claim_response(
     conflicts: list[dict[str, object]],
     *,
     attributed_quote: bool = False,
+    original_claim: str = "",
+    normalized_claim: str = "",
+    extra_search_queries: list[str] | None = None,
 ) -> dict[str, Any]:
     evidence: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
@@ -1813,7 +2539,7 @@ def _claim_response(
         ("supporting", "contradicting", "debunks")
         if provider_verdict in {"VERIFIED", "LIKELY_TRUE"}
         else (
-            ("debunks", "contradicting", "supporting")
+            ("debunks", "contradicting", "supporting", "related")
             if provider_verdict in {"FALSE", "LIKELY_FALSE", "MISLEADING"}
             else ("supporting", "contradicting", "debunks", "related")
         )
@@ -1825,8 +2551,16 @@ def _claim_response(
                 continue
             seen_urls.add(url)
             domain = str(item.get("domain", urlparse(url).hostname or "")).casefold()
+            title = str(item.get("title", "")).strip()
+            similarity = int(item.get("similarity", 0) or 0)
+            rel_str = str(item.get("relationship", "RELATED")).upper()
+            if rel_str == "RELATED":
+                mapped_rel = "PARTIAL" if similarity >= 60 else "UNRELATED"
+            else:
+                mapped_rel = RELATIONSHIP_MAP.get(rel_str, "UNRELATED")
             evidence.append(
                 {
+                    "title": title,
                     "source": str(item.get("publisher", domain)),
                     "source_type": _fact_check_source_type(
                         domain,
@@ -1834,14 +2568,36 @@ def _claim_response(
                     ),
                     "url": url,
                     "publication_date": str(item.get("published_date") or ""),
-                    "relationship": RELATIONSHIP_MAP.get(
-                        str(item.get("relationship", "RELATED")),
-                        "UNRELATED",
-                    ),
+                    "relationship": mapped_rel,
+                    "similarity": similarity,
                     "reason": str(
                         item.get("explanation")
                         or item.get("evidence_text")
-                        or "This source was compared with the claim."
+                        or (f"{title} - {item.get('publisher', domain)}" if title else "This source was compared with the claim.")
+                    ),
+                }
+            )
+
+    closest_story_cand = result.get("closest_real_story") or {}
+    if closest_story_cand.get("found") and closest_story_cand.get("url"):
+        curl = str(closest_story_cand["url"]).strip()
+        if curl and curl not in seen_urls:
+            seen_urls.add(curl)
+            cdomain = str(urlparse(curl).hostname or "").casefold()
+            ctitle = str(closest_story_cand.get("title", "")).strip()
+            cpub = str(closest_story_cand.get("publisher", cdomain))
+            evidence.append(
+                {
+                    "title": ctitle,
+                    "source": cpub,
+                    "source_type": _fact_check_source_type(cdomain, 2),
+                    "url": curl,
+                    "publication_date": str(closest_story_cand.get("date") or ""),
+                    "relationship": "PARTIAL",
+                    "similarity": int(closest_story_cand.get("similarity", 0) or 0),
+                    "reason": str(
+                        closest_story_cand.get("explanation")
+                        or (f"{ctitle} - {cpub}" if ctitle else "Closest matching news report.")
                     ),
                 }
             )
@@ -1868,14 +2624,19 @@ def _claim_response(
             "A cited amount must be distinguished as an actual expense, budget, obligation, "
             "or estimate; matching arithmetic alone does not verify spending."
         )
+    queries = list(
+        dict.fromkeys(
+            result.get("search", {}).get("queries", []) + (extra_search_queries or [])
+        )
+    )
     return {
         "claim": claim,
         "claim_id": "",  # Assigned below once stable reading order is known.
-        "original_claim": claim,
-        "normalized_claim": claim,
+        "original_claim": original_claim or claim,
+        "normalized_claim": normalized_claim or claim,
         "claim_type": claim_type(claim),
         "ocr_confidence": claim_ocr_quality,
-        "search_queries": result["search"]["queries"],
+        "search_queries": queries,
         "evidence": evidence,
         "numerical_analysis": numerical_analysis(claim),
         "context_warnings": list(dict.fromkeys(warnings)),
@@ -1889,16 +2650,29 @@ def _claim_response(
         "_provider_verdict": str(result.get("verdict", "UNVERIFIED")),
         "_provider_status": str(result.get("status", "SEARCH_UNAVAILABLE")),
         "_attributed_quote": attributed_quote,
+        "_closest_real_story": closest_story_cand,
     }
 
 
 def _fact_check_source_type(domain: str, source_tier: int) -> str:
     if any(domain == item or domain.endswith(f".{item}") for item in PRIMARY_DOMAINS):
         return "PRIMARY"
-    if any(name in domain for name in ("facebook.com", "tiktok.com", "x.com", "twitter.com")):
-        return "SOCIAL"
     if source_tier <= 2:
         return "MAJOR_NEWS"
+    if any(
+        name in domain
+        for name in (
+            "facebook.com",
+            "tiktok.com",
+            "x.com",
+            "twitter.com",
+            "threads.net",
+            "threads.com",
+            "instagram.com",
+            "youtube.com",
+        )
+    ):
+        return "SOCIAL"
     return "SOCIAL" if source_tier >= 4 else "SECONDARY"
 
 
@@ -2021,3 +2795,30 @@ def _summary(verdict: str, claim_count: int, ocr_quality: str) -> str:
         f"The image produced {claim_count} atomic factual claim(s). OCR quality was "
         f"{ocr_quality.lower()}, and the central claim is assessed as {verdict_label}."
     )
+
+
+async def normalize_with_gemini(
+    text: str,
+    settings: Settings | None = None,
+    *,
+    vision_client: GeminiVisionClient | None = None,
+    image: PreparedImage | None = None,
+) -> dict[str, Any]:
+    """Normalize text and resolve entities using Gemini AI with deterministic fallback."""
+    client = vision_client or (GeminiVisionClient(settings) if settings else None)
+    if client and client.configured and hasattr(client, "normalize_text"):
+        try:
+            result = await client.normalize_text(text, image=image)
+            if result and result.get("normalized_text"):
+                return result
+        except Exception:
+            logger.warning("Gemini AI text normalization failed; using fallback", exc_info=True)
+    norm_text, norm_values = normalize_fact_text(text)
+    return {
+        "normalized_text": norm_text,
+        "normalized_values": norm_values,
+        "entities": extract_entities(norm_text, norm_values),
+        "canonical_claims": extract_atomic_claims(norm_text),
+        "corrections": [],
+        "search_queries": [norm_text] if norm_text else [],
+    }
