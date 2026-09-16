@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     rate_limit_text_detection: str = "10/minute"
     rate_limit_image_detection: str = "6/minute"
     rate_limit_news_verification: str = "6/minute"
+    rate_limit_guest_text_detection: str = "30/minute"
 
     result_cache_url: str | None = None
     result_cache_max_entries: int = Field(default=1_000, ge=100, le=100_000)
@@ -83,7 +84,7 @@ class Settings(BaseSettings):
     gemini_timeout_seconds: float = Field(default=30.0, ge=2.0, le=60.0)
     gemini_key_cooldown_seconds: int = Field(default=60, ge=5, le=3_600)
 
-    text_model_path: Path = Path(r"C:\Users\dever\Downloads\xlmr-ai-human-best")
+    text_model_path: Path = Path(r"C:\Users\dever\Downloads\xlmr-ai-human-v4-enhanced")
     text_model_device: Literal["auto", "cpu", "cuda"] = "auto"
     # Prefer model config label metadata. Set this only as an explicit override
     # for legacy exports whose labels are still documented externally.

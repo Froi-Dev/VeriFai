@@ -94,6 +94,25 @@ def test_extract_ai_stylistic_signals_detects_listicles_and_encyclopedic_formula
     assert any("listicle" in m for m in markers)
 
 
+def test_extract_ai_stylistic_signals_detects_explanatory_and_cosmological_formulas() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    text = (
+        "The Big Bang Theory explains how the universe began. Around 13.8 billion years ago, "
+        "the universe was extremely hot and packed into a very small, dense state. "
+        "It then started expanding and has continued to expand ever since. "
+        "Scientists believe in the Big Bang because there is evidence for it. "
+        "In simple words, it was the process that eventually led to the universe we see today."
+    )
+    score, markers = extract_ai_stylistic_signals(text)
+    assert score >= 4.0
+    assert "simplifying summary formula" in markers
+    assert "teleological progress formula" in markers
+    assert "stock cosmological formula" in markers
+    assert "stock temporal continuation" in markers
+    assert "didactic evidentiary formula" in markers
+
+
 def test_extract_ai_stylistic_signals_ignores_clean_human_text() -> None:
     from app.ContentDetector.text_detector import extract_ai_stylistic_signals
 
@@ -121,4 +140,25 @@ def test_compute_hybrid_ai_probability_boosts_formulaic_ai() -> None:
     # Human score with 0 stylistic score is completely untouched
     human = compute_hybrid_ai_probability(0.002, 0.0, min_ai_threshold=0.8748)
     assert human == 0.002
+
+
+def test_compute_hybrid_ai_probability_with_calibrated_thresholds_does_not_clamp_to_constant() -> None:
+    from app.ContentDetector.text_detector import compute_hybrid_ai_probability
+
+    # With modern calibrated thresholds (~0.50 AI threshold, ~0.26 human threshold):
+    # Mild markers (scores 1.1 vs 1.6) must produce distinct, smoothly scaled probabilities
+    prob_mild_1 = compute_hybrid_ai_probability(
+        0.10, 1.1, min_ai_threshold=0.50237, human_max_threshold=0.26515
+    )
+    prob_mild_2 = compute_hybrid_ai_probability(
+        0.10, 1.6, min_ai_threshold=0.50237, human_max_threshold=0.26515
+    )
+    assert prob_mild_1 < prob_mild_2
+    assert prob_mild_1 != pytest.approx(0.49237, abs=1e-4)
+
+    # Strong markers (score >= 2.5) must elevate into confident AI zone (> 0.88)
+    strong = compute_hybrid_ai_probability(
+        0.10, 2.8, min_ai_threshold=0.50237, human_max_threshold=0.26515
+    )
+    assert strong >= 0.88
 

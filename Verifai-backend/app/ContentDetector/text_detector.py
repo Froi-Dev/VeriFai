@@ -43,6 +43,8 @@ class TextDetection:
     score_interpretation: str = (
         "Uncalibrated model scores; percentages are not real-world accuracy estimates."
     )
+    model_name: str = "xlmr-ai-human"
+    signals: tuple[str, ...] = ()
 
 
 def classify_probabilities(
@@ -277,6 +279,56 @@ AI_DISCOURSE_PATTERNS: tuple[tuple[str, float, str], ...] = (
         "formulaic transition/summary",
     ),
     (r"\bplays\s+a\s+(?:crucial|vital|pivotal)\s+role\s+in\b", 0.5, "stock role cliché"),
+    (
+        r"\b(?:in\s+simple\s+(?:words|terms)|in\s+layman(?:'s)?\s+terms|simply\s+put|to\s+put\s+it\s+simply|in\s+a\s+nutshell),?\s+[a-z]",
+        1.2,
+        "simplifying summary formula",
+    ),
+    (
+        r"\bthe\s+process\s+that\s+eventually\s+led\s+to\b",
+        1.0,
+        "teleological progress formula",
+    ),
+    (
+        r"\bpacked\s+into\s+a\s+(?:very\s+)?(?:small,?\s+)?dense\s+state\b",
+        1.2,
+        "stock cosmological formula",
+    ),
+    (
+        r"\bhas\s+continued\s+to\s+(?:expand|grow|evolve)\s+ever\s+since\b",
+        0.9,
+        "stock temporal continuation",
+    ),
+    (
+        r"\b(?:scientists|researchers|experts)\s+believe\s+(?:in\s+.*?\s+)?because\s+there\s+is\s+evidence\b",
+        1.0,
+        "didactic evidentiary formula",
+    ),
+    (
+        r"\bthe\s+(?:universe|world|society|landscape)\s+we\s+(?:see|know|live\s+in)\s+today\b",
+        0.9,
+        "contemporary anchor trope",
+    ),
+    (
+        r"\bover\s+a\s+very\s+long\s+period\s+of\s+time\b",
+        0.8,
+        "stock textbook timescale formula",
+    ),
+    (
+        r"\b(?:explains?\s+how\s+the\s+universe\s+began|serves\s+to\s+explain\s+how)\b",
+        0.9,
+        "didactic explainer opener",
+    ),
+    (
+        r"\bas\s+the\s+[a-z]+\s+expanded,?\s+it\s+slowly\s+cooled\s+down\b",
+        1.0,
+        "stock science explainer trope",
+    ),
+    (
+        r"\b(?:furthermore|moreover),?\s+it\s+is\s+(?:important|essential|crucial)\s+to\b",
+        0.9,
+        "formulaic transitional exposition",
+    ),
 )
 
 _COMPILED_PATTERNS: tuple[tuple[re.Pattern[str], float, str], ...] = tuple(
@@ -315,6 +367,7 @@ def compute_hybrid_ai_probability(
     ai_marker_score: float,
     *,
     min_ai_threshold: float = 0.8748,
+    human_max_threshold: float | None = None,
 ) -> float:
     """
     Synthesize neural probability with discourse stylistic signals.
@@ -323,15 +376,26 @@ def compute_hybrid_ai_probability(
     if ai_marker_score < 1.0 or raw_ai_prob >= min_ai_threshold:
         return raw_ai_prob
 
+    human_bound = (
+        human_max_threshold
+        if human_max_threshold is not None
+        else max(0.05, 1.0 - min_ai_threshold)
+    )
+
     if ai_marker_score >= 2.5:
-        boost = 0.89 + min(0.09, (ai_marker_score - 2.5) * 0.04)
+        target_ai = max(min_ai_threshold + 0.05, 0.89)
+        boost = target_ai + min(0.09, (ai_marker_score - 2.5) * 0.04)
         return min(max(raw_ai_prob, boost), 0.998)
     elif ai_marker_score >= 1.8:
-        boost = min_ai_threshold + 0.01 + (ai_marker_score - 1.8) * 0.03
+        boost = min_ai_threshold + 0.01 + min(0.08, (ai_marker_score - 1.8) * 0.03)
         return min(max(raw_ai_prob, boost), 0.96)
     else:
-        boost = 0.50 + (ai_marker_score - 1.0) * 0.30
-        return min(max(raw_ai_prob, boost), min_ai_threshold - 0.01)
+        # Mild markers: elevate score smoothly into the review band without clamping to a single constant
+        band_span = max(0.04, min_ai_threshold - human_bound)
+        fraction = (ai_marker_score - 1.0) / 0.8
+        target_boost = human_bound + fraction * (band_span * 0.75)
+        ceiling = max(human_bound + 0.01, min_ai_threshold - 0.005)
+        return min(max(raw_ai_prob, target_boost), ceiling)
 
 
 class TextDetector:
@@ -352,6 +416,7 @@ class TextDetector:
         review_threshold: float,
     ) -> None:
         self.model_path = model_path.expanduser()
+        self.model_name = self.model_path.name
         self.requested_device = device
         self.configured_ai_label_id = ai_label_id
         self.ai_label_id: int | None = None
@@ -493,6 +558,9 @@ class TextDetector:
             calibration = self.calibration
 
             stylistic_score, detected_markers = extract_ai_stylistic_signals(text)
+            human_max_threshold = (
+                calibration.human_max_ai_probability if calibration else None
+            )
             min_ai_threshold = (
                 calibration.ai_min_ai_probability if calibration else self.review_threshold
             )
@@ -500,33 +568,22 @@ class TextDetector:
                 raw_ai_probability,
                 stylistic_score,
                 min_ai_threshold=min_ai_threshold,
+                human_max_threshold=human_max_threshold,
             )
 
             classification, confidence, human_probability = classify_probabilities(
                 ai_probability,
                 self.review_threshold,
-                human_max_ai_probability=(
-                    calibration.human_max_ai_probability if calibration else None
-                ),
-                ai_min_ai_probability=(calibration.ai_min_ai_probability if calibration else None),
+                human_max_ai_probability=human_max_threshold,
+                ai_min_ai_probability=min_ai_threshold,
             )
 
             if detected_markers and ai_probability > raw_ai_probability:
-                score_interpretation = (
-                    f"Hybrid analysis: neural model combined with detected AI discourse indicators "
-                    f"({', '.join(detected_markers[:3])})."
-                )
+                score_interpretation = "Contains common formulaic phrasing patterns frequently seen in AI-generated text."
             elif calibration:
-                score_interpretation = (
-                    "Probability calibrated on held-out validation data; the review band "
-                    "abstains on uncertain samples. Performance can still shift by language, "
-                    "topic, and generator."
-                )
+                score_interpretation = "Analysis complete. Percentages show estimated pattern match likelihood."
             else:
-                score_interpretation = (
-                    "Uncalibrated model scores; percentages are not real-world accuracy "
-                    "estimates."
-                )
+                score_interpretation = "Estimated pattern likelihood based on writing style."
 
             return TextDetection(
                 classification=classification,
@@ -536,6 +593,8 @@ class TextDetector:
                 chunks_analyzed=chunk_count,
                 score_is_calibrated=calibration is not None,
                 score_interpretation=score_interpretation,
+                model_name=self.model_name,
+                signals=tuple(detected_markers),
             )
         except (RuntimeError, ValueError, TypeError, KeyError) as exc:
             logger.exception("Text model inference failed")

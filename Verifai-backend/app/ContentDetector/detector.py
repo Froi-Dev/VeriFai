@@ -64,8 +64,14 @@ async def detect_text(
 ) -> TextDetectionResponse:
     async def produce() -> dict:
         async with text_inference_semaphore:
+            loop = asyncio.get_running_loop()
+            t0 = loop.time()
             result = await asyncio.to_thread(text_detector.analyze, payload.text)
-            return result.__dict__
+            elapsed_ms = round((loop.time() - t0) * 1000.0, 1)
+            data = result.__dict__.copy()
+            data["inference_time_ms"] = elapsed_ms
+            data["signals"] = list(data.get("signals", ()))
+            return data
 
     try:
         async with asyncio.timeout(settings.text_analysis_deadline_seconds):
@@ -73,7 +79,7 @@ async def detect_text(
                 cache_key(
                     "text",
                     f"{settings.text_model_path.resolve()}\0{payload.text}",
-                    version="v5",
+                    version="v6",
                 ),
                 settings.text_result_cache_seconds,
                 produce,
@@ -96,7 +102,9 @@ async def detect_text(
             detail="Text analysis could not be completed",
         ) from exc
     response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
-    validated = TextDetectionResponse(**result)
+    result_data = dict(result)
+    result_data["cached"] = cache_hit
+    validated = TextDetectionResponse(**result_data)
     record_scan(
         user_id=user.user_id,
         filename=payload.text[:54] + ("…" if len(payload.text) > 54 else ""),

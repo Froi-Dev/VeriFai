@@ -32,6 +32,10 @@ class TextDetectionResponse(BaseModel):
     chunks_analyzed: int = Field(ge=1)
     score_is_calibrated: bool
     score_interpretation: str
+    model_name: str | None = None
+    signals: list[str] = Field(default_factory=list)
+    inference_time_ms: float | None = None
+    cached: bool = False
 
 
 class ImageDetectionResponse(BaseModel):

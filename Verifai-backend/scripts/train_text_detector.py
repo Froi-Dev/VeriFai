@@ -144,6 +144,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--freeze-encoder", action="store_true")
+    parser.add_argument(
+        "--unfreeze-top-layers",
+        type=int,
+        default=0,
+        help="Number of top transformer encoder layers to unfreeze (e.g. 2)",
+    )
     parser.add_argument("--local-files-only", action="store_true")
     return parser.parse_args()
 
@@ -188,6 +194,24 @@ def main() -> None:
         for parameter in model.base_model.parameters():
             parameter.requires_grad_(False)
         logger.info("Frozen %s encoder parameters", model.base_model_prefix)
+    elif args.unfreeze_top_layers > 0:
+        for parameter in model.base_model.parameters():
+            parameter.requires_grad_(False)
+        encoder_layers = getattr(model.base_model.encoder, "layer", None)
+        if encoder_layers is None and hasattr(model.base_model, "roberta"):
+            encoder_layers = getattr(model.base_model.roberta.encoder, "layer", None)
+        if encoder_layers is not None:
+            num_unfrozen = min(args.unfreeze_top_layers, len(encoder_layers))
+            for layer in encoder_layers[-num_unfrozen:]:
+                for parameter in layer.parameters():
+                    parameter.requires_grad_(True)
+            logger.info(
+                "Frozen %s encoder except top %d layers",
+                model.base_model_prefix,
+                num_unfrozen,
+            )
+        else:
+            logger.warning("Could not locate encoder layers; default gradients retained")
 
     train_dataset = ChunkDataset(
         splits["train"],
@@ -216,8 +240,14 @@ def main() -> None:
         generator=generator,
         pin_memory=device.type == "cuda",
     )
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    logger.info(
+        "Trainable parameter tensors: %d / %d",
+        len(trainable_params),
+        len(list(model.parameters())),
+    )
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay
+        trainable_params, lr=args.learning_rate, weight_decay=args.weight_decay
     )
     updates_per_epoch = math.ceil(len(loader) / args.gradient_accumulation)
     total_updates = max(1, updates_per_epoch * args.epochs)
@@ -602,6 +632,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("epochs, batch size, and gradient accumulation must be positive")
     if args.human_loss_weight <= 0:
         raise ValueError("human loss weight must be positive")
+    if args.unfreeze_top_layers < 0:
+        raise ValueError("unfreeze-top-layers must be non-negative")
     if not 32 <= args.max_length <= 512:
         raise ValueError("max length must be between 32 and 512")
     if not 0 <= args.stride < args.max_length - 2:

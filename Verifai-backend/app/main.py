@@ -17,6 +17,7 @@ from app.Auth.admin import router as admin_router
 from app.Auth.auth_router import router as auth_router
 from app.ContentDetector.detector import router as detector_router
 from app.ContentDetector.detector import text_detector
+from app.ContentDetector.guest_router import router as guest_router
 from app.ContentDetector.scan_router import router as scan_router
 from app.FakeNewsAnalyzer.news import image_fact_checker, news_verifier
 from app.FakeNewsAnalyzer.news import router as news_router
@@ -147,6 +148,7 @@ app.include_router(admin_router, prefix=settings.api_v1_prefix)
 app.include_router(detector_router, prefix=settings.api_v1_prefix)
 app.include_router(news_router, prefix=settings.api_v1_prefix)
 app.include_router(scan_router, prefix=settings.api_v1_prefix)
+app.include_router(guest_router, prefix=settings.api_v1_prefix)
 
 
 def _readiness_response() -> JSONResponse:
