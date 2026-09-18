@@ -25,10 +25,10 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "How does fact-checking work with screenshots and images?",
     answer:
-      "When you upload an image of a social media post, meme, or announcement, Verif.Ai reads the text inside the screenshot and searches accredited Philippine news publishers and fact-checking records to see if the claim has been confirmed or debunked.",
+      "When you upload an image of a social media post, meme, or announcement, Verif.AI reads the text inside the screenshot and searches accredited Philippine news publishers and fact-checking records to see if the claim has been confirmed or debunked.",
   },
   {
-    question: "Can schools, student publications, and teams use Verif.Ai?",
+    question: "Can schools, student publications, and teams use Verif.AI?",
     answer:
       "The web workspace is available for checking writing, news, and images. A browser extension is planned, but a downloadable package is not yet available.",
   },

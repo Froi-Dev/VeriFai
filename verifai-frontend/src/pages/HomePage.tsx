@@ -45,7 +45,7 @@ const questions = [
   ],
   [
     "Sigurado bang tama ang bawat resulta?",
-    "Walang tool na laging tama. Nagbibigay ang Verif.ai ng mga palatandaan, source, at paliwanag para makatulong sa pag-check. Basahin ang mga ito bago magdesisyon—lalo na kung sensitibo o mahalaga ang impormasyon.",
+    "Walang tool na laging tama. Nagbibigay ang Verif.AI ng mga palatandaan, source, at paliwanag para makatulong sa pag-check. Basahin ang mga ito bago magdesisyon—lalo na kung sensitibo o mahalaga ang impormasyon.",
   ],
   [
     "Pwede bang screenshot ang i-check?",
@@ -57,7 +57,7 @@ const questions = [
   ],
   [
     "Available na ba ang browser extension?",
-    "Ginagawa pa ang browser extension. Wala pang mada-download na package. Sa ngayon, magagamit mo ang text, news, at image checks sa web app.",
+    "Oo, available para sa Chrome. Eksklusibo ito para sa mga may rehistradong account. Bisitahin ang Extension page upang i-download ang ZIP package at sundin ang gabay sa pag-install.",
   ],
 ];
 
@@ -310,7 +310,7 @@ const modules = [
       </>
     ),
     description:
-      "Hindi porke maayos ang grammar, AI na agad. Sinusuri ng Verif.ai ang mga pattern sa pagsulat para may mas malinaw kang basehan.",
+      "Hindi porke maayos ang grammar, AI na agad. Sinusuri ng Verif.AI ang mga pattern sa pagsulat para may mas malinaw kang basehan.",
     points: [
       "English, Filipino, at Taglish",
       "Mga palatandaang may kasamang paliwanag",
@@ -350,7 +350,7 @@ const modules = [
       </>
     ),
     description:
-      "May mga larawang gawa ng AI o may binagong detalye. Tinutulungan ka ng Verif.ai na makita ang mga senyales na madaling malampasan.",
+      "May mga larawang gawa ng AI o may binagong detalye. Tinutulungan ka ng Verif.AI na makita ang mga senyales na madaling malampasan.",
     points: [
       "Mga larawan, graphic, at screenshot",
       "Pagsusuri ng visual inconsistencies",
@@ -366,7 +366,7 @@ function ContactSection() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const subject = encodeURIComponent(
-      `Verif.ai — Mensahe mula kay ${data.get("name")}`,
+      `Verif.AI — Mensahe mula kay ${data.get("name")}`,
     );
     const body = encodeURIComponent(
       `Pangalan: ${data.get("name")}\nEmail: ${data.get("email")}\n\n${data.get("message")}`,
@@ -446,9 +446,17 @@ function ContactSection() {
 export function HomePage() {
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const loggedInUser = (() => {
+    try {
+      const stored = sessionStorage.getItem("verifai_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  })();
   useEffect(() => {
     document.documentElement.classList.remove("dark");
-    document.title = "Verif.ai — ’Wag basta maniwala. Siguraduhing tama.";
+    document.title = "Verif.AI — ’Wag basta maniwala. Siguraduhing tama.";
     const update = () => setScrolled(window.scrollY > 50);
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenu(false);
@@ -484,8 +492,8 @@ export function HomePage() {
               <span className="ph-nav-message">
                 Para sa mas ligtas na internet
               </span>
-              <Link className="ph-button ph-nav-cta" to="/auth">
-                Magsimula <ArrowRight size={16} />
+              <Link className="ph-button ph-nav-cta" to={loggedInUser ? "/dashboard" : "/auth"}>
+                {loggedInUser ? "Pumunta sa Dashboard" : "Magsimula"} <ArrowRight size={16} />
               </Link>
               <Button
                 className="ph-menu"
@@ -516,7 +524,9 @@ export function HomePage() {
               <a href="#contact" onClick={() => setMenu(false)}>
                 Contact us
               </a>
-              <Link to="/auth">Mag-sign in</Link>
+              <Link to={loggedInUser ? "/dashboard" : "/auth"}>
+                {loggedInUser ? "Pumunta sa Dashboard" : "Mag-sign in"}
+              </Link>
             </nav>
           )}
         </header>
@@ -578,11 +588,11 @@ export function HomePage() {
                   </div>
                 </div>
                 <div className="ph-hero-actions">
-                  <Link className="ph-button" to="/auth">
-                    Mag-verify na <ArrowRight size={20} />
+                  <Link className="ph-button" to={loggedInUser ? "/dashboard" : "/auth"}>
+                    {loggedInUser ? "Pumunta sa Dashboard" : "Mag-verify na"} <ArrowRight size={20} />
                   </Link>
                   <a className="ph-learn" href="#problem">
-                    Kilalanin ang Verif.ai
+                    Kilalanin ang Verif.AI
                   </a>
                 </div>
               </div>
@@ -698,7 +708,7 @@ export function HomePage() {
                 <p>
                   Iba-iba ang content. Iba-iba rin ang kailangang tingnan.
                   <br />
-                  Kilalanin ang tatlong paraan ng pag-check sa Verif.ai.
+                  Kilalanin ang tatlong paraan ng pag-check sa Verif.AI.
                 </p>
               </Reveal>
               {modules.map((module, index) => (
@@ -764,7 +774,7 @@ export function HomePage() {
                     </span>
                     <h3>Hayaan itong masuri.</h3>
                     <p>
-                      Titingnan ng Verif.ai ang mga pattern, source, o detalye
+                      Titingnan ng Verif.AI ang mga pattern, source, o detalye
                       ng content.
                     </p>
                   </Reveal>
@@ -800,20 +810,20 @@ export function HomePage() {
                   <em>may kasamang pang-check.</em>
                 </h2>
                 <p>
-                  Balak naming ilapit ang Verif.ai sa mismong binabasa mo.
+                  Gamitin ang Verif.AI sa mismong binabasa mo.
                   Piliin ang content, buksan ang checker, at tingnan ang
                   konteksto.
                 </p>
                 <div className="ph-extension-status">
                   <span />
-                  Ginagawa pa. Abangan.
+                  Available para sa Chrome · Rehistradong account lamang
                 </div>
                 <p className="ph-extension-note">
-                  Wala pang mada-download na extension. Magagamit mo na ang mga
-                  check sa web app.
+                  Eksklusibo para sa mga may rehistradong account.
+                  Gumawa ng libreng account para ma-download at magamit ang extension.
                 </p>
-                <Link className="ph-underlined" to="/auth">
-                  Gamitin muna ang web app <ArrowUpRight size={17} />
+                <Link className="ph-underlined" to={loggedInUser ? "/dashboard/download-extension" : "/register"}>
+                  {loggedInUser ? "Download at Connect" : "Gumawa ng account para ma-download"} <ArrowUpRight size={17} />
                 </Link>
               </Reveal>
               <Reveal className="ph-extension-preview" delay={0.1}>
@@ -844,7 +854,7 @@ export function HomePage() {
                   </div>
                   <div className="ph-extension-popover">
                     <BrandSymbol />
-                    <strong>Verif.ai</strong>
+                    <strong>Verif.AI</strong>
                     <p>Mas malinaw na konteksto, isang check lang.</p>
                     <span>
                       <Search size={14} /> Suriin ang napiling text
@@ -907,13 +917,19 @@ export function HomePage() {
                   <a href="#contact">Contact us</a>
                 </nav>
                 <nav aria-label="Account navigation">
-                  <Link to="/auth">Mag-sign in</Link>
-                  <Link to="/auth">Gumawa ng account</Link>
+                  {loggedInUser ? (
+                    <Link to="/dashboard">Dashboard ({loggedInUser.name})</Link>
+                  ) : (
+                    <>
+                      <Link to="/auth">Mag-sign in</Link>
+                      <Link to="/register">Gumawa ng account</Link>
+                    </>
+                  )}
                 </nav>
               </div>
             </div>
             <div className="ph-footer-bottom">
-              <span>© 2026 Verif.ai. All rights reserved.</span>
+              <span>© 2026 Verif.AI. All rights reserved.</span>
               <span>
                 Gawa para sa Pilipinas. <i />
                 <i />

@@ -27,7 +27,7 @@ export function HeroPreview() {
         >
           <img
             src={image}
-            alt="Verif.Ai dashboard with analysis activity and shortcuts to the verification tools"
+            alt="Verif.AI dashboard with analysis activity and shortcuts to the verification tools"
             className="hero-preview-display-img"
             width={1440}
             height={640}

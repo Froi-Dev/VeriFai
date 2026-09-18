@@ -130,6 +130,15 @@ class NewsEvidenceAnalysisItem(BaseModel):
     reasoning: str
 
 
+class NewsClaimResult(BaseModel):
+    claim: str
+    verdict: Literal[
+        "VERIFIED", "LIKELY_TRUE", "LIKELY_FALSE", "FALSE", "MISLEADING", "UNVERIFIED"
+    ]
+    explanation: str
+    source_urls: list[str] = Field(default_factory=list)
+
+
 class NewsVerificationResponse(BaseModel):
     status: Literal["SUCCESS", "SEARCH_UNAVAILABLE"]
     original_text: str
@@ -154,6 +163,7 @@ class NewsVerificationResponse(BaseModel):
     evidence_analysis: list[NewsEvidenceAnalysisItem] = []
     unresolved_numeric_claims: list[str] = []
     atomic_claims: list[str] = []
+    claim_results: list[NewsClaimResult] = Field(default_factory=list)
     numerical_analysis: dict[str, object] | None = None
     closest_real_story: ClosestRealStory
     search: NewsSearchMetadata

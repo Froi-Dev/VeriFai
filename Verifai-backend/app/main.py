@@ -136,7 +136,7 @@ app.add_middleware(
     allow_origin_regex=r"^chrome-extension://.*$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Guest-Token"],
     expose_headers=["X-Request-ID", "X-Cache"],
     max_age=600,
 )

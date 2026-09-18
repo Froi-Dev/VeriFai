@@ -19,8 +19,8 @@ import re
 import threading
 import time
 import unicodedata
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from io import BytesIO
 from typing import Any
 
@@ -450,9 +450,8 @@ class GeminiVisionClient:
         if not keys:
             raise OcrUnavailableError("All Gemini API keys are temporarily cooling down")
 
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/{model or self.model}:generateContent"
-        )
+        selected_model = model or self.model
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{selected_model}:generateContent"
         parts: list[dict[str, Any]] = [{"text": prompt}]
         if image is not None:
             parts.append(
@@ -830,6 +829,15 @@ def _build_image_response(
         }
         for i, c in enumerate(atomic_claims)
     ]
+
+    # Preserve individual verdicts instead of copying the overall verdict to every claim.
+    for claim, detail in zip(claims, verification.get("claim_results", [])):
+        claim["verdict"] = detail["verdict"]
+        claim["explanation"] = detail["explanation"]
+        claim.pop("confidence", None)  # Per-claim confidence was not measured.
+        claim["evidence"] = [
+            item for item in mapped_evidence if item["url"] in detail.get("source_urls", [])
+        ]
 
     extracted_blocks = ocr_result.get("blocks", []) or []
     headline = ""

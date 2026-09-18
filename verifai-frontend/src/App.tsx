@@ -3,6 +3,8 @@ import { LoaderCircle } from "lucide-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthPage, DashboardPage, HomePage } from "@/pages";
 import { getCurrentUser } from "@/services/auth";
+import { GuestConsentPage, GuestScannerPage } from "@/pages/GuestPages";
+import { ExtensionPage } from "@/pages/ExtensionPage";
 
 function ProtectedDashboard() {
   const [sessionState, setSessionState] = useState<
@@ -45,6 +47,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/register" element={<AuthPage key="register" />} />
+        <Route path="/guest/consent" element={<GuestConsentPage />} />
+        <Route path="/guest/scanner" element={<GuestScannerPage />} />
+        <Route path="/extension" element={<ExtensionPage />} />
         <Route path="/auth/reset" element={<AuthPage />} />
         {!landingOnly && <Route path="/dashboard/*" element={<ProtectedDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />

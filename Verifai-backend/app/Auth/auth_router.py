@@ -40,6 +40,15 @@ from app.Global.schemas import (
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+@router.post("/extension-token")
+def extension_token(user: CurrentUser, payload: TokenData, response: Response):
+    """Explicit user connection; short-lived token retains session revocation checks."""
+    from app.Global.security import create_access_token
+    token = create_access_token(user.user_id, payload.session_id, payload.generation)
+    response.headers["Cache-Control"] = "no-store"
+    return {"access_token": token.encoded, "expires_at": token.expires_at}
+
+
 def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 

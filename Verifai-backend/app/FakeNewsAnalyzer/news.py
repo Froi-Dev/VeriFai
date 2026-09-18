@@ -4,13 +4,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
+from app.ContentDetector.scan_router import record_scan
 from app.FakeNewsAnalyzer.fast_verifier import FastNewsVerifier
 from app.FakeNewsAnalyzer.image_fact_checker import (
     ImagePreprocessingError,
     OcrUnavailableError,
     PhilippineImageFactChecker,
 )
-from app.ContentDetector.scan_router import record_scan
 from app.FakeNewsAnalyzer.news_verifier import NewsVerifier
 from app.Global.cache import cache_key, result_cache
 from app.Global.config import settings
@@ -62,7 +62,7 @@ async def verify_news(
     try:
         async with asyncio.timeout(settings.news_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("news", payload.text, version="v9-fast"),
+                cache_key("news", payload.text, version="v10-claim-breakdown"),
                 settings.news_result_cache_seconds,
                 produce,
                 cache_when=lambda value: value.get("status") == "SUCCESS",
@@ -123,7 +123,7 @@ async def verify_news_image(
     try:
         async with asyncio.timeout(settings.image_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("image", image_bytes, version="v13-fast"),
+                cache_key("image", image_bytes, version="v14-claim-breakdown"),
                 settings.image_result_cache_seconds,
                 produce,
                 cache_when=lambda value: (

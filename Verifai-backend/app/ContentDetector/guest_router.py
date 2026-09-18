@@ -1,8 +1,11 @@
 import asyncio
 import logging
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from pydantic import BaseModel, Field
 
+from app.ContentDetector.guest_quota import COOKIE, TTL, issue, quota, require_quota
 from app.ContentDetector.text_detector import (
     TextModelError,
     TextModelUnavailableError,
@@ -21,7 +24,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/guest", tags=["Guest"])
 
 
-@router.post("/detect-text", response_model=TextDetectionResponse)
+@router.post(
+    "/detect-text",
+    response_model=TextDetectionResponse,
+    dependencies=[Depends(require_quota("text"))],
+)
 @limiter.limit(settings.rate_limit_guest_text_detection)
 async def guest_detect_text(
     payload: TextDetectionRequest,
@@ -83,7 +90,11 @@ async def guest_detect_text(
     return TextDetectionResponse(**result_data)
 
 
-@router.post("/verify-news", response_model=NewsVerificationResponse)
+@router.post(
+    "/verify-news",
+    response_model=NewsVerificationResponse,
+    dependencies=[Depends(require_quota("news"))],
+)
 @limiter.limit(settings.rate_limit_news_verification)
 async def guest_verify_news(
     payload: NewsVerificationRequest,
@@ -119,3 +130,56 @@ async def guest_verify_news(
 
     response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
     return NewsVerificationResponse.model_validate(result)
+
+
+class GuestConsent(BaseModel):
+    fingerprint: str = Field(min_length=1, max_length=256)
+    cookies: Literal[True] | None = None
+    service_terms: Literal[True] | None = None
+    essential: Literal[True] | None = None
+    quota_tracking: Literal[True] | None = None
+    device_terms: Literal[True] | None = None
+
+
+@router.post("/consent")
+@limiter.limit("20/hour")
+def consent(payload: GuestConsent, request: Request, response: Response):
+    token = issue(request, payload.fingerprint)
+    response.set_cookie(
+        COOKIE,
+        token,
+        max_age=TTL,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        path="/",
+        domain=settings.cookie_domain,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return {"guest_token": token, "expires_in": TTL}
+
+
+@router.get("/quota")
+def guest_quota(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return quota(request)
+
+
+@router.post("/detect-image", dependencies=[Depends(require_quota("image"))])
+@limiter.limit(settings.rate_limit_image_detection)
+async def guest_detect_image(
+    request: Request, response: Response, image: Annotated[UploadFile, File()]
+):
+    from app.ContentDetector.detector import analyze_image
+
+    return await analyze_image(request, response, None, image)
+
+
+@router.post("/verify-news-image", dependencies=[Depends(require_quota("news"))])
+@limiter.limit(settings.rate_limit_news_verification)
+async def guest_verify_news_image(
+    request: Request, response: Response, image: Annotated[UploadFile, File()]
+):
+    from app.FakeNewsAnalyzer.news import verify_news_image
+
+    return await verify_news_image(request, response, None, image)

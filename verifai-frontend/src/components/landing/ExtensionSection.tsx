@@ -40,7 +40,7 @@ export function ExtensionSection({ onRequestAccess }: ExtensionSectionProps) {
           <div className="extension-roadmap-heading">
             <Puzzle size={24} />
             <div>
-              <strong>Verif.Ai for your browser</strong>
+              <strong>Verif.AI for your browser</strong>
               <span>Planned experience · not yet available</span>
             </div>
           </div>

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "VerifAI — Scan with confidence",
+  "version": "1.0.0",
+  "description": "Scan selected text, check news, and analyze images with shared VerifAI guest quotas.",
+  "permissions": ["storage", "contextMenus"],
+  "host_permissions": ["http://localhost:8000/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "VerifAI results" },
+  "content_scripts": [{
+    "matches": ["http://localhost:5173/*", "http://127.0.0.1:5173/*"],
+    "js": ["bridge.js"]
+  }]
+}

@@ -124,6 +124,10 @@ async def detect_image(
     user: CurrentPrincipal,
     image: Annotated[UploadFile, File()],
 ) -> ImageDetectionResponse:
+    return await analyze_image(request, response, user, image)
+
+
+async def analyze_image(request: Request, response: Response, user, image: UploadFile) -> ImageDetectionResponse:
     if image.content_type not in SUPPORTED_IMAGE_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -185,12 +189,13 @@ async def detect_image(
         ) from exc
     response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
     validated = ImageDetectionResponse.model_validate(result)
-    record_scan(
-        user_id=user.user_id,
-        filename=image.filename or "image_scan",
-        media_type="media",
-        confidence_score=float(validated.confidence),
-        is_synthetic=(validated.classification in ("Likely AI-generated", "Manipulation suspected")),
-        artifacts=validated.model_dump(),
-    )
+    if user is not None:
+        record_scan(
+            user_id=user.user_id,
+            filename=image.filename or "image_scan",
+            media_type="media",
+            confidence_score=float(validated.confidence),
+            is_synthetic=(validated.classification in ("Likely AI-generated", "Manipulation suspected")),
+            artifacts=validated.model_dump(),
+        )
     return validated

@@ -26,7 +26,8 @@ api.interceptors.response.use(
       "/auth/password-reset/request",
       "/auth/password-reset/confirm",
     ].some((path) => request?.url?.endsWith(path));
-    const canRefresh = error.response?.status === 401 && request && !request._sessionRetry && !isRefresh && !neverRefresh;
+    const isGuest = request?.url?.startsWith("/guest/");
+    const canRefresh = error.response?.status === 401 && request && !request._sessionRetry && !isRefresh && !neverRefresh && !isGuest;
 
     if (!canRefresh) {
       return Promise.reject(error);

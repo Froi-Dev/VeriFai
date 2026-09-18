@@ -28,10 +28,10 @@ export function BrandSymbol() {
 
 export function Brand({ className = "" }: { className?: string }) {
   return (
-    <Link className={`vf-brand ${className}`} to="/" aria-label="Verif.ai home">
+    <Link className={`vf-brand ${className}`} to="/" aria-label="Verif.AI home">
       <BrandSymbol />
       <span>
-        Verif<span className="vf-brand-accent">.</span>ai
+        Verif<span className="vf-brand-accent">.</span>AI
       </span>
     </Link>
   );

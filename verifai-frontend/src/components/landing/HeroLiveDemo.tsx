@@ -225,7 +225,7 @@ export function HeroLiveDemo() {
           </div>
           <div className="live-demo-badge">
             <Cpu size={13} className="live-demo-chip-icon" />
-            <span>Interactive Test Sandbox · Verif.Ai Scanner</span>
+            <span>Interactive Test Sandbox · Verif.AI Scanner</span>
           </div>
           <Link to="/auth" className="preview-app-link">
             Full Workspace <ArrowRight size={13} />
@@ -276,7 +276,7 @@ export function HeroLiveDemo() {
                   setIsModified(true);
                 }}
                 rows={5}
-                placeholder="Type or paste any text to test Verif.Ai's detection…"
+                placeholder="Type or paste any text to test Verif.AI's detection…"
                 className="demo-textarea"
               />
 

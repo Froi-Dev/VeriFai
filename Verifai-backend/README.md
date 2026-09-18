@@ -24,7 +24,17 @@ metadata or establish provenance.
 ## Fake News Analyzer
 
 `POST /api/v1/news/verify` is separate from the AI-writing Text Analyzer. It accepts a text
-claim and never sends that claim to an AI model. The deterministic pipeline:
+claim. The primary engine searches live Google snippets through Serper, with
+SearchAPI and Google Custom Search as provider fallbacks, and adjudicates the
+retrieved evidence with `gemini-3.5-flash-lite`. It does not download HTML articles.
+`NEWS_FAST_MODEL` can select `gemini-3.5-flash` instead. Text and image verification
+share the Gemini key pool with OCR: round-robin selection skips rate-limited keys
+for `GEMINI_KEY_COOLDOWN_SECONDS` (60 seconds by default).
+
+The existing response schema and evidence groups are preserved. Citations must
+match retrieved URLs, and successful empty searches return `UNVERIFIED` without
+an LLM call. If search providers or Gemini attempts are exhausted, the original
+deterministic verifier is used without another LLM adjudicator. That fallback:
 
 - normalizes text while preserving names, dates, numbers, and negation;
 - extracts entities, keywords, dates, and event categories with rules;
@@ -63,15 +73,15 @@ Invoke-RestMethod -Method Post `
 `POST /api/v1/news/verify-image` accepts one authenticated JPEG, PNG, WEBP, GIF, HEIC, or
 HEIF upload up to 10 MB. Pillow downsizes high-resolution sources before creating the bounded
 OCR array; GIF and phone-native HEIF formats are normalized to JPEG for vision fallback.
-PaddleOCR is always the primary engine. Gemini Vision is called only when the
-overall OCR is weak or a low-confidence region contains a critical name, date, number,
-percentage, currency value, or agency.
+Gemini Vision structured transcription is the primary OCR engine, using
+`GEMINI_VISION_MODEL=gemini-3.5-flash-lite`. Headline blocks are joined into the
+primary claim; body text is used when there is no headline. UI text, labels, and
+watermarks are excluded from the claim. PaddleOCR remains an OCR failure fallback.
 
-The response preserves `raw_paddle_text` and `gemini_transcription` separately, records OCR
-corrections and conflicts, and returns deterministic normalization, atomic claims, evidence,
-numerical/context checks, claim verdicts, source-independence metadata, and a central overall
-verdict. A disputed critical OCR token forces affected claims to `UNVERIFIABLE` instead of
-guessing.
+The response preserves `ocr.raw_text`, categorized blocks, the cleaned claim, OCR
+provider and timing, and wraps the same complete verification response used by
+the text route. Successful primary checks report zero scraped articles. Cold
+PaddleOCR startup and deterministic fallback may take longer than the fast path.
 
 Set `GEMINI_API_KEYS` to a comma-separated, backend-only key pool. The shared Gemini client
 round-robins image detection and fallback OCR requests and temporarily skips credentials that

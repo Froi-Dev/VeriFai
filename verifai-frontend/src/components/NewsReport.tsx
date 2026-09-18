@@ -10,7 +10,15 @@ export type ReportSource = {
   relationship?: string;
 };
 
+export type ReportClaim = {
+  claim: string;
+  verdict: string;
+  explanation: string;
+  source_urls?: string[];
+};
+
 type NewsReportProps = {
+  claims?: ReportClaim[];
   verdict?: string;
   tone: string;
   confidence?: number;
@@ -29,10 +37,18 @@ function SourceImage({ source }: { source: ReportSource }) {
   return (
     <span className={`report-source-image${hasImage ? "" : " is-unavailable"}`}>
       {hasImage ? (
-        <img src={imageUrl} alt={`Image from ${source.publisher}: ${source.title}`}
-          loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedUrl(imageUrl)} />
+        <img
+          src={imageUrl}
+          alt={`Image from ${source.publisher}: ${source.title}`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(imageUrl)}
+        />
       ) : (
-        <><Newspaper size={22} aria-hidden="true" /><small>No image available</small></>
+        <>
+          <Newspaper size={22} aria-hidden="true" />
+          <small>No image available</small>
+        </>
       )}
     </span>
   );
@@ -45,24 +61,47 @@ function relationshipLabel(relationship?: string) {
   return "Related report";
 }
 
-export function NewsReport({ verdict, tone, confidence, heading, explanation, warnings = [], closestStory, sources }: NewsReportProps) {
-  // This input-length tip is intentionally omitted; evidence/context warnings remain.
-  const contextWarnings = warnings.filter((warning) => !warning.startsWith("This input looks like a short headline."));
+export function NewsReport({
+  verdict,
+  tone,
+  confidence,
+  heading,
+  explanation,
+  warnings = [],
+  closestStory,
+  sources,
+}: NewsReportProps) {
+  const contextWarnings = warnings.filter(
+    (warning) =>
+      !warning.startsWith("This input looks like a short headline.") &&
+      !warning.includes("Verified using search snippets") &&
+      !warning.includes("full article contents were not retrieved")
+  );
+
   return (
     <div className="news-result-content unified-news-report">
-      <div className="news-verdict">
-        <div>
-          {verdict && <span data-news-result={tone}>{verdict}</span>}
-          <strong>{confidence !== undefined ? `Confidence: ${confidence}%` : "Please try again later"}</strong>
+      <section className="news-verdict" aria-labelledby="news-verdict-heading">
+        <div className="news-verdict-meta">
+          {verdict && (
+            <span className="news-verdict-label" data-news-result={tone}>
+              <i aria-hidden="true" />
+              {verdict}
+            </span>
+          )}
+          <strong className="news-verdict-confidence">
+            {confidence !== undefined ? `Confidence: ${confidence}%` : "Please try again later"}
+          </strong>
         </div>
-        <h3>{heading}</h3>
-        <p>{explanation}</p>
+        <h3 id="news-verdict-heading">{heading}</h3>
+        <p className="news-verdict-summary">{explanation}</p>
         {contextWarnings.map((warning, index) => (
           <div className="report-context-note" role="note" key={`${index}-${warning}`}>
-            <Info size={16} /><span>{warning}</span>
+            <Info size={16} />
+            <span>{warning}</span>
           </div>
         ))}
-      </div>
+      </section>
+
       {closestStory && (
         <article className="closest-story">
           <SourceImage source={closestStory} />
@@ -76,13 +115,28 @@ export function NewsReport({ verdict, tone, confidence, heading, explanation, wa
           </div>
         </article>
       )}
+
       {sources.length > 0 && (
         <div className="source-list">
-          <div className="source-list-heading"><h3>Sources checked</h3><span>{sources.length} {sources.length === 1 ? "report" : "reports"}</span></div>
+          <div className="source-list-heading">
+            <h3>Sources checked</h3>
+            <span>
+              {sources.length} {sources.length === 1 ? "report" : "reports"}
+            </span>
+          </div>
           {sources.map((source) => (
-            <a href={source.url} target="_blank" rel="noreferrer" key={`${source.relationship}-${source.url}`}>
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              key={`${source.relationship}-${source.url}`}
+            >
               <SourceImage source={source} />
-              <div><strong>{source.publisher}</strong><span className="report-relationship">{relationshipLabel(source.relationship)}</span><p>{source.title}</p></div>
+              <div>
+                <strong>{source.publisher}</strong>
+                <span className="report-relationship">{relationshipLabel(source.relationship)}</span>
+                <p>{source.title}</p>
+              </div>
               <ExternalLink size={16} />
             </a>
           ))}

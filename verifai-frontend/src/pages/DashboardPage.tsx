@@ -12,6 +12,7 @@ import {
   ImageUp,
   Info,
   LayoutDashboard,
+  Link2,
   LoaderCircle,
   LogOut,
   Newspaper,
@@ -25,11 +26,13 @@ import {
   User,
   X,
 } from "lucide-react";
+import axios from "axios";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NewsReport } from "@/components/NewsReport";
 import { Brand } from "@/components/Brand";
 import { api } from "@/lib/api";
 import { logoutUser, type AuthUser } from "@/services/auth";
+import "@/pages/guest.css";
 
 type ScanKind = "media" | "text" | "news";
 
@@ -524,20 +527,20 @@ export function DashboardPage() {
   useEffect(() => {
     document.title =
       view === "overview"
-        ? "Dashboard | Verif.Ai"
+        ? "Dashboard | Verif.AI"
         : view === "text"
-          ? "Text Analyzer | Verif.Ai"
+          ? "Text Analyzer | Verif.AI"
           : view === "media"
-            ? "Media Analyzer | Verif.Ai"
+            ? "Media Analyzer | Verif.AI"
             : view === "news"
-              ? "News Checker | Verif.Ai"
+              ? "News Checker | Verif.AI"
             : view === "extension"
-              ? "Download Extension | Verif.Ai"
+              ? "Download Extension | Verif.AI"
               : view === "profile"
-                ? "Profile Settings | Verif.Ai"
-          : "Scan history | Verif.Ai";
+                ? "Profile Settings | Verif.AI"
+          : "Scan history | Verif.AI";
     return () => {
-      document.title = "Verif.Ai — Digital Content Authenticity Analysis";
+      document.title = "Verif.AI — Digital Content Authenticity Analysis";
     };
   }, [view]);
 
@@ -977,6 +980,48 @@ export function DashboardPage() {
     sessionStorage.setItem("verifai_user", JSON.stringify(updatedUser));
     setUser(updatedUser);
     setProfileMessage("Profile name saved.");
+  };
+
+  const [extensionConnecting, setExtensionConnecting] = useState(false);
+  const [extensionStatus, setExtensionStatus] = useState("");
+
+  const connectExtension = async () => {
+    if (!user) return;
+    setExtensionConnecting(true);
+    setExtensionStatus("");
+    try {
+      const { data } = await api.post("/auth/extension-token");
+      const connection = { mode: "account", token: data.access_token, expiresAt: data.expires_at };
+
+      await new Promise<void>((resolve, reject) => {
+        const requestId = crypto.randomUUID();
+        const listener = (event: MessageEvent) => {
+          if (
+            event.source !== window ||
+            event.origin !== window.location.origin ||
+            event.data?.type !== "VERIFAI_CONNECTED" ||
+            event.data.requestId !== requestId
+          ) {
+            return;
+          }
+          clearTimeout(timer);
+          window.removeEventListener("message", listener);
+          if (event.data.ok) resolve();
+          else reject(new Error("Hindi nakakonekta ang extension. I-reload ito at subukang muli."));
+        };
+        const timer = window.setTimeout(() => {
+          window.removeEventListener("message", listener);
+          reject(new Error("I-install muna ang extension sa Chrome o Edge (Load unpacked), pagkatapos subukang kumonekta muli."));
+        }, 5000);
+        window.addEventListener("message", listener);
+        window.postMessage({ type: "VERIFAI_CONNECT", requestId, ...connection }, window.location.origin);
+      });
+      setExtensionStatus("Connected! Matagumpay na nai-link ang extension sa iyong workspace.");
+    } catch (e) {
+      setExtensionStatus(e instanceof Error && !axios.isAxiosError(e) ? e.message : "Hindi nakakonekta ang extension. Subukang muli.");
+    } finally {
+      setExtensionConnecting(false);
+    }
   };
 
   return (
@@ -1577,19 +1622,98 @@ export function DashboardPage() {
           <section className="dashboard-tool-page">
             <div className="tool-page-heading">
               <h1>Download Extension</h1>
-              <p>Use Verif.Ai from your browser while reading content online.</p>
+              <p>Gamitin ang Verif.AI habang nagbabasa at nagba-browse online gamit ang Chrome o Edge.</p>
             </div>
             <div className="extension-download-card">
               <div className="extension-product">
                 <span className="extension-product-mark"><span className="brand-mark" aria-hidden="true"><i /><i /></span></span>
-                <div><small>BROWSER EXTENSION</small><h2>Verif.Ai for Chrome and Edge</h2><p>Select text or media on a webpage and send it to your Verif.Ai workspace for analysis.</p></div>
+                <div>
+                  <small>BROWSER EXTENSION</small>
+                  <h2>Verif.AI for Chrome and Edge</h2>
+                  <p>Naka-sign in bilang <strong>{user?.name}</strong> ({user?.email}). I-download ang opisyal na extension package para sa iyong browser.</p>
+                </div>
               </div>
               <div className="extension-download-action">
-                <span>Not available yet</span>
-                <button className="button primary large" type="button" disabled><Download size={17} /> Download unavailable</button>
+                <span>Naka-verify na Account · v1.0.0</span>
+                <a
+                  className="button primary large"
+                  href={`${import.meta.env.BASE_URL}downloads/verifai-extension.zip`}
+                  download
+                >
+                  <Download size={17} /> Download Extension (.zip)
+                </a>
               </div>
             </div>
-            <p className="extension-preview-note"><Info size={15} /> A verified extension package has not been published, so there is currently nothing to download.</p>
+
+            <div className="trial-extension-grid" style={{ marginTop: "24px" }}>
+              <section className="trial-panel">
+                <h2>I-install sa Chrome at Edge</h2>
+                <ol className="trial-install-steps">
+                  <li>
+                    <strong>I-download at i-extract</strong>
+                    <p>Pindutin ang <b>Download Extension (.zip)</b> sa itaas at i-extract ang ZIP sa isang folder sa computer.</p>
+                  </li>
+                  <li>
+                    <strong>Buksan ang Extensions sa Browser</strong>
+                    <p>I-type ang <code>chrome://extensions</code> sa Chrome o <code>edge://extensions</code> sa Edge address bar.</p>
+                  </li>
+                  <li>
+                    <strong>I-load ang extension</strong>
+                    <p>I-on ang <b>Developer mode</b> sa kanang itaas, pindutin ang <b>Load unpacked</b>, at piliin ang na-extract na folder.</p>
+                  </li>
+                  <li>
+                    <strong>Ikonekta ang iyong account</strong>
+                    <p>Pindutin ang <b>Connect to Extension</b> sa kanan upang i-sync ang iyong Verif.AI account.</p>
+                  </li>
+                  <li>
+                    <strong>Magsimulang mag-check</strong>
+                    <p>Mag-right-click sa kahit anong highlighted text o larawan habang nagba-browse → <b>Scan with Verif.AI</b>.</p>
+                  </li>
+                </ol>
+              </section>
+
+              <aside className="trial-panel trial-connect-panel">
+                <div className="analysis-card-heading">
+                  <span className="analysis-number"><Link2 size={19} /></span>
+                  <div>
+                    <h2>Connect your account</h2>
+                    <p>I-sync ang iyong Verif.AI workspace sa browser.</p>
+                  </div>
+                </div>
+
+                <p style={{ color: "var(--soft)", fontSize: "14px", lineHeight: "1.6" }}>
+                  Ikonekta ang browser extension sa iyong account (<strong>{user?.email}</strong>) para sa direktang pagsusuri mula sa web browser.
+                </p>
+                <button
+                  className="button primary"
+                  style={{ width: "100%", margin: "16px 0" }}
+                  disabled={extensionConnecting}
+                  onClick={() => void connectExtension()}
+                >
+                  {extensionConnecting ? (
+                    <><LoaderCircle className="spin" size={17} /> Connecting…</>
+                  ) : (
+                    <><Link2 size={17} /> Connect to Extension</>
+                  )}
+                </button>
+                {extensionStatus && (
+                  <p className="trial-connection-status" role="status" style={{ fontSize: "13px", padding: "12px", background: "var(--muted)", borderRadius: "var(--control)" }}>
+                    {extensionStatus}
+                  </p>
+                )}
+                <p className="trial-fine-print" style={{ fontSize: "12px", color: "var(--soft)", marginTop: "12px" }}>
+                  Kapag nag-expire ang session token, bumalik dito at kumonekta muli anumang oras.
+                </p>
+              </aside>
+            </div>
+
+            <div className="dashboard-info-banner trial-development-note" role="note" style={{ marginTop: "24px" }}>
+              <Info size={17} />
+              <div>
+                <strong>Verif.AI Browser Extension</strong>
+                <span>Eksklusibong tampok para sa mga rehistradong miyembro. Protektahan ang iyong sarili mula sa fake news at AI deception saanman sa web.</span>
+              </div>
+            </div>
           </section>
         )}
 
@@ -1597,7 +1721,7 @@ export function DashboardPage() {
           <section className="dashboard-tool-page profile-page">
             <div className="tool-page-heading">
               <h1>Profile Settings</h1>
-              <p>Manage the personal information shown in your Verif.Ai workspace.</p>
+              <p>Manage the personal information shown in your Verif.AI workspace.</p>
             </div>
             <form className="profile-settings-card" onSubmit={(event) => { event.preventDefault(); saveProfile(); }}>
               <div className="profile-card-heading">
@@ -1675,7 +1799,7 @@ export function DashboardPage() {
       </main>
 
       <footer className="dashboard-footer">
-        <span>© 2026 Verif.Ai</span>
+        <span>© 2026 Verif.AI</span>
         <span>Built for more careful sharing online.</span>
       </footer>
       </div>

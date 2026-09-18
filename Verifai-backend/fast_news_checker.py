@@ -225,6 +225,63 @@ class FastNewsChecker:
             res["elapsed_seconds"] = round(elapsed, 2)
             return res
 
+    async def verify_image(
+        self, image_path: Path | str, *, try_grounding: bool = False
+    ) -> dict[str, Any]:
+        """Verify an image: Gemini 3.5 OCR -> claim extraction -> fast fact-check."""
+        from app.FakeNewsAnalyzer.image_fact_checker import prepare_image, GeminiVisionClient
+
+        start_time = time.perf_counter()
+        p = Path(image_path)
+        if not p.exists():
+            raise FileNotFoundError(f"Image not found: {p}")
+
+        image_bytes = p.read_bytes()
+        prepared = prepare_image(image_bytes, max_pixels=settings.image_ocr_max_pixels)
+
+        # 1. OCR via Gemini 3.5 Flash-Lite Vision
+        t0 = time.perf_counter()
+        vision_client = GeminiVisionClient(settings)
+        ocr_res = await vision_client.transcribe_structured(prepared)
+        ocr_time = time.perf_counter() - t0
+
+        # 2. Extract headline / claim
+        blocks = ocr_res.get("blocks", [])
+        headlines = [b["text"] for b in blocks if b.get("type") == "headline"]
+        bodies = [b["text"] for b in blocks if b.get("type") == "body"]
+
+        if headlines:
+            claim = " ".join(headlines).strip()
+        elif bodies:
+            claim = bodies[0].strip()
+        else:
+            raw = ocr_res.get("raw_text", "").strip()
+            lines = [l.strip() for l in raw.split("\n") if l.strip()]
+            claim = " ".join(lines[:3]) if lines else raw
+
+        # 3. Fast Fact-Check
+        fact_res = await self.verify(claim, try_grounding=try_grounding)
+        total_time = time.perf_counter() - start_time
+
+        return {
+            "image_filename": p.name,
+            "ocr": {
+                "raw_text": ocr_res.get("raw_text", ""),
+                "extracted_claim": claim,
+                "blocks": blocks,
+                "confidence": ocr_res.get("confidence"),
+                "ocr_time_seconds": round(ocr_time, 2),
+            },
+            "fact_check": fact_res,
+            "timing": {
+                "ocr_seconds": round(ocr_time, 2),
+                "search_seconds": fact_res.get("search_time_seconds", 0),
+                "reasoning_seconds": fact_res.get("gemini_time_seconds", 0),
+                "fact_check_seconds": fact_res.get("elapsed_seconds", 0),
+                "total_seconds": round(total_time, 2),
+            },
+        }
+
 
 # ---------------------------------------------------------------------------
 # CLI / Terminal Demonstration
@@ -232,7 +289,7 @@ class FastNewsChecker:
 
 async def main() -> None:
     print("=" * 70)
-    print(" VeriFai Fast Fake News Checker (Gemini 3.5 Flash)")
+    print(" VeriFai Fast Fake News & Image Detector (Gemini 3.5 Flash)")
     print("=" * 70)
 
     args = sys.argv[1:]
@@ -249,6 +306,52 @@ async def main() -> None:
             args.pop(m_idx + 1)
             args.pop(m_idx)
 
+    image_path = None
+    if "--image" in args:
+        i_idx = args.index("--image")
+        if i_idx + 1 < len(args):
+            image_path = args[i_idx + 1]
+            args.pop(i_idx + 1)
+            args.pop(i_idx)
+
+    checker = FastNewsChecker(model=model)
+
+    if image_path:
+        print(f"\n[Image Input]: {image_path}")
+        print(f"Model: {model}")
+        print("Running Gemini 3.5 Vision OCR & Live Fact-Checking...")
+
+        res = await checker.verify_image(image_path, try_grounding=try_grounding)
+        fc = res["fact_check"]
+        ocr = res["ocr"]
+        t = res["timing"]
+
+        print("\n" + "-" * 70)
+        print("STEP 1: GEMINI 3.5 VISION OCR EXTRACTION")
+        print("-" * 70)
+        print(f"Detected Claim: \"{ocr['extracted_claim']}\"")
+        print(f"OCR Latency:    {t['ocr_seconds']}s")
+        print(f"OCR Blocks:     {len(ocr['blocks'])} text regions categorized")
+
+        print("\n" + "-" * 70)
+        print("STEP 2: LIVE FACT-CHECKING RESULTS")
+        print("-" * 70)
+        print(f"VERDICT:        {fc.get('verdict')} (Confidence: {fc.get('confidence')}%)")
+        print(f"FACT-CHECK TIME: {t['fact_check_seconds']}s (Search: {t['search_seconds']}s, Gemini: {t['reasoning_seconds']}s)")
+        print(f"TOTAL TIME:     {t['total_seconds']}s")
+        print("-" * 70)
+        print(f"EXPLANATION:\n{fc.get('explanation')}\n")
+        print(f"REASONING:\n{fc.get('reasoning')}\n")
+
+        sources = fc.get("sources", [])
+        if sources:
+            print("SOURCES & CITATIONS:")
+            for s in sources:
+                print(f"  • {s.get('title')}: {s.get('url')}")
+        print("=" * 70)
+        return
+
+    # Text Mode
     if args:
         claim = " ".join(args)
     else:
@@ -259,7 +362,6 @@ async def main() -> None:
     print(f"Mode:  {'Native Google Search Grounding' if try_grounding else 'Ultra-Fast Search Snippets + Gemini 3.5'}")
     print("Analyzing and searching live data...")
 
-    checker = FastNewsChecker(model=model)
     result = await checker.verify(claim, try_grounding=try_grounding)
 
     print("\n" + "-" * 70)
@@ -269,7 +371,7 @@ async def main() -> None:
     print("-" * 70)
     print(f"EXPLANATION:\n{result.get('explanation')}\n")
     print(f"REASONING:\n{result.get('reasoning')}\n")
-    
+
     sources = result.get("sources", [])
     if sources:
         print("SOURCES & CITATIONS:")

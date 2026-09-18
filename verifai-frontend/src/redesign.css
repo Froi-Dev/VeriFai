@@ -2234,3 +2234,10 @@ button:disabled {
   }
   .hero-art-cross-one{animation:none}
 }
+.report-claim-breakdown { margin-top: 18px; border-top: 1px solid #d8e2f1; padding-top: 14px; }
+.report-claim-breakdown h4 { margin: 0 0 10px; font-size: 14px; }
+.report-claim-breakdown ol { margin: 0; padding-left: 22px; }
+.report-claim-breakdown li { padding: 6px 0 12px; }
+.report-claim-breakdown li > strong { display: block; font-size: 14px; line-height: 1.5; }
+.report-claim-verdict { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 4px; background: #edf2fa; color: #123b7a; font-size: 12px; font-weight: 700; }
+.report-claim-breakdown li p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; }
