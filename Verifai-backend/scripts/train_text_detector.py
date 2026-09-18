@@ -451,6 +451,8 @@ def train_epoch(
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad(set_to_none=True)
+        if batch_index % 25 == 0 or batch_index == len(loader):
+            logger.info("Training batch %d / %d (loss: %.4f)", batch_index, len(loader), float(loss.detach().cpu()))
     return loss_total / len(loader)
 
 

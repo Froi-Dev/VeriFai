@@ -34,6 +34,8 @@ from app.Global.middleware import (
 )
 from app.Global.rate_limit import limiter, rate_limit_exceeded_handler
 
+# VeriFai API Main Application
+# Settings updated with gemini-3.5-flash-lite adjudicator and refreshed Serper config
 logger = logging.getLogger(__name__)
 
 
@@ -131,6 +133,7 @@ app.add_middleware(OriginProtectionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
+    allow_origin_regex=r"^chrome-extension://.*$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],

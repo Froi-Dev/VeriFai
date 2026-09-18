@@ -162,3 +162,208 @@ def test_compute_hybrid_ai_probability_with_calibrated_thresholds_does_not_clamp
     )
     assert strong >= 0.88
 
+
+def test_extract_ai_stylistic_signals_detects_taglish_markers() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    text = (
+        "Sa modernong panahon, napakahalaga ng time management para sa mga estudyante. "
+        "Mahalagang tandaan na ang pagkakaroon ng maayos na study routine ay susi sa tagumpay. "
+        "Hindi maikakaila na may mahalagang papel na ginagampanan ang tamang pagpaplano. "
+        "Narito ang ilang mga paraan upang mas maunawaan ang proseso."
+    )
+    score, markers = extract_ai_stylistic_signals(text)
+    assert score >= 3.0
+    assert "Taglish contemporary anchor formula" in markers
+    assert "Taglish didactic importance formula" in markers
+    assert "Taglish undeniable assertion trope" in markers
+    assert "Taglish stock role cliché" in markers
+    assert "Taglish listicle/guide opener" in markers
+
+
+def test_extract_ai_stylistic_signals_detects_humanized_evasion_markers() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    text = (
+        "Here's the thing about writing thesis chapters under tight deadlines. "
+        "Let's be honest, it's not just about getting passing marks; it's about staying sane. "
+        "At the end of the day, what matters most is consistency and grit."
+    )
+    score, markers = extract_ai_stylistic_signals(text)
+    assert score >= 2.5
+    assert "evasive conversational pivot" in markers
+    assert "conversational honesty trope" in markers
+    assert "dualistic contrast formula" in markers
+    assert "humanized concluding cliché" in markers
+
+
+def test_extract_ai_stylistic_signals_detects_social_captions_and_bot_comments() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    caption = (
+        "Stop scrolling if you want to ace your college exams! 📚 "
+        "👉 Plan your schedule daily\n"
+        "👉 Avoid doomscrolling\n"
+        "Save this post for later and drop a comment below with your favorite hack! 👇 #StudyTips"
+    )
+    c_score, c_markers = extract_ai_stylistic_signals(caption)
+    assert c_score >= 2.0
+    assert "social hook formula" in c_markers
+    assert "social engagement CTA" in c_markers
+    assert any("emoji bullet structure" in m for m in c_markers)
+
+    bot_comment = (
+        "Such an insightful and well-written post! "
+        "Couldn't agree more with your point about consistency. "
+        "Thank you so much for sharing your perspective!"
+    )
+    b_score, b_markers = extract_ai_stylistic_signals(bot_comment)
+    assert b_score >= 3.0
+    assert "bot sycophantic praise" in b_markers
+    assert "bot formulaic agreement" in b_markers
+    assert "bot appreciation formula" in b_markers
+
+
+def test_human_informal_safeguards_protect_casual_social_rants() -> None:
+    from app.ContentDetector.text_detector import (
+        compute_hybrid_ai_probability,
+        extract_ai_stylistic_signals,
+        extract_human_informal_signals,
+    )
+
+    rant = "Grabe kanina sa jeep ang init tapos na-stuck pa kami sa trapik sa may cubao gutom na gutom na ko pota haha"
+    ai_score, ai_markers = extract_ai_stylistic_signals(rant)
+    human_score, human_markers = extract_human_informal_signals(rant)
+
+    assert ai_score == 0.0
+    assert human_score >= 1.0
+    assert any("casual colloquial markers" in m for m in human_markers)
+
+    # If neural model outputs borderline or elevated score (e.g. 0.65), safeguard pulls it safely into human zone
+    calibrated_ai = compute_hybrid_ai_probability(
+        0.65,
+        ai_score,
+        human_marker_score=human_score,
+        min_ai_threshold=0.78,
+        human_max_threshold=0.46,
+    )
+    assert calibrated_ai <= 0.46 * 0.85
+    assert calibrated_ai < 0.40
+
+
+def test_extract_ai_stylistic_signals_detects_qa_markers() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    ai_qa_en = (
+        "Great question! Let's break down the core differences between SQL and NoSQL databases. "
+        "Here are the key differences between the two architectures: "
+        "SQL databases use rigid schemas whereas NoSQL provides dynamic documents. "
+        "Hope this answers your question! Let me know if you need further clarification or code examples."
+    )
+    score_en, markers_en = extract_ai_stylistic_signals(ai_qa_en)
+    assert score_en >= 3.0
+    assert "QA enthusiastic opener" in markers_en
+    assert "QA comparative breakdown opener" in markers_en
+    assert "QA helpfulness closer" in markers_en
+    assert "QA follow-up invitation" in markers_en
+
+    ai_qa_taglish = (
+        "Ang sagot sa iyong katanungan ay nakasalalay sa tatlong mahahalagang salik. "
+        "Narito ang detalyadong paliwanag tungkol sa epekto ng batas na ito sa lipunan. "
+        "Sana nakatulong ang paliwanag na ito sa iyong assignment! Sabihin mo lang kung may tanong ka pa."
+    )
+    score_tl, markers_tl = extract_ai_stylistic_signals(ai_qa_taglish)
+    assert score_tl >= 3.0
+    assert "Taglish QA direct opener" in markers_tl
+    assert "Taglish QA explanation opener" in markers_tl
+    assert "Taglish QA helpfulness closer" in markers_tl
+    assert "Taglish QA follow-up invitation" in markers_tl
+
+
+def test_human_qa_safeguards_protect_concise_student_answers() -> None:
+    from app.ContentDetector.text_detector import (
+        compute_hybrid_ai_probability,
+        extract_ai_stylistic_signals,
+        extract_human_informal_signals,
+    )
+
+    human_qa = (
+        "ganto kasi yan pre, isipin mo yung async/await parang nag-order ka sa fast food. "
+        "di mo kailangan tumayo lang dun hanggang matapos haha"
+    )
+    ai_score, ai_markers = extract_ai_stylistic_signals(human_qa)
+    human_score, human_markers = extract_human_informal_signals(human_qa)
+
+    assert ai_score == 0.0
+    assert human_score >= 1.0
+    assert any("casual colloquial markers" in m for m in human_markers)
+
+    calibrated_ai = compute_hybrid_ai_probability(
+        0.58,
+        ai_score,
+        human_marker_score=human_score,
+        min_ai_threshold=0.78,
+        human_max_threshold=0.46,
+    )
+    assert calibrated_ai <= 0.46 * 0.85
+
+
+def test_extract_ai_stylistic_signals_detects_personal_essay_and_about_me_markers() -> None:
+    from app.ContentDetector.text_detector import extract_ai_stylistic_signals
+
+    ai_personal = (
+        "From a young age, I have always been fascinated by software engineering. "
+        "When my family faced economic hardship, it was not merely a challenge; it was a defining crucible. "
+        "This transformative experience taught me the profound value of resilience and empathy. "
+        "Looking back on this journey, I realize that it served as a catalyst for personal growth."
+    )
+    p_score, p_markers = extract_ai_stylistic_signals(ai_personal)
+    assert p_score >= 3.5
+    assert "personal essay childhood opener" in p_markers
+    assert "reflective crucible formula" in p_markers
+    assert "profound lesson cliché" in p_markers
+    assert "retrospective awakening formula" in p_markers
+    assert "catalyst for growth formula" in p_markers
+
+    ai_about_me = (
+        "I am a passionate, driven individual who thrives at the intersection of machine learning and human cognition. "
+        "Beyond my academic pursuits, I find solace in classical piano and landscape photography. "
+        "My ultimate mission is to build intelligent systems that democratize knowledge for all."
+    )
+    a_score, a_markers = extract_ai_stylistic_signals(ai_about_me)
+    assert a_score >= 3.0
+    assert "about-me intersection trope" in a_markers
+    assert "about-me solace cliché" in a_markers
+    assert "about-me mission statement trope" in a_markers
+
+
+def test_human_personal_narrative_safeguards() -> None:
+    from app.ContentDetector.text_detector import (
+        compute_hybrid_ai_probability,
+        extract_ai_stylistic_signals,
+        extract_human_informal_signals,
+    )
+
+    human_essay = (
+        "Growing up, our kitchen was never quiet. My lola would wake up at four in the morning to prepare food. "
+        "When money was tight, my lola would hand me a mango and tell me that nobody could steal education away."
+    )
+    ai_score, ai_markers = extract_ai_stylistic_signals(human_essay)
+    human_score, human_markers = extract_human_informal_signals(human_essay)
+
+    assert ai_score == 0.0
+    assert human_score >= 1.0
+    assert any("casual colloquial markers" in m for m in human_markers)
+
+    calibrated_ai = compute_hybrid_ai_probability(
+        0.60,
+        ai_score,
+        human_marker_score=human_score,
+        min_ai_threshold=0.78,
+        human_max_threshold=0.46,
+    )
+    assert calibrated_ai <= 0.46 * 0.85
+
+
+
+

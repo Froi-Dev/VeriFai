@@ -10,7 +10,12 @@ from app.ContentDetector.text_detector import (
 from app.Global.cache import cache_key, result_cache
 from app.Global.config import settings
 from app.Global.rate_limit import limiter
-from app.Global.schemas import TextDetectionRequest, TextDetectionResponse
+from app.Global.schemas import (
+    NewsVerificationRequest,
+    NewsVerificationResponse,
+    TextDetectionRequest,
+    TextDetectionResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/guest", tags=["Guest"])
@@ -76,3 +81,41 @@ async def guest_detect_text(
     result_data = dict(result)
     result_data["cached"] = cache_hit
     return TextDetectionResponse(**result_data)
+
+
+@router.post("/verify-news", response_model=NewsVerificationResponse)
+@limiter.limit(settings.rate_limit_news_verification)
+async def guest_verify_news(
+    payload: NewsVerificationRequest,
+    request: Request,
+    response: Response,
+) -> NewsVerificationResponse:
+    """Unauthenticated news verification for extension users and landing visitors."""
+    from app.FakeNewsAnalyzer.news import news_verifier
+
+    async def produce() -> dict:
+        return await news_verifier.verify(payload.text)
+
+    try:
+        async with asyncio.timeout(settings.news_analysis_deadline_seconds):
+            result, cache_hit = await result_cache.get_or_compute(
+                cache_key("news", payload.text, version="v8"),
+                settings.news_result_cache_seconds,
+                produce,
+                cache_when=lambda value: value.get("status") == "SUCCESS",
+            )
+    except TimeoutError as exc:
+        logger.warning("Guest news verification exceeded its end-to-end deadline")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="News verification timed out; please try again",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Guest news verification request failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="News verification could not be completed",
+        ) from exc
+
+    response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
+    return NewsVerificationResponse.model_validate(result)

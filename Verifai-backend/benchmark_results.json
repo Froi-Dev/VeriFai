@@ -1,0 +1,260 @@
+[
+  {
+    "filename": "1.png",
+    "image_size_kb": 365.2,
+    "ocr_raw_text": "Sara: Duterte, Uuwi na Next Week! US Pres. Trump, Gumagalaw Para I-Abolish na ang ICC? Posible?",
+    "extracted_claim": "Sara: Duterte, Uuwi na Next Week! US Pres. Trump, Gumagalaw Para I-Abolish na ang ICC? Posible?",
+    "verdict": "MISLEADING",
+    "confidence": 85,
+    "explanation": "The claim uses sensationalized and speculative phrasing commonly found in clickbait vlogs and social media posts regarding Vice President Sara Duterte and US President Donald Trump. While there are discussions around Donald Trump's stance on the ICC, claims about him abolishing the court to directly free Rodrigo Duterte are speculative and distorted.",
+    "reasoning": "The search results show that the title originates from sensationalized social media videos and posts designed to draw clicks rather than verified news reporting. Official and news-based context reveals that any connection between Trump's posture toward the ICC and the release of Rodrigo Duterte remains speculative and uncertain.",
+    "sources": [
+      {
+        "title": "Sara: Duterte, Uuwi na Next Week! US Pres. Trump on YouTube",
+        "url": "https://www.youtube.com/watch?v=cmP_TeihdKg"
+      },
+      {
+        "title": "Sara Duterte doubts Donald Trump's anti-ICC campaign on Politiko",
+        "url": "https://politiko.com.ph/2026/08/06/sara-duterte-doubts-donald-trumps-anti-icc-campaign-will-free-rody-but/daily-feed/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 1.93,
+      "search_seconds": 1.75,
+      "reasoning_seconds": 1.98,
+      "fact_check_seconds": 3.74,
+      "total_seconds": 5.86
+    }
+  },
+  {
+    "filename": "2.png",
+    "image_size_kb": 473.5,
+    "ocr_raw_text": "UPDATE VP SARA DUTERTE MASAYANG INANUNSYO ANG PAG LAYA NI RODRIGO DUTERTE, NEXT WEEK AY NAKA TAKDA DAW ITONG UMUWI NA NG PILIPINAS",
+    "extracted_claim": "VP SARA DUTERTE MASAYANG INANUNSYO ANG PAG LAYA NI RODRIGO DUTERTE, NEXT WEEK AY NAKA TAKDA DAW ITONG UMUWI NA NG PILIPINAS",
+    "verdict": "FALSE",
+    "confidence": 100,
+    "explanation": "Vice President Sara Duterte explicitly clarified that she never stated her father, former President Rodrigo Duterte, would be released and returning to the Philippines next week. Credible sources and fact-checkers such as VERA Files and DZRH have debunked this claim.",
+    "reasoning": "The claim attributes statements to Vice President Sara Duterte regarding the immediate release and homecoming of Rodrigo Duterte next week, which she directly denied making. Official clarifications and fact-checking organizations confirm the claim is false.",
+    "sources": [
+      {
+        "title": "VERA Files Fact Check: Sara Duterte did NOT say her father is coming home next week",
+        "url": "https://verafiles.org/articles/fact-check-sara-duterte-did-not-say-her-father-is-coming-home-next-week-3"
+      },
+      {
+        "title": "DZRH News: Nilinaw ni Vice President Sara Duterte na wala siyang sinabi",
+        "url": "https://www.facebook.com/dzrhtv/videos/wala-akong-sinabi-na-lalabas-na-si-fprrd-next-weeknilinaw-ni-vice-president-sara/1748119632856451/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 1.76,
+      "search_seconds": 4.35,
+      "reasoning_seconds": 1.73,
+      "fact_check_seconds": 6.1,
+      "total_seconds": 7.87
+    }
+  },
+  {
+    "filename": "3.png",
+    "image_size_kb": 370.4,
+    "ocr_raw_text": "Sir Jack Argota: \"Yung ICC madidisMantle na. Uuwi na si Duterte!\"",
+    "extracted_claim": "Sir Jack Argota: \"Yung ICC madidisMantle na. Uuwi na si Duterte!\"",
+    "verdict": "FALSE",
+    "confidence": 95,
+    "explanation": "The claim originates from unverified social media memes and pages like Celebrity Buzz PH, and there is no authoritative or official news confirming that the International Criminal Court is being dismantled or that Rodrigo Duterte is returning under such circumstances.",
+    "reasoning": "The claim is based on social media posts and graphic images lacking any official institutional backing or credible reporting, directly contradicting official ICC status and ongoing legal proceedings.",
+    "sources": [
+      {
+        "title": "Facebook - Celebrity Buzz PH meme",
+        "url": "https://www.facebook.com/groups/1710445832541836/posts/4226149540971440/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 2.67,
+      "search_seconds": 2.5,
+      "reasoning_seconds": 1.78,
+      "fact_check_seconds": 4.29,
+      "total_seconds": 6.98
+    }
+  },
+  {
+    "filename": "4.png",
+    "image_size_kb": 201.9,
+    "ocr_raw_text": "DAILY Tribune WITHOUT FEAR. WITHOUT FAVOR. 'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte",
+    "extracted_claim": "'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang na mas matindi 'yung nangyari sa buhay ko.",
+    "verdict": "UNVERIFIED",
+    "confidence": 40,
+    "explanation": "The quote has appeared on social media platforms attributed to a public figure, but lacks verification from mainstream news sources or official transcripts to confirm its authenticity and context.",
+    "reasoning": "The search results primarily consist of social media posts, reels, and commentary without direct reporting or confirmation from credible news outlets or primary documentation. Therefore, it remains unverified.",
+    "sources": [
+      {
+        "title": "Facebook Official Post Reference",
+        "url": "https://www.facebook.com/PhilippineTVOfficial/posts/kawawa-ka-namannagbigay-ng-reaksiyon-ang-aktor-na-si-janus-del-prado-sa-naging-p/1522237653282802/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 1.81,
+      "search_seconds": 1.31,
+      "reasoning_seconds": 1.67,
+      "fact_check_seconds": 3.0,
+      "total_seconds": 4.82
+    }
+  },
+  {
+    "filename": "5.png",
+    "image_size_kb": 295.2,
+    "ocr_raw_text": "Philippines Moves Closer to Nuclear Energy as DOE Advances Key Preparations for Future ISKOLAR NG BAYAN",
+    "extracted_claim": "Philippines Moves Closer to Nuclear Energy as DOE Advances Key Preparations for Future",
+    "verdict": "VERIFIED",
+    "confidence": 100,
+    "explanation": "Official announcements from the Department of Energy (DOE) of the Philippines confirm that the country is advancing preparations for nuclear energy by laying out key milestones, including legal frameworks, regulations, and potential site assessments.",
+    "reasoning": "The claim precisely mirrors official reports and press releases issued by the Philippine Department of Energy regarding current milestones in policy, regulations, and site identification for the country's upcoming nuclear energy program.",
+    "sources": [
+      {
+        "title": "Department of Energy Philippines Official Announcement",
+        "url": "https://doe.gov.ph/ph-advances-nuclear-energy-preparations-as-doe-lays-out-key-milestones"
+      },
+      {
+        "title": "Philippine Daily Inquirer",
+        "url": "https://business.inquirer.net/605799/doe-bares-potential-sites-of-7-nuclear-power-plants"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 2.27,
+      "search_seconds": 1.23,
+      "reasoning_seconds": 1.74,
+      "fact_check_seconds": 2.98,
+      "total_seconds": 5.27
+    }
+  },
+  {
+    "filename": "6.png",
+    "image_size_kb": 649.2,
+    "ocr_raw_text": "LATEST SURVEY RESULTS AUGUST 18-23, 2026 MOMENTUM RESEARCH VP SARA DUTERTE APPROVAL 61.3% 3 PERCENTAGE POINTS PUBLIC SUPPORT REMAINS STRONG AND HAS IMPROVED PRES. FERDINAND MARCOS JR. DISAPPROVAL 57.4% 2 PERCENTAGE POINTS DISSATISFACTION CONTINUES TO RISE NUMBERS DON'T LIE. THE PEOPLE HAVE SPOKEN. SOURCE: MOMENTUM RESEARCH | AUGUST 18-23, 2026",
+    "extracted_claim": "LATEST SURVEY RESULTS AUGUST 18-23, 2026 MOMENTUM RESEARCH VP SARA DUTERTE PRES. FERDINAND MARCOS JR. NUMBERS DON'T LIE. THE PEOPLE HAVE SPOKEN.",
+    "verdict": "UNVERIFIED",
+    "confidence": 90,
+    "explanation": "There are no official or credible news reports confirming a specific Momentum Research survey conducted from August 18-23, 2026, regarding President Marcos Jr. and VP Sara Duterte. Publicly available polling data from major firms like OCTA show different trends, leaving this specific claim unsubstantiated.",
+    "reasoning": "The provided search results do not validate the existence of survey results matching the exact dates and entity metrics provided in the claim. Without corroborating data from recognized polling institutions or media outlets, the claim remains unverified.",
+    "sources": [
+      {
+        "title": "Momentum Research Official Site",
+        "url": "https://momentumresearch.ph/"
+      },
+      {
+        "title": "Philippine News Agency - OCTA poll results",
+        "url": "https://www.pna.gov.ph/articles/1274926"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 2.44,
+      "search_seconds": 2.26,
+      "reasoning_seconds": 1.68,
+      "fact_check_seconds": 3.95,
+      "total_seconds": 6.43
+    }
+  },
+  {
+    "filename": "7.png",
+    "image_size_kb": 454.5,
+    "ocr_raw_text": "ISANG PILIPINAS PRESIDENT MARCOS, BUKAS SA POSIBILIDAD NG PAGBABAWAL SA FACEBOOK SA PILIPINAS AYON KAY CASTRO",
+    "extracted_claim": "ISANG PILIPINAS PRESIDENT MARCOS, BUKAS SA POSIBILIDAD NG PAGBABAWAL SA FACEBOOK SA PILIPINAS AYON KAY CASTRO",
+    "verdict": "VERIFIED",
+    "confidence": 95,
+    "explanation": "Multiple news reports and official statements citing Palace Press Officer Undersecretary Claire Castro confirm that President Ferdinand Marcos Jr. is open to the possibility of banning Facebook in the Philippines if it causes significant harm.",
+    "reasoning": "The claim attributes the statement regarding President Marcos's openness to a Facebook ban to Usec. Claire Castro. Live search results from credible broadcasting networks and media pages validate that Castro made this statement.",
+    "sources": [
+      {
+        "title": "Bomba Radyo Philippines",
+        "url": "https://www.facebook.com/bomboradyophilippines/videos/sinabi-ni-palace-press-officer-undersecretary-claire-castro-na-bukas-si-pangulon/1628292445394197/"
+      },
+      {
+        "title": "DZMM Teleradyo",
+        "url": "https://www.facebook.com/DZMMTeleradyo.MSPC/posts/bukas-si-pang-ferdinand-marcos-jr-sa-posibilidad-na-ipa-ban-o-tuluyan-nang-ipagb/122260571990706136/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 1.65,
+      "search_seconds": 1.51,
+      "reasoning_seconds": 8.76,
+      "fact_check_seconds": 10.28,
+      "total_seconds": 11.95
+    }
+  },
+  {
+    "filename": "8.png",
+    "image_size_kb": 432.3,
+    "ocr_raw_text": "NEWS UPDATE TrendPinas SEN. ROBIN PADILLA ISINUSULONG ANG BATAS NA 'NO CHRISTMAS SONG' DAHIL WALA NAMAN DAW ITONG NAITUTULONG SA PILIPINAS LALO NA SAKANILANG MGA MUSLIM SEPTEMBER 11, 2026",
+    "extracted_claim": "SEN. ROBIN PADILLA ISINUSULONG ANG BATAS NA 'NO CHRISTMAS SONG' DAHIL WALA NAMAN DAW ITONG NAITUTULONG SA PILIPINAS LALO NA SAKANILANG MGA MUSLIM",
+    "verdict": "FALSE",
+    "confidence": 100,
+    "explanation": "There is no factual record, official bill, or credible news report indicating that Senator Robin Padilla has proposed a law banning Christmas songs in the Philippines. The claim stems entirely from misinformation circulating on social media platforms.",
+    "reasoning": "A review of public legislative records and reliable news outlets shows no evidence of such a bill proposed by Senator Robin Padilla. The claim is a fabricated rumor spreading via social media posts.",
+    "sources": [
+      {
+        "title": "Senate of the Philippines - Legislative Documents",
+        "url": "https://www.senate.gov.ph"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 2.21,
+      "search_seconds": 1.79,
+      "reasoning_seconds": 2.25,
+      "fact_check_seconds": 4.06,
+      "total_seconds": 6.29
+    }
+  },
+  {
+    "filename": "9.png",
+    "image_size_kb": 148.7,
+    "ocr_raw_text": "Rappler about an hour ago WATCH: President Ferdinand Marcos Jr. says he's \"glad\" that the Supreme Court overturned the Sandiganbayan's conviction of his mother, the former first lady, of graft. Marcos says the decision will not affect his selection of a new chief justice. \"That will never enter our thinking in any way,\" he tells media on September 13. Updates from Rappler app: https://rplr.co/FrontPage Subscribe: http://rplr.co/RapplerYouTube More videos on Rappler: https://www.rappler.com/video See less COURTESY OF RTVM RTVM",
+    "extracted_claim": "WATCH: President Ferdinand Marcos Jr. says he's \"glad\" that the Supreme Court overturned the Sandiganbayan's conviction of his mother, the former first lady, of graft.",
+    "verdict": "VERIFIED",
+    "confidence": 100,
+    "explanation": "President Ferdinand Marcos Jr. publicly stated that he was glad and relieved after the Supreme Court overturned the Sandiganbayan graft conviction of his mother, former First Lady Imelda Marcos, ending a decades-long legal battle.",
+    "reasoning": "Authoritative news reports and video footage confirm that President Marcos Jr. expressed his gladness regarding the Supreme Court's decision to acquit his mother, Imelda Marcos, of graft charges.",
+    "sources": [
+      {
+        "title": "Inquirer.net",
+        "url": "https://newsinfo.inquirer.net/2304694/marcos-welcomes-imelda-acquittal-aftr-40-year-graft-legal-battle"
+      },
+      {
+        "title": "Rappler",
+        "url": "https://www.facebook.com/rapplerdotcom/posts/watch-president-ferdinand-marcos-jr-says-hes-glad-that-the-supreme-court-overtur/1629916315837097/"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 2.42,
+      "search_seconds": 1.58,
+      "reasoning_seconds": 1.95,
+      "fact_check_seconds": 3.54,
+      "total_seconds": 5.97
+    }
+  },
+  {
+    "filename": "10.png",
+    "image_size_kb": 298.5,
+    "ocr_raw_text": "The gap is already visible on paper.... See more PhilHealth warns its own funding may not last 2 to 3 more years 4Ps beneficiaries, PWDs, indigents, and solo parents could feel this funding gap first Photo from Philhealth",
+    "extracted_claim": "PhilHealth warns its own funding may not last 2 to 3 more years",
+    "verdict": "MISLEADING",
+    "confidence": 90,
+    "explanation": "While warnings about PhilHealth's fund life lasting only 2 to 3 years or until 2027 have been raised, reports indicate that it was the Department of Health (DOH) or lawmakers discussing sustainability and subsidies rather than an official self-warning directly issued by PhilHealth itself in the manner stated.",
+    "reasoning": "The core of the claim regarding the 2 to 3-year fund lifespan is present in public discussions, but attribution is misattributed. Public health experts and statements point to the Department of Health or lawmakers analyzing the funding gap and sustainability without subsidies, making the specific phrasing that PhilHealth itself issued the warning misleading.",
+    "sources": [
+      {
+        "title": "Chronic Defunding of PhilHealth By Dr. Tony Leachon",
+        "url": "https://www.facebook.com/DrTonyLeachon/posts/chronic-defunding-of-philhealthby-dr-tony-leachonthe-gap-is-already-visible-on-p/1630713198502191/"
+      },
+      {
+        "title": "PhilHealth funds enough, can last for 2 years – lawmakers",
+        "url": "https://newsinfo.inquirer.net/2016018/philhealth-funds-enough-can-last-for-2-years-lawmakers"
+      }
+    ],
+    "timing": {
+      "ocr_seconds": 1.88,
+      "search_seconds": 1.75,
+      "reasoning_seconds": 2.31,
+      "fact_check_seconds": 4.07,
+      "total_seconds": 5.96
+    }
+  }
+]

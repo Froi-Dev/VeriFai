@@ -2,12 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  ArrowRight,
   Check,
   Clipboard,
   Clock3,
   Download,
-  ExternalLink,
   FileImage,
   FileText,
   History,
@@ -19,7 +17,6 @@ import {
   Newspaper,
   Save,
   Menu,
-  Plus,
   ScanText,
   Search,
   ShieldCheck,
@@ -29,6 +26,8 @@ import {
   X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { NewsReport } from "@/components/NewsReport";
+import { Brand } from "@/components/Brand";
 import { api } from "@/lib/api";
 import { logoutUser, type AuthUser } from "@/services/auth";
 
@@ -155,6 +154,7 @@ type NewsVerificationResponse = {
 type ImageClassification = "REAL" | "QUOTE" | "FAKE" | "MISLEADING" | "INSUFFICIENT_EVIDENCE";
 
 type ImageFactCheckEvidence = {
+  image_url?: string;
   title?: string;
   source: string;
   source_type: "PRIMARY" | "MAJOR_NEWS" | "SECONDARY" | "SOCIAL";
@@ -180,6 +180,7 @@ type ImageFactCheckClaim = {
 };
 
 type ImageFactCheckResponse = {
+  verification?: NewsVerificationResponse | null;
   analysis_type: "philippine_news_image_fact_check";
   classification?: ImageClassification;
   confidence?: number;
@@ -397,46 +398,14 @@ function newsVerdictHeading(result: NewsVerificationResponse) {
     return "We could not check this news right now.";
   }
   if (result.verdict === "VERIFIED" || result.verdict === "LIKELY_TRUE") {
-    return "This news matches reliable reporting.";
+    return "This news matches reliable sources.";
   }
-  if (result.verdict === "MISLEADING") return "This news changes important details or context.";
-  if (result.verdict === "UNVERIFIED") return "There is not enough information to decide.";
-  if (result.verdict === "LIKELY_FALSE") return "This news is likely fake.";
-  if (result.verdict === "SATIRE") return "This content appears to be satire or parody.";
-  if (result.verdict === "OUTDATED") return "This news is outdated and being presented as current.";
-  return "Reliable sources show that this news is fake.";
-}
-
-function formatEvidenceRelationship(relationship: NewsEvidenceItem["relationship"]) {
-  if (relationship === "SUPPORTS") return "Supports this news";
-  if (relationship === "DEBUNKS") return "Fact-check";
-  if (relationship === "CONTRADICTS") return "Reports different facts";
-  return "Related report";
-}
-
-function formatSourceBadge(source: NewsEvidenceItem) {
-  if (source.source_type === "primary" || source.source_type === "official_data") {
-    return `Official Primary (${Math.round((source.reliability ?? 1.0) * 100)}%)`;
-  }
-  if (source.source_type === "fact_check") {
-    return `Fact Check (${Math.round((source.reliability ?? 0.95) * 100)}%)`;
-  }
-  if (source.source_tier === 1) {
-    return `Tier 1 News (${Math.round((source.reliability ?? 0.95) * 100)}%)`;
-  }
-  if (source.source_tier === 2) {
-    return `Tier 2 News (${Math.round((source.reliability ?? 0.90) * 100)}%)`;
-  }
-  return `Tier ${source.source_tier}`;
-}
-
-function sourceMonogram(publisher: string) {
-  return publisher
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
+  if (result.verdict === "MISLEADING") return "This news has misleading details.";
+  if (result.verdict === "UNVERIFIED") return "There is not enough evidence yet.";
+  if (result.verdict === "LIKELY_FALSE") return "This news is likely false.";
+  if (result.verdict === "SATIRE") return "This appears to be satire or parody.";
+  if (result.verdict === "OUTDATED") return "This is old news presented as new.";
+  return "Reliable sources show this news is false.";
 }
 
 export function DashboardPage() {
@@ -858,7 +827,7 @@ export function DashboardPage() {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-  const firstName = user?.name?.split(" ")[0] || "there";
+  const firstName = user?.name?.split(" ")[0] || "kaibigan";
   const textScanCount = history.filter((item) => item.kind === "text").length;
   const mediaScanCount = history.filter((item) => item.kind === "media").length;
   const newsScanCount = history.filter((item) => item.kind === "news").length;
@@ -905,7 +874,9 @@ export function DashboardPage() {
     setHistory([]);
     cacheHistory([], user?.id);
   };
-  const newsVerification = result?.kind === "news" ? result.newsVerification : undefined;
+  const newsVerification = result?.kind === "news"
+    ? result.newsVerification ?? result.imageFactCheck?.verification ?? undefined
+    : undefined;
   const imageFactCheck = result?.kind === "news" ? result.imageFactCheck : undefined;
   const imageClassification = imageFactCheck
     ? resolveImageClassification(imageFactCheck)
@@ -937,15 +908,12 @@ export function DashboardPage() {
           date: imageEvidence[0].publication_date,
           similarity: imageEvidence[0].similarity || 50,
           explanation: imageEvidence[0].reason,
-          image_url: "",
+          image_url: imageEvidence[0].image_url || "",
         }
       : undefined;
   const displayedImageEvidence = imageClosestStory
     ? imageEvidence.filter((item) => item.url !== imageClosestStory.url)
     : imageEvidence;
-  const newsIsReal = newsVerification
-    ? newsVerification.verdict === "VERIFIED" || newsVerification.verdict === "LIKELY_TRUE"
-    : false;
   const showNewsVerdict = Boolean(
     newsVerification && newsVerification.status !== "SEARCH_UNAVAILABLE",
   );
@@ -965,7 +933,7 @@ export function DashboardPage() {
         ...newsVerification.evidence.supporting,
       ][0]
     : undefined;
-  const relatedNews = !newsIsReal && newsVerification
+  const relatedNews = newsVerification
     ? newsVerification.closest_real_story.found
       ? newsVerification.closest_real_story
       : closestRelatedReport
@@ -1028,35 +996,32 @@ export function DashboardPage() {
       </AnimatePresence>
       <aside className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-head">
-          <Link className="brand dashboard-brand" to="/" aria-label="Verif.Ai home">
-            <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-            <span>Verif.Ai</span>
-          </Link>
+          <Brand className="dashboard-brand" />
           <button className="sidebar-close" type="button" onClick={() => setSidebarOpen(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
           <p>Workspace</p>
-          <button className={view === "overview" ? "active" : ""} type="button" onClick={() => goTo("/dashboard")}>
+          <button className={view === "overview" ? "active" : ""} aria-current={view === "overview" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard")}>
             <LayoutDashboard size={17} /><span>Overview</span>
           </button>
-          <button className={view === "text" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/text-analyzer")}>
+          <button className={view === "text" ? "active" : ""} aria-current={view === "text" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/text-analyzer")}>
             <FileText size={17} /><span>Text Analyzer</span>
           </button>
-          <button className={view === "media" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/media-analyzer")}>
+          <button className={view === "media" ? "active" : ""} aria-current={view === "media" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/media-analyzer")}>
             <FileImage size={17} /><span>Media Analyzer</span>
           </button>
-          <button className={view === "news" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/fake-news-analyzer")}>
+          <button className={view === "news" ? "active" : ""} aria-current={view === "news" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/fake-news-analyzer")}>
             <Newspaper size={17} /><span>News Checker</span>
           </button>
           <p className="sidebar-section-label">Tools</p>
-          <button className={view === "extension" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/download-extension")}>
+          <button className={view === "extension" ? "active" : ""} aria-current={view === "extension" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/download-extension")}>
             <Download size={17} /><span>Download Extension</span>
           </button>
           <p className="sidebar-section-label">Account</p>
-          <button className={view === "history" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/history")}>
+          <button className={view === "history" ? "active" : ""} aria-current={view === "history" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/history")}>
             <History size={17} /><span>Scan history</span>
           </button>
-          <button className={view === "profile" ? "active" : ""} type="button" onClick={() => goTo("/dashboard/profile")}>
+          <button className={view === "profile" ? "active" : ""} aria-current={view === "profile" ? "page" : undefined} type="button" onClick={() => goTo("/dashboard/profile")}>
             <User size={17} /><span>Profile Settings</span>
           </button>
         </nav>
@@ -1073,18 +1038,14 @@ export function DashboardPage() {
             <Menu size={19} />
           </button>
           <div><span>{view === "overview" ? "Overview" : view === "text" ? "Text Analyzer" : view === "media" ? "Media Analyzer" : view === "news" ? "News Checker" : view === "extension" ? "Download Extension" : view === "profile" ? "Profile Settings" : "Scan history"}</span></div>
-          {(view === "overview" || view === "history") && (
-            <button className="new-scan-link" type="button" onClick={() => goTo("/dashboard/text-analyzer")}>
-              <Plus size={16} /> New text scan
-            </button>
-          )}
+
         </header>
 
         <main className="dashboard-main">
           {view === "overview" && (
-            <motion.div className="dashboard-overview" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div className="dashboard-overview" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
               <section className="overview-welcome compact-welcome">
-                <div><h1>Welcome back, {firstName}.</h1><p>Here is a summary of your analysis activity.</p></div>
+                <div><h1>Kumusta, {firstName}.</h1><p>Suriin muna bago ibahagi. Piliin sa menu ang gusto mong i-check.</p></div>
               </section>
               <section className="overview-summary" aria-label="Account summary">
                 <div><span>Total analyses</span><strong>{history.length}</strong><small>All time</small></div>
@@ -1095,7 +1056,7 @@ export function DashboardPage() {
               <section className="overview-insights-grid">
                 <article className="weekly-chart-card">
                   <div className="weekly-chart-heading">
-                    <div><p className="kicker">WEEKLY ACTIVITY</p><h2>Scans this week</h2></div>
+                    <div><p className="kicker">Weekly activity</p><h2>Scans this week</h2></div>
                     <span><strong>{weeklyTotal}</strong> {weeklyTotal === 1 ? "scan" : "scans"} this week</span>
                   </div>
                   <div className="weekly-chart" role="img" aria-label={`Weekly scan activity. ${weeklyTotal} total scans this week.`}>
@@ -1109,8 +1070,8 @@ export function DashboardPage() {
                   </div>
                 </article>
                 <article className="scan-history">
-                  <div className="lower-heading"><div><p className="kicker">RECENT ACTIVITY</p><h2>Latest scans</h2></div><button type="button" onClick={() => goTo("/dashboard/history")}>View history</button></div>
-                  {history.length === 0 ? <div className="empty-history"><Clock3 size={21} /><div><strong>No scans yet</strong><p>Start an analysis and it will appear here.</p></div></div> : (
+                  <div className="lower-heading"><div><p className="kicker">Recent activity</p><h2>Latest scans</h2></div><button type="button" onClick={() => goTo("/dashboard/history")}>View history</button></div>
+                  {history.length === 0 ? <div className="empty-history"><Clock3 size={21} /><div><strong>No scans yet</strong><p>Your completed checks will appear here.</p><Link className="empty-state-action" to="/dashboard/text-analyzer">Start a text analysis</Link></div></div> : (
                     <div className="history-list">{history.slice(0, 4).map((item) => (
                       <div className="history-item" key={item.id}>
                         <span>{item.kind === "text" ? <FileText size={17} /> : item.kind === "media" ? <FileImage size={17} /> : <Newspaper size={17} />}</span>
@@ -1153,7 +1114,7 @@ export function DashboardPage() {
           {view === "media" && (
           <article className="analysis-card media-analysis-card">
             <div className="analysis-card-heading">
-              <span className="analysis-number">01</span>
+              <span className="analysis-number" aria-hidden="true"><ImageUp size={19} /></span>
               <div>
                 <h2>Upload an image</h2>
                 <p>Assess visible AI-generation and manipulation signals.</p>
@@ -1209,7 +1170,7 @@ export function DashboardPage() {
               )}
             </div>
             <button className="button primary analysis-action" type="button" disabled={scanning !== null} onClick={() => startScan("media")}>
-              {scanning === "media" ? <><LoaderCircle className="spin" size={17} /> Analyzing image…</> : <>Analyze image <ArrowRight size={17} /></>}
+              {scanning === "media" ? <><LoaderCircle className="spin" size={17} /> Analyzing image…</> : <>Analyze image</>}
             </button>
           </article>
           )}
@@ -1217,7 +1178,7 @@ export function DashboardPage() {
           {view === "media" && (
             <aside className="text-result-card media-result-card" aria-live="polite">
               <div className="text-result-heading">
-                <div><p>ANALYSIS RESULT</p><h2>Media assessment</h2></div>
+                <div><p>Analysis result</p><h2>Media assessment</h2></div>
                 {result?.kind === "media" && !scanning && <span>Complete</span>}
               </div>
 
@@ -1239,9 +1200,9 @@ export function DashboardPage() {
               )}
 
               {!scanning && result?.kind === "media" && result.mediaAnalysis && (
-                <motion.div className="text-result-content" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                <motion.div className="text-result-content" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
                   <div className="plain-verdict">
-                    <span>OVERALL ASSESSMENT · {result.confidence}% CONFIDENCE</span>
+                    <span>Overall assessment · {result.confidence}% CONFIDENCE</span>
                     <h3>{result.classification}</h3>
                     <p>{result.mediaAnalysis.summary}</p>
                   </div>
@@ -1272,7 +1233,7 @@ export function DashboardPage() {
           {view === "text" && (
           <article className="analysis-card text-analysis-card">
             <div className="analysis-card-heading">
-              <span className="analysis-number">02</span>
+              <span className="analysis-number" aria-hidden="true"><FileText size={19} /></span>
               <div>
                 <h2>Paste text</h2>
                 <p>Check an article, message, caption, or written passage.</p>
@@ -1310,7 +1271,7 @@ export function DashboardPage() {
               </div>
             )}
             <button className="button primary analysis-action" type="button" disabled={scanning !== null} onClick={() => startScan("text")}>
-              {scanning === "text" ? <><LoaderCircle className="spin" size={17} /> Analyzing text…</> : <>Analyze text <ArrowRight size={17} /></>}
+              {scanning === "text" ? <><LoaderCircle className="spin" size={17} /> Analyzing text…</> : <>Analyze text</>}
             </button>
           </article>
           )}
@@ -1318,7 +1279,7 @@ export function DashboardPage() {
           {view === "text" && (
             <aside className="text-result-card" aria-live="polite">
               <div className="text-result-heading">
-                <div><p>ANALYSIS RESULT</p><h2>Writing assessment</h2></div>
+                <div><p>Analysis result</p><h2>Writing assessment</h2></div>
                 {result?.kind === "text" && !scanning && <span>Complete</span>}
               </div>
 
@@ -1335,7 +1296,7 @@ export function DashboardPage() {
                   <LoaderCircle className="spin" size={20} />
                   <div>
                     <strong>{scanStage || "Reading the writing patterns…"}</strong>
-                    <span>Processing text through XLM-RoBERTa neural sequence classification.</span>
+                    <span>Comparing the passage with learned writing patterns. Your assessment will appear here.</span>
                   </div>
                   <b>{progress}%</b>
                   <span className="result-loading-track"><i style={{ width: `${progress}%` }} /></span>
@@ -1343,9 +1304,9 @@ export function DashboardPage() {
               )}
 
               {!scanning && result?.kind === "text" && (
-                <motion.div className="text-result-content" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="plain-verdict">
-                    <span>OVERALL ASSESSMENT</span>
+                <motion.div className="text-result-content" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
+                  <div className="plain-verdict writing-verdict" data-writing-result={result.classification === "Likely AI-generated" ? "ai" : result.classification === "Likely human-written" ? "human" : "review"}>
+                    <span>Overall assessment</span>
                     <h3>{result.classification}</h3>
                     <p>
                       {result.classification === "Likely AI-generated"
@@ -1357,11 +1318,11 @@ export function DashboardPage() {
                   </div>
                   <div className="likelihood-bars">
                     <div>
-                      <div><span>AI writing pattern score</span><strong>{result.aiConfidence ?? result.confidence}%</strong></div>
+                      <div className="writing-score-ai"><span>AI writing pattern score</span><strong>{result.aiConfidence ?? result.confidence}%</strong></div>
                       <span className="likelihood-track"><i className="ai-bar" style={{ width: `${result.aiConfidence ?? result.confidence}%` }} /></span>
                     </div>
                     <div>
-                      <div><span>Human writing pattern score</span><strong>{result.humanConfidence ?? 100 - result.confidence}%</strong></div>
+                      <div className="writing-score-human"><span>Human writing pattern score</span><strong>{result.humanConfidence ?? 100 - result.confidence}%</strong></div>
                       <span className="likelihood-track"><i className="human-bar" style={{ width: `${result.humanConfidence ?? 100 - result.confidence}%` }} /></span>
                     </div>
                   </div>
@@ -1447,7 +1408,7 @@ export function DashboardPage() {
             <section className="analysis-options news-analyzer-grid" aria-label="News checker">
               <article className="analysis-card news-analysis-card">
                 <div className="analysis-card-heading">
-                  <span className="analysis-number">1</span>
+                  <span className="analysis-number" aria-hidden="true"><Newspaper size={18} /></span>
                   <div>
                     <h2>Add news to check</h2>
                     <p>Paste the text or upload a clear screenshot of the story.</p>
@@ -1537,18 +1498,14 @@ export function DashboardPage() {
                   </>
                 )}
 
-                <div className="news-search-note">
-                  <Info size={18} />
-                  <p><strong>Tip:</strong> Add as much detail as you can, including names, dates, places, and key claims.</p>
-                </div>
                 <button className="button primary analysis-action" type="button" disabled={scanning !== null} onClick={() => startScan("news")}>
-                  {scanning === "news" ? <><LoaderCircle className="spin" size={18} /> Searching Philippine news...</> : <><Search size={18} /> Check this news</>}
+                  {scanning === "news" ? <><LoaderCircle className="spin" size={18} /> Finding reliable sources...</> : <><Search size={18} /> Check this news</>}
                 </button>
               </article>
 
               <aside className="text-result-card news-result-card" aria-live="polite">
                 <div className="text-result-heading">
-                  <span className="analysis-number">2</span>
+                  <span className="analysis-number" aria-hidden="true"><ShieldCheck size={18} /></span>
                   <div><h2>Results</h2></div>
                 </div>
 
@@ -1556,192 +1513,60 @@ export function DashboardPage() {
                   <div className="text-result-empty">
                     <span><ShieldCheck size={24} /></span>
                     <strong>Your results will appear here</strong>
-                    <p>Add a story in step 1, then choose “Check this news.”</p>
+                    <p>Add a story, then select “Check this news.”</p>
                   </div>
                 )}
 
                 {scanning === "news" && (
                   <div className="text-result-loading news-result-loading">
                     <LoaderCircle className="spin" size={20} />
-                    <div><strong>{newsMode === "image" ? "Extracting text and searching…" : "Searching for matching coverage…"}</strong><span>Checking Philippine news outlets, then weighing source quality and claim details.</span></div>
+                    <div><strong>{newsMode === "image" ? "Reading the image and finding sources..." : "Finding reliable sources..."}</strong><span>Checking sources and comparing the facts.</span></div>
                     <b>{progress}%</b>
                     <span className="result-loading-track"><i style={{ width: `${progress}%` }} /></span>
                     <ol>
-                      <li className={progress > 20 ? "done" : ""}>Understand the main story</li>
-                      <li className={progress > 48 ? "done" : ""}>Find independent coverage</li>
-                      <li className={progress > 76 ? "done" : ""}>Compare facts and context</li>
+                      <li className={progress > 20 ? "done" : ""}>Read the claim</li>
+                      <li className={progress > 48 ? "done" : ""}>Find reliable sources</li>
+                      <li className={progress > 76 ? "done" : ""}>Compare the facts</li>
                     </ol>
                   </div>
                 )}
 
                 {!scanning && result?.kind === "news" && newsVerification && (
-                  <motion.div className="news-result-content" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                    <div className="news-verdict">
-                      <div>
-                        {showNewsVerdict && (
-                          <span data-news-result={newsVerdictTone(newsVerification.verdict)}>{formatNewsVerdict(newsVerification.verdict)}</span>
-                        )}
-                        <strong>{showNewsVerdict ? `We're ${newsVerification.confidence}% sure` : "Please try again later"}</strong>
-                      </div>
-                      <h3>{newsVerdictHeading(newsVerification)}</h3>
-                      <p>{newsVerification.explanation}</p>
-                      {newsVerification.context_warnings?.length > 0 && (
-                        <div className="news-context-warnings">
-                          {newsVerification.context_warnings.map((warning, i) => (
-                            <div key={i} className="dashboard-info-banner news-redirect-hint" role="note" style={{ marginBottom: 8, marginTop: i === 0 ? 12 : 0 }}>
-                              <Info size={15} />
-                              <span>{warning}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {showNewsVerdict && relatedNews && (
-                      <div className="closest-story">
-                        <span className="closest-story-media">
-                          <Newspaper size={18} />
-                          {relatedNews.image_url && (
-                            <img
-                              src={relatedNews.image_url}
-                              alt={`Thumbnail for ${relatedNews.title}`}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              onError={(event) => { event.currentTarget.hidden = true; }}
-                            />
-                          )}
-                        </span>
-                        <div>
-                          <small>CLOSEST MATCHING REPORT</small>
-                          <h3>{relatedNews.title}</h3>
-                          <p>{relatedNews.explanation}</p>
-                          <a href={relatedNews.url} target="_blank" rel="noreferrer">
-                            Read on {relatedNews.publisher || "the original source"} <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    {displayedNewsEvidence.length > 0 && (
-                      <div className="source-list">
-                        <div className="source-list-heading">
-                          <h3>{newsIsReal ? "Reports that confirm it" : "Other reports used for this check"}</h3>
-                          <span>{displayedNewsEvidence.length} {displayedNewsEvidence.length === 1 ? "report" : "reports"}</span>
-                        </div>
-                        {displayedNewsEvidence.map((source) => (
-                          <a href={source.url} target="_blank" rel="noreferrer" key={`${source.relationship}-${source.url}`}>
-                            <span className="source-monogram">{sourceMonogram(source.publisher)}</span>
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
-                                <strong>{source.publisher} · {formatEvidenceRelationship(source.relationship)}</strong>
-                                <span style={{
-                                  fontSize: "0.68rem",
-                                  fontWeight: 600,
-                                  padding: "1px 6px",
-                                  borderRadius: "4px",
-                                  backgroundColor: (source.source_type === "primary" || source.source_type === "official_data") ? "rgba(139, 92, 246, 0.12)" : source.source_tier === 1 ? "rgba(16, 185, 129, 0.12)" : source.source_tier === 2 ? "rgba(59, 130, 246, 0.12)" : "rgba(156, 163, 175, 0.12)",
-                                  color: (source.source_type === "primary" || source.source_type === "official_data") ? "#8b5cf6" : source.source_tier === 1 ? "#10b981" : source.source_tier === 2 ? "#3b82f6" : "#6b7280",
-                                  border: `1px solid ${(source.source_type === "primary" || source.source_type === "official_data") ? "rgba(139, 92, 246, 0.25)" : source.source_tier === 1 ? "rgba(16, 185, 129, 0.25)" : source.source_tier === 2 ? "rgba(59, 130, 246, 0.25)" : "rgba(156, 163, 175, 0.25)"}`,
-                                }}>
-                                  {formatSourceBadge(source)}
-                                </span>
-                              </div>
-                              <p>{source.title}</p>
-                            </div>
-                            <ExternalLink size={14} />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-
-                  </motion.div>
+                  <NewsReport
+                    verdict={showNewsVerdict ? formatNewsVerdict(newsVerification.verdict) : undefined}
+                    tone={newsVerdictTone(newsVerification.verdict)}
+                    confidence={showNewsVerdict ? newsVerification.confidence : undefined}
+                    heading={newsVerdictHeading(newsVerification)}
+                    explanation={newsVerification.explanation}
+                    warnings={newsVerification.context_warnings}
+                    closestStory={showNewsVerdict ? relatedNews : null}
+                    sources={displayedNewsEvidence}
+                  />
                 )}
 
-                {!scanning && result?.kind === "news" && imageFactCheck && (
-                  <motion.div className="news-result-content image-fact-check" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                    <div className="news-verdict simple-image-verdict">
-                      <div>
-                        <span data-news-result={imageVerdictTone(imageClassification!)}>
-                          {formatImageVerdict(imageClassification!)} · {imageConfidence}%
-                        </span>
-                      </div>
-                      <h3>
-                        {imageClassification === "REAL"
-                          ? "This news matches reliable reporting."
-                          : imageClassification === "QUOTE"
-                            ? "This is a verified quotation."
-                          : imageClassification === "MISLEADING"
-                            ? "This claim or quote is misleading."
+                {!scanning && result?.kind === "news" && imageFactCheck && !newsVerification && (
+                  <NewsReport
+                    verdict={formatImageVerdict(imageClassification!)}
+                    tone={imageVerdictTone(imageClassification!)}
+                    confidence={imageConfidence}
+                    heading={imageClassification === "REAL"
+                      ? "This news matches reliable sources."
+                      : imageClassification === "QUOTE"
+                        ? "This quote is verified."
+                        : imageClassification === "MISLEADING"
+                          ? "This claim or quote is misleading."
                           : imageClassification === "FAKE"
-                            ? imageFactCheck.quote_verification?.is_quote
-                              ? "The Quote contains False or Debunked Claim"
-                              : "This news is fake."
-                            : (imageEvidence.length > 0 || Boolean(imageClosestStory))
-                              ? "There is not enough information to decide."
-                              : "We could not check this image."}
-                      </h3>
-                      <p>{imageFactCheck.reasoning_summary || imageFactCheck.summary}</p>
-                    </div>
-
-                    {imageClosestStory && (
-                      <div className="closest-story">
-                        <span className="closest-story-media">
-                          <Newspaper size={18} />
-                          {imageClosestStory.image_url && (
-                            <img
-                              src={imageClosestStory.image_url}
-                              alt={`Thumbnail for ${imageClosestStory.title}`}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              onError={(event) => { event.currentTarget.hidden = true; }}
-                            />
-                          )}
-                        </span>
-                        <div>
-                          <small>CLOSEST MATCHING REPORT</small>
-                          <h3>{imageClosestStory.title}</h3>
-                          <p>{imageClosestStory.explanation}</p>
-                          <a href={imageClosestStory.url} target="_blank" rel="noreferrer">
-                            Read on {imageClosestStory.publisher || "the original source"} <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    {displayedImageEvidence.length > 0 && (
-                      <div className="source-list">
-                        <div className="source-list-heading">
-                          <h3>Evidence used for this result</h3>
-                          <span>{displayedImageEvidence.length} {displayedImageEvidence.length === 1 ? "source" : "sources"}</span>
-                        </div>
-                        {displayedImageEvidence.map((source) => (
-                          <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>
-                            <span className="source-monogram">{sourceMonogram(source.source)}</span>
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "2px" }}>
-                                <strong>{source.source}</strong>
-                                {source.relationship === "PARTIAL" && (
-                                  <span style={{
-                                    fontSize: "0.68rem",
-                                    fontWeight: 600,
-                                    padding: "1px 6px",
-                                    borderRadius: "4px",
-                                    backgroundColor: "rgba(59, 130, 246, 0.12)",
-                                    color: "#3b82f6",
-                                    border: "1px solid rgba(59, 130, 246, 0.25)",
-                                  }}>
-                                    Related report
-                                  </span>
-                                )}
-                              </div>
-                              <p>{source.title || source.reason}</p>
-                            </div>
-                            <ExternalLink size={14} />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
+                            ? "This claim is false."
+                            : "There is not enough evidence yet."}
+                    explanation={imageFactCheck.reasoning_summary || imageFactCheck.summary}
+                    warnings={imageFactCheck.key_context}
+                    closestStory={imageClosestStory}
+                    sources={displayedImageEvidence.map((source) => ({
+                      ...source,
+                      title: source.title || source.reason,
+                      publisher: source.source,
+                    }))}
+                  />
                 )}
               </aside>
             </section>
@@ -1808,9 +1633,7 @@ export function DashboardPage() {
                   <Trash2 size={15} /> Clear history
                 </button>
               )}
-              <button className="button primary" type="button" onClick={() => goTo("/dashboard/text-analyzer")}>
-                <Plus size={16} /> New text scan
-              </button>
+
             </div>
           </div>
           <div className="dashboard-lower-grid history-list-only">
@@ -1820,7 +1643,7 @@ export function DashboardPage() {
               {history.length > 0 && <span>{history.length} total</span>}
             </div>
             {history.length === 0 ? (
-              <div className="empty-history"><Clock3 size={21} /><div><strong>No scans yet</strong><p>Your completed analyses will appear here for quick reference.</p></div></div>
+              <div className="empty-history"><Clock3 size={21} /><div><strong>No scans yet</strong><p>Your completed analyses will appear here for quick reference.</p><Link className="empty-state-action" to="/dashboard/text-analyzer">Start a text analysis</Link></div></div>
             ) : (
               <div className="history-list">
                 {history.map((item) => (

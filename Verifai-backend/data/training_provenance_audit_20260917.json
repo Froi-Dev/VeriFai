@@ -1,0 +1,108 @@
+{
+  "corpora": [
+    {
+      "path": "C:\\Users\\dever\\OneDrive\\Desktop\\Verifai\\Verifai-backend\\data\\processed_dataset.jsonl",
+      "sha256": "14a5aeb04b70c40e8ffa0cbb308dbf83049dc0ceaffadafe3297201ed6dc84c6",
+      "rows": 1475,
+      "labels": {
+        "human": 375,
+        "ai": 1100
+      },
+      "sources": {
+        "human": 375,
+        "claude-3-5-sonnet": 276,
+        "gpt-4o": 276,
+        "gemini-2-flash": 274,
+        "deepseek-r1": 274
+      },
+      "languages": {
+        "english": 625,
+        "tagalog": 375,
+        "taglish": 475
+      },
+      "explicit_split_group_conflicts": 0,
+      "duplicate_texts": 0,
+      "conflicting_text_labels": 0,
+      "known_synthetic_generator_matches": 0,
+      "known_synthetic_matches_labeled_human": 0,
+      "provenance_status": "Authorship requires external verification; metadata alone is insufficient."
+    },
+    {
+      "path": "C:\\Users\\dever\\Downloads\\verifai_v11_latest_gen_master.jsonl",
+      "sha256": "2c1b2f72e06e64af145581c045591e19199803c9f0317b7f23e0b0b60989b54c",
+      "rows": 3706,
+      "labels": {
+        "human": 1125,
+        "ai": 2581
+      },
+      "sources": {
+        "human": 713,
+        "chatgpt": 184,
+        "claude": 424,
+        "deepseek": 382,
+        "gemini": 382,
+        "gpt": 227,
+        "student-thesis": 10,
+        "academic-textbook": 200,
+        "curated-human": 58,
+        "student-thesis-longform": 3,
+        "academic-textbook-longform": 62,
+        "gemini-synthesized": 100,
+        "unknown": 342,
+        "human-student-study-notes": 28,
+        "gemini-qa-ai_qa_stem_en": 47,
+        "gemini-qa-ai_qa_student_short_taglish": 46,
+        "gemini-qa-ai_qa_humanized_bypass": 46,
+        "gemini-qa-ai_qa_tech_en": 47,
+        "gemini-qa-ai_qa_formal_tagalog": 47,
+        "gemini-qa-ai_qa_history_taglish": 47,
+        "human-student-essay-archives": 9,
+        "gemini-essay-ai_essay_about_me_en": 47,
+        "gemini-essay-ai_essay_general_en": 46,
+        "gemini-essay-ai_essay_personal_taglish": 47,
+        "gemini-essay-ai_essay_personal_statement_en": 47,
+        "gemini-essay-ai_essay_formal_tagalog": 47,
+        "gemini-essay-ai_essay_humanized_bypass": 46,
+        "claude-3-5-sonnet": 7,
+        "deepseek-r1": 4,
+        "gpt-4o": 7,
+        "gemini-2-flash": 4
+      },
+      "languages": {
+        "english": 1877,
+        "taglish": 1263,
+        "tagalog": 566
+      },
+      "explicit_split_group_conflicts": 0,
+      "duplicate_texts": 0,
+      "conflicting_text_labels": 0,
+      "known_synthetic_generator_matches": 37,
+      "known_synthetic_matches_labeled_human": 15,
+      "provenance_status": "Authorship requires external verification; metadata alone is insufficient."
+    },
+    {
+      "path": "C:\\Users\\dever\\Downloads\\test_predictions_with_breakdown.csv",
+      "sha256": "ef440cbb6a8ebc74be84ecb048b0a5baa1d29a1599d0383f696a651d31ffcd9e",
+      "rows": 1398,
+      "labels": {
+        "human": 699,
+        "ai": 699
+      },
+      "sources": {
+        "human": 699,
+        "generated": 699
+      },
+      "languages": {
+        "english": 690,
+        "taglish": 508,
+        "tagalog": 200
+      },
+      "explicit_split_group_conflicts": 0,
+      "duplicate_texts": 0,
+      "conflicting_text_labels": 0,
+      "known_synthetic_generator_matches": 0,
+      "known_synthetic_matches_labeled_human": 0,
+      "provenance_status": "Authorship requires external verification; metadata alone is insufficient."
+    }
+  ]
+}

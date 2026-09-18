@@ -1,0 +1,92 @@
+{
+  "timestamp": "2026-09-18 19:22:22",
+  "score_percentage": 100.0,
+  "total_tests": 12,
+  "passed_tests": 12,
+  "results": [
+    {
+      "pillar": "Auth",
+      "test_name": "User Login & Session Setup",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_s": 0.14
+    },
+    {
+      "pillar": "Pillar 1",
+      "test_name": "AI Text Detection",
+      "passed": true,
+      "details": "Verdict: Review recommended (AI Prob: 0.6535359025001526, Conf: 0.6535359025001526)",
+      "duration_s": 0.26
+    },
+    {
+      "pillar": "Pillar 1",
+      "test_name": "Human Text Detection",
+      "passed": true,
+      "details": "Verdict: Likely human-written (Human Prob: 0.6666967462025158, Conf: 0.6666967462025158)",
+      "duration_s": 0.16
+    },
+    {
+      "pillar": "Pillar 1",
+      "test_name": "Text Input Validation (<20 chars rejected)",
+      "passed": true,
+      "details": "Status: 422",
+      "duration_s": 0.01
+    },
+    {
+      "pillar": "Pillar 2",
+      "test_name": "Media AI Image Detection",
+      "passed": true,
+      "details": "Classification: Likely authentic/camera-captured (Conf: 85%, Model: gemini-3.5-flash-lite)",
+      "duration_s": 2.06
+    },
+    {
+      "pillar": "Pillar 3",
+      "test_name": "Fact-Check Real News Claim",
+      "passed": true,
+      "details": "Status: SUCCESS, Verdict: VERIFIED, Confidence: 100%, Evidence items: 8",
+      "duration_s": 13.2
+    },
+    {
+      "pillar": "Pillar 3",
+      "test_name": "Fact-Check Disinformation Claim",
+      "passed": true,
+      "details": "Status: SUCCESS, Verdict: FALSE, Confidence: 98%, Evidence items: 4",
+      "duration_s": 13.29
+    },
+    {
+      "pillar": "Pillar 4",
+      "test_name": "News Image OCR & Fact-Check",
+      "passed": true,
+      "details": "Extracted: 'Sara: Duterte, Uuwi na Next Week! US Pres. Trump, Gumagalaw ...', Classification: FAKE, Verdict: FALSE",
+      "duration_s": 16.17
+    },
+    {
+      "pillar": "Pillar 5",
+      "test_name": "Fetch Scans & Aggregated Statistics",
+      "passed": true,
+      "details": "Total Scans: 38 (Text: 25, Media: 3, News: 10, Weekly: 29)",
+      "duration_s": 0.02
+    },
+    {
+      "pillar": "Pillar 5",
+      "test_name": "Delete Single Scan Record",
+      "passed": true,
+      "details": "Deleted scan #296 (Status: 200)",
+      "duration_s": 0.01
+    },
+    {
+      "pillar": "Pillar 6",
+      "test_name": "Guest Text Detection Live Demo",
+      "passed": true,
+      "details": "Classification: Review recommended, Confidence: 0.6852929592132568",
+      "duration_s": 0.05
+    },
+    {
+      "pillar": "Pillar 6",
+      "test_name": "Guest News Verification Live Demo",
+      "passed": true,
+      "details": "Verdict: VERIFIED, Confidence: 95%",
+      "duration_s": 12.34
+    }
+  ]
+}

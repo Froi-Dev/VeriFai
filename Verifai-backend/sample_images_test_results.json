@@ -2,73 +2,73 @@
   {
     "file": "1.png",
     "status": "success",
-    "classification": "INSUFFICIENT_EVIDENCE",
-    "confidence": 30,
-    "overall_verdict": "UNVERIFIABLE",
+    "classification": "FAKE",
+    "confidence": 99,
+    "overall_verdict": "FALSE",
     "ocr_provider": "gemini",
     "cleaned_text": "Sara: Duterte, Uuwi na Next Week! US Pres. Trump, Gumagalaw Para I-Abolish na ang ICC? Posible?",
-    "summary": "No matching coverage was found from credible sources. That does not mean the claim is false; it may simply not have been reported yet.",
-    "elapsed_sec": 15.88,
+    "summary": "Credible fact-checking from RAPPLER and VERA Files explicitly labels this claim as false or misleading.",
+    "elapsed_sec": 22.57,
     "timing": {
-      "image_processing_ms": 147.67,
-      "gemini_ocr_ms": 2661.3,
-      "cleanup_ms": 0.78,
-      "verification_ms": 13070.97,
-      "total_ms": 15881.06
+      "image_processing_ms": 173.36,
+      "gemini_ocr_ms": 1949.96,
+      "cleanup_ms": 0.95,
+      "verification_ms": 20446.37,
+      "total_ms": 22571.05
     }
   },
   {
     "file": "2.png",
     "status": "success",
-    "classification": "MISLEADING",
-    "confidence": 87,
-    "overall_verdict": "MISLEADING",
+    "classification": "FAKE",
+    "confidence": 99,
+    "overall_verdict": "FALSE",
     "ocr_provider": "gemini",
     "cleaned_text": "UPDATE VP SARA DUTERTE MASAYANG INANUNSYO ANG PAG LAYA NI RODRIGO DUTERTE, NEXT WEEK AY NAKA TAKDA DAW ITONG UMUWI NA NG PILIPINAS",
-    "summary": "A related real story was found, but its publication date does not match the claim's current framing. The information may have been true at the time but is being presented as current news.",
-    "elapsed_sec": 8.83,
+    "summary": "Credible fact-checking from RAPPLER and VERA Files explicitly labels this claim as false or misleading.",
+    "elapsed_sec": 10.59,
     "timing": {
-      "image_processing_ms": 15.68,
-      "gemini_ocr_ms": 2495.16,
+      "image_processing_ms": 19.66,
+      "gemini_ocr_ms": 1910.24,
       "cleanup_ms": 0.05,
-      "verification_ms": 6319.07,
-      "total_ms": 8830.01
+      "verification_ms": 8656.55,
+      "total_ms": 10586.56
     }
   },
   {
     "file": "3.png",
     "status": "success",
-    "classification": "INSUFFICIENT_EVIDENCE",
-    "confidence": 30,
-    "overall_verdict": "UNVERIFIABLE",
+    "classification": "FAKE",
+    "confidence": 92,
+    "overall_verdict": "FALSE",
     "ocr_provider": "gemini",
     "cleaned_text": "Sir Jack Argota: \"Yung ICC madidisMantle na. Uuwi na si Duterte!\"",
-    "summary": "No matching coverage was found from credible sources. That does not mean the claim is false; it may simply not have been reported yet.",
-    "elapsed_sec": 13.17,
+    "summary": "Credible fact-checking from VERA Files explicitly rejects this claim.",
+    "elapsed_sec": 10.49,
     "timing": {
-      "image_processing_ms": 20.0,
-      "gemini_ocr_ms": 2883.3,
-      "cleanup_ms": 0.04,
-      "verification_ms": 10263.23,
-      "total_ms": 13166.62
+      "image_processing_ms": 21.91,
+      "gemini_ocr_ms": 2010.42,
+      "cleanup_ms": 0.06,
+      "verification_ms": 8452.97,
+      "total_ms": 10485.43
     }
   },
   {
     "file": "4.png",
     "status": "success",
-    "classification": "REAL",
-    "confidence": 78,
-    "overall_verdict": "MOSTLY_SUPPORTED",
+    "classification": "FAKE",
+    "confidence": 93,
+    "overall_verdict": "FALSE",
     "ocr_provider": "gemini",
-    "cleaned_text": "DAILY Tribune WITHOUT FEAR. WITHOUT FAVOR 'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte",
-    "summary": "Credible reporting from Inquirer.net supports the claim, but independent confirmation is limited.",
-    "elapsed_sec": 16.43,
+    "cleaned_text": "'Pag may nangyaring 'di maganda sa buhay n'yo, isipin n'yo na lang na mas matindi 'yung nangyari sa buhay ko. VP Sara Duterte",
+    "summary": "Credible fact-checking from Rappler explicitly labels this claim as false or misleading.",
+    "elapsed_sec": 17.75,
     "timing": {
-      "image_processing_ms": 11.17,
-      "gemini_ocr_ms": 2146.2,
-      "cleanup_ms": 0.07,
-      "verification_ms": 14273.5,
-      "total_ms": 16431.01
+      "image_processing_ms": 13.12,
+      "gemini_ocr_ms": 2183.32,
+      "cleanup_ms": 0.05,
+      "verification_ms": 15557.79,
+      "total_ms": 17754.34
     }
   },
   {
@@ -78,15 +78,15 @@
     "confidence": 98,
     "overall_verdict": "SUPPORTED",
     "ocr_provider": "gemini",
-    "cleaned_text": "Philippines Moves Closer to Nuclear Energy as DOE Advances Key Preparations for Future",
-    "summary": "Multiple independent credible reports from Inquirer.net, Department of Energy, and others support the claim's central event and entities.",
-    "elapsed_sec": 10.7,
+    "cleaned_text": "Philippines Moves Closer to Nuclear Energy as DOE Advances Key Preparations for Future ISKOLAR NG BAYAN",
+    "summary": "Multiple independent credible reports from Department of Energy, GMA News Online, and others support the claim's central event and entities.",
+    "elapsed_sec": 9.7,
     "timing": {
-      "image_processing_ms": 17.3,
-      "gemini_ocr_ms": 1979.71,
-      "cleanup_ms": 0.1,
-      "verification_ms": 8697.88,
-      "total_ms": 10695.05
+      "image_processing_ms": 21.88,
+      "gemini_ocr_ms": 2007.39,
+      "cleanup_ms": 0.08,
+      "verification_ms": 7666.4,
+      "total_ms": 9695.83
     }
   },
   {
@@ -96,33 +96,33 @@
     "confidence": 43,
     "overall_verdict": "UNVERIFIABLE",
     "ocr_provider": "gemini",
-    "cleaned_text": "LATEST SURVEY RESULTS AUGUST 18-23, 2026 MOMENTUM RESEARCH VP SARA DUTERTE APPROVAL 61.3% 3 PERCENTAGE POINTS PUBLIC SUPPORT REMAINS STRONG AND HAS IMPROVED PRES. FERDINAND MARCOS JR. DISAPPROVAL 57.4% 2 PERCENTAGE POINTS DISSATISFACTION CONTINUES TO RISE NUMBERS DON'T LIE. THE PEOPLE HAVE SPOKEN. SOURCE: MOMENTUM RESEARCH | AUGUST 18-23, 2026",
+    "cleaned_text": "LATEST SURVEY RESULTS AUGUST 18–23, 2026 MOMENTUM RESEARCH VP SARA DUTERTE APPROVAL 61.3% ↑ 3 PERCENTAGE POINTS PUBLIC SUPPORT REMAINS STRONG AND HAS IMPROVED PRES. FERDINAND MARCOS JR. DISAPPROVAL 57.4% ↑ 2 PERCENTAGE POINTS DISSATISFACTION CONTINUES TO RISE NUMBERS DON’T LIE. THE PEOPLE HAVE SPOKEN. SOURCE: MOMENTUM RESEARCH | AUGUST 18–23, 2026",
     "summary": "Reliable sources report related stories, but none directly support or contradict the exact claim. It remains unverified.",
-    "elapsed_sec": 13.39,
+    "elapsed_sec": 13.66,
     "timing": {
-      "image_processing_ms": 25.84,
-      "gemini_ocr_ms": 2576.82,
-      "cleanup_ms": 0.1,
-      "verification_ms": 10785.23,
-      "total_ms": 13388.08
+      "image_processing_ms": 29.57,
+      "gemini_ocr_ms": 2790.1,
+      "cleanup_ms": 0.17,
+      "verification_ms": 10842.9,
+      "total_ms": 13662.88
     }
   },
   {
     "file": "7.png",
     "status": "success",
-    "classification": "REAL",
-    "confidence": 96,
-    "overall_verdict": "SUPPORTED",
+    "classification": "FAKE",
+    "confidence": 93,
+    "overall_verdict": "FALSE",
     "ocr_provider": "gemini",
     "cleaned_text": "ISANG PILIPINAS PRESIDENT MARCOS, BUKAS SA POSIBILIDAD NG PAGBABAWAL SA FACEBOOK SA PILIPINAS AYON KAY CASTRO",
-    "summary": "Multiple independent credible reports from Inquirer.net, Manila Bulletin, and others support the claim's central event and entities.",
-    "elapsed_sec": 10.64,
+    "summary": "Credible fact-checking from Rappler explicitly labels this claim as false or misleading.",
+    "elapsed_sec": 11.83,
     "timing": {
-      "image_processing_ms": 16.31,
-      "gemini_ocr_ms": 2105.84,
-      "cleanup_ms": 0.16,
-      "verification_ms": 8513.38,
-      "total_ms": 10635.82
+      "image_processing_ms": 19.48,
+      "gemini_ocr_ms": 1711.43,
+      "cleanup_ms": 0.06,
+      "verification_ms": 10102.48,
+      "total_ms": 11833.54
     }
   },
   {
@@ -132,33 +132,33 @@
     "confidence": 84,
     "overall_verdict": "MOSTLY_SUPPORTED",
     "ocr_provider": "gemini",
-    "cleaned_text": "NEWS UPDATE Trend Pinas SEN. ROBIN PADILLA ISINUSULONG ANG BATAS NA 'NO CHRISTMAS SONG' DAHIL WALA NAMAN DAW ITONG NAITUTULONG SA PILIPINAS LALO NA SAKANILANG MGA MUSLIM SEPTEMBER 11, 2026",
+    "cleaned_text": "NEWS UPDATE TrendPinas SEN. ROBIN PADILLA ISINUSULONG ANG BATAS NA 'NO CHRISTMAS SONG' DAHIL WALA NAMAN DAW ITONG NAITUTULONG SA PILIPINAS LALO NA SAKANILANG MGA MUSLIM SEPTEMBER 11, 2026",
     "summary": "Credible reporting from Senate of the Philippines supports the claim, but independent confirmation is limited.",
-    "elapsed_sec": 9.87,
+    "elapsed_sec": 19.67,
     "timing": {
-      "image_processing_ms": 28.3,
-      "gemini_ocr_ms": 2578.93,
-      "cleanup_ms": 0.07,
-      "verification_ms": 7263.58,
-      "total_ms": 9870.94
+      "image_processing_ms": 20.99,
+      "gemini_ocr_ms": 2059.58,
+      "cleanup_ms": 0.14,
+      "verification_ms": 17589.4,
+      "total_ms": 19670.24
     }
   },
   {
     "file": "9.png",
     "status": "success",
-    "classification": "INSUFFICIENT_EVIDENCE",
-    "confidence": 44,
-    "overall_verdict": "UNVERIFIABLE",
+    "classification": "REAL",
+    "confidence": 84,
+    "overall_verdict": "MOSTLY_SUPPORTED",
     "ocr_provider": "gemini",
     "cleaned_text": "Rappler about an hour ago WATCH: President Ferdinand Marcos Jr. says he's \"glad\" that the Supreme Court overturned the Sandiganbayan's conviction of his mother, the former first lady, of graft. Marcos says the decision will not affect his selection of a new chief justice. \"That will never enter our thinking in any way,\" he tells media on September 13. Updates from Rappler app: https://rplr.co/FrontPage Subscribe: http://rplr.co/RapplerYouTube More videos on Rappler: https://www.rappler.com/video See less COURTESY OF RTVM RTVM",
-    "summary": "Reliable sources report related stories, but none directly support or contradict the exact claim. It remains unverified.",
-    "elapsed_sec": 15.81,
+    "summary": "Credible reporting from Rappler supports the claim, but independent confirmation is limited.",
+    "elapsed_sec": 13.25,
     "timing": {
-      "image_processing_ms": 11.56,
-      "gemini_ocr_ms": 2998.08,
-      "cleanup_ms": 0.16,
-      "verification_ms": 12799.45,
-      "total_ms": 15809.35
+      "image_processing_ms": 14.78,
+      "gemini_ocr_ms": 2458.9,
+      "cleanup_ms": 0.14,
+      "verification_ms": 10776.51,
+      "total_ms": 13250.46
     }
   },
   {
@@ -168,15 +168,15 @@
     "confidence": 30,
     "overall_verdict": "UNVERIFIABLE",
     "ocr_provider": "gemini",
-    "cleaned_text": "The gap is already visible on paper... See more PhilHealth warns its own funding may not last 2 to 3 more years 4Ps beneficiaries, PWDs, indigents, and solo parents could feel this funding gap first Photo from Philhealth",
+    "cleaned_text": "The gap is already visible on paper... See more PhilHealth warns its own funding may not last 2 to 3 more years 4Ps beneficiaries, PWDs, indigents, and solo parents could feel this funding gap first",
     "summary": "No matching coverage was found from credible sources. That does not mean the claim is false; it may simply not have been reported yet.",
-    "elapsed_sec": 15.97,
+    "elapsed_sec": 15.6,
     "timing": {
-      "image_processing_ms": 15.74,
-      "gemini_ocr_ms": 2561.56,
-      "cleanup_ms": 0.07,
-      "verification_ms": 13395.26,
-      "total_ms": 15972.7
+      "image_processing_ms": 16.37,
+      "gemini_ocr_ms": 2038.38,
+      "cleanup_ms": 0.1,
+      "verification_ms": 13547.94,
+      "total_ms": 15602.88
     }
   }
 ]

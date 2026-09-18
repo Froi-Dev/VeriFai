@@ -122,6 +122,7 @@ class OriginProtectionMiddleware(BaseHTTPMiddleware):
             request.method not in self.SAFE_METHODS
             and origin
             and origin.rstrip("/") not in settings.allowed_origins
+            and not origin.startswith("chrome-extension://")
         ):
             return JSONResponse(status_code=403, content={"detail": "Origin not allowed"})
         return await call_next(request)

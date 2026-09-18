@@ -1,48 +1,40 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, LayoutDashboard } from "lucide-react";
-import { Link } from "react-router-dom";
+import { LayoutDashboard, Maximize2 } from "lucide-react";
 
 export function HeroPreview() {
-  const reduceMotion = useReducedMotion();
-
+  const image = `${import.meta.env.BASE_URL}images/dashboard-overview-desktop.png`;
   return (
-    <div className="hero-product-preview">
-      <span className="preview-layer preview-layer-one" aria-hidden="true" />
-      <span className="preview-layer preview-layer-two" aria-hidden="true" />
-
-      <motion.div
-        className="preview-window"
-        initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="preview-toolbar">
-          <div className="preview-dots" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
+    <figure className="hero-product-preview">
+      <div className="preview-window">
+        <figcaption className="preview-toolbar">
           <span className="hero-preview-badge">
-            <LayoutDashboard size={13} className="hero-badge-icon" />
-            <span>Verif.Ai Workspace · Live Overview</span>
+            <LayoutDashboard size={16} /> Your verification workspace
           </span>
-          <Link to="/auth" className="preview-app-link">
-            <span>Open workspace</span>
-            <ArrowRight size={13} />
-          </Link>
-        </div>
-
-        <div className="hero-preview-image-shell">
+          <a
+            href={image}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View full-size dashboard screenshot"
+          >
+            View full size <Maximize2 size={14} />
+          </a>
+        </figcaption>
+        <a
+          className="hero-preview-image-shell"
+          href={image}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open dashboard screenshot in a new tab"
+        >
           <img
-            src={`${import.meta.env.BASE_URL}images/dashboard-overview-preview.png`}
-            alt="Verif.Ai Workspace Overview Dashboard showing scan activity, weekly charts, and recent scan verifications"
+            src={image}
+            alt="Verif.Ai dashboard with analysis activity and shortcuts to the verification tools"
             className="hero-preview-display-img"
-            width={1024}
-            height={465}
+            width={1440}
+            height={640}
             loading="eager"
           />
-        </div>
-      </motion.div>
-    </div>
+        </a>
+      </div>
+    </figure>
   );
 }

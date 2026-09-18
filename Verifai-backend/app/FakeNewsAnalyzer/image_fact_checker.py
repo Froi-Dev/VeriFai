@@ -20,6 +20,7 @@ import threading
 import time
 import unicodedata
 from dataclasses import dataclass
+from collections.abc import Callable
 from io import BytesIO
 from typing import Any
 
@@ -440,6 +441,8 @@ class GeminiVisionClient:
         prompt: str,
         *,
         generation_config: dict[str, Any] | None = None,
+        model: str | None = None,
+        validate_text: Callable[[str], Any] | None = None,
     ) -> str:
         if not self.configured:
             raise OcrUnavailableError("Gemini Vision is not configured")
@@ -448,7 +451,7 @@ class GeminiVisionClient:
             raise OcrUnavailableError("All Gemini API keys are temporarily cooling down")
 
         url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model or self.model}:generateContent"
         )
         parts: list[dict[str, Any]] = [{"text": prompt}]
         if image is not None:
@@ -473,13 +476,20 @@ class GeminiVisionClient:
                 "thinkingConfig": {"thinkingLevel": "minimal"},
             },
         }
-        last_error: httpx.HTTPStatusError | None = None
+        last_error: Exception | None = None
         for position, api_key in enumerate(keys, start=1):
-            response = await self._client.post(
-                url,
-                headers={"x-goog-api-key": api_key},
-                json=payload,
-            )
+            # Another concurrent request may have cooled this key since selection.
+            if self._cooldowns.get(api_key, 0.0) > time.monotonic():
+                continue
+            try:
+                response = await self._client.post(
+                    url,
+                    headers={"x-goog-api-key": api_key},
+                    json=payload,
+                )
+            except httpx.TransportError as exc:
+                last_error = exc
+                continue
             if self._is_key_failure(response):
                 await self._cool_down(api_key, response.status_code)
                 logger.warning(
@@ -494,13 +504,20 @@ class GeminiVisionClient:
                     response=response,
                 )
                 continue
-            response.raise_for_status()
-            data = response.json()
-            parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-            text = "\n".join(str(part.get("text", "")) for part in parts).strip()
-            if not text:
-                raise ValueError("Gemini returned no usable text")
-            return text
+            try:
+                response.raise_for_status()
+                data = response.json()
+                candidates = data.get("candidates") or [{}]
+                parts = candidates[0].get("content", {}).get("parts", [])
+                text = "\n".join(str(part.get("text", "")) for part in parts).strip()
+                if not text:
+                    raise ValueError("Gemini returned no usable text")
+                if validate_text is not None:
+                    validate_text(text)
+                return text
+            except (httpx.HTTPStatusError, ValueError) as exc:
+                last_error = exc
+                continue
 
         if last_error is not None:
             raise last_error
@@ -1208,7 +1225,9 @@ class PhilippineImageFactChecker:
         timing["total_ms"] = round((time.perf_counter() - t_total_start) * 1000, 2)
 
         # --- Step 5: Wrap result with image/OCR metadata ---
-        return _build_image_response(ocr_result, verification, timing)
+        response = _build_image_response(ocr_result, verification, timing)
+        response["metadata"]["verification_engine"] = type(self.news_verifier).__name__
+        return response
 
     async def _extract_text(
         self,
@@ -1267,7 +1286,20 @@ class PhilippineImageFactChecker:
 
         # --- Minimal deterministic cleanup ---
         t0 = time.perf_counter()
-        cleaned_text = clean_ocr_text(raw_text)
+        headlines = [b["text"] for b in blocks if b.get("type") == "headline"]
+        bodies = [b["text"] for b in blocks if b.get("type") == "body"]
+        if headlines:
+            claim_text = " ".join(headlines)
+        elif bodies:
+            claim_text = " ".join(bodies)
+        elif blocks:
+            claim_text = " ".join(
+                b["text"] for b in blocks
+                if b.get("type") not in {"ui_element", "watermark", "label"}
+            )
+        else:
+            claim_text = raw_text
+        cleaned_text = clean_ocr_text(claim_text)
         timing["cleanup_ms"] = round((time.perf_counter() - t0) * 1000, 2)
 
         return {

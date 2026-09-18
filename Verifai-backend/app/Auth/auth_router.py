@@ -128,7 +128,7 @@ def register(
     except PasswordPolicyError as exc:
         raise HTTPException(status_code=422, detail=exc.errors) from exc
     _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
-    return AuthResponse(user=_user_response(result.user))
+    return AuthResponse(user=_user_response(result.user), access_token=result.access_token.encoded)
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -161,7 +161,7 @@ def login(
             detail="This account is inactive",
         ) from exc
     _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
-    return AuthResponse(user=_user_response(result.user))
+    return AuthResponse(user=_user_response(result.user), access_token=result.access_token.encoded)
 
 
 @router.post("/refresh", response_model=AuthResponse)
@@ -182,7 +182,7 @@ def refresh(request: Request, response: Response, db: DatabaseSession) -> AuthRe
         _clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Session expired") from exc
     _set_auth_cookies(response, result.access_token.encoded, result.refresh_token)
-    return AuthResponse(user=_user_response(result.user))
+    return AuthResponse(user=_user_response(result.user), access_token=result.access_token.encoded)
 
 
 @router.get("/me", response_model=UserResponse)

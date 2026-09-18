@@ -329,6 +329,333 @@ AI_DISCOURSE_PATTERNS: tuple[tuple[str, float, str], ...] = (
         0.9,
         "formulaic transitional exposition",
     ),
+    # Taglish AI discourse patterns
+    (
+        r"\b(?:mahalagang\s+tandaan\s+na|mahalagang\s+isaalang-alang)\b",
+        1.2,
+        "Taglish didactic importance formula",
+    ),
+    (
+        r"\b(?:sa\s+kabuuan|bilang\s+konklusyon|sa\s+madaling\s+salita),?\s+[a-z]",
+        1.0,
+        "Taglish formulaic summary",
+    ),
+    (
+        r"\b(?:sa\s+modernong\s+panahon|sa\s+panahon\s+ngayon|sa\s+kasalukuyang\s+panahon)\b",
+        1.2,
+        "Taglish contemporary anchor formula",
+    ),
+    (
+        r"\b(?:hindi\s+(?:maikakaila|maitatatwa)\s+na)\b",
+        1.1,
+        "Taglish undeniable assertion trope",
+    ),
+    (
+        r"\b(?:may\s+mahalagang\s+papel\s+na\s+ginagampanan)\b",
+        1.0,
+        "Taglish stock role cliché",
+    ),
+    (
+        r"\b(?:narito\s+ang\s+(?:ilang\s+)?(?:mga\s+)?(?:paraan|tips|hakbang|punto|dahilan))\b",
+        1.2,
+        "Taglish listicle/guide opener",
+    ),
+    (
+        r"\b(?:sa\s+kabilang\s+banda|gayunpaman|gayumpaman),?\s+[a-z]",
+        0.8,
+        "Taglish formal connective",
+    ),
+    (
+        r"\b(?:nagbibigay\s+ng\s+(?:malaking|mahalagang)\s+tulong)\b",
+        0.8,
+        "Taglish didactic helpfulness formula",
+    ),
+    (
+        r"\b(?:upang\s+mas\s+maunawaan|ating\s+(?:tatalakayin|alamin))\b",
+        0.9,
+        "Taglish guided discourse opener",
+    ),
+    (
+        r"\b(?:isa\s+sa\s+mga\s+pangunahing\s+(?:dahilan|hamon|suliranin|isyu))\b",
+        0.9,
+        "Taglish primary factor formula",
+    ),
+    # Humanized / Anti-Detector AI evasion patterns
+    (
+        r"\b(?:here['’]s\s+the\s+thing|look,\s+the\s+reality\s+is|honestly,?\s+when\s+you\s+think\s+about\s+it)\b",
+        1.0,
+        "evasive conversational pivot",
+    ),
+    (
+        r"\b(?:at\s+the\s+end\s+of\s+the\s+day,?\s+(?:it\s+comes\s+down\s+to|we\s+have\s+to|what\s+matters))\b",
+        0.9,
+        "humanized concluding cliché",
+    ),
+    (
+        r"\b(?:let['’]s\s+be\s+honest|let['’]s\s+face\s+it),?\s+[a-z]",
+        0.9,
+        "conversational honesty trope",
+    ),
+    (
+        r"\b(?:it['’]s\s+not\s+just\s+about\s+[a-z\s]+;\s*it['’]s\s+about)\b",
+        1.0,
+        "dualistic contrast formula",
+    ),
+    (
+        r"\b(?:sure,?\s+[a-z\s]+,?\s+but\s+on\s+the\s+other\s+hand)\b",
+        0.8,
+        "counterbalanced hedging formula",
+    ),
+    # Social Captions & Engagement Formulas
+    (
+        r"\b(?:stop\s+scrolling\s+if|ever\s+wonder\s+why|here['’]s\s+the\s+(?:secret|truth))\b",
+        1.2,
+        "social hook formula",
+    ),
+    (
+        r"\b(?:save\s+this\s+post(?:\s+for\s+later)?|drop\s+(?:your\s+thoughts|a\s+comment)|leave\s+a\s+comment\s+below|double\s+tap\s+if)\b",
+        1.3,
+        "social engagement CTA",
+    ),
+    (
+        r"\b(?:share\s+this\s+with\s+someone|tag\s+a\s+friend\s+who|tag\s+someone\s+who)\b",
+        1.1,
+        "social sharing CTA",
+    ),
+    (
+        r"\b(?:i-save\s+mo\s+ito|i-share\s+mo\s+['’]to|i-tag\s+mo\s+(?:na\s+)?ang\s+tropa)\b",
+        1.3,
+        "Taglish social CTA",
+    ),
+    (
+        r"\b(?:mag-iwan\s+ng\s+komento|i-comment\s+mo\s+sa\s+ibaba)\b",
+        1.2,
+        "Taglish comment CTA",
+    ),
+    (
+        r"\b(?:gusto\s+mo\s+bang\s+(?:maging|malaman)|narito\s+ang\s+(?:\d+\s+)?(?:tips|paraan|secrets))\b",
+        1.2,
+        "Taglish caption hook",
+    ),
+    # Bot & Sycophantic Social Comments
+    (
+        r"\b(?:such\s+an?\s+(?:insightful|well-written|thought-provoking|inspiring|great)(?:\s+and\s+[a-z-]+)?)\s+post\b",
+        1.4,
+        "bot sycophantic praise",
+    ),
+    (
+        r"\b(?:couldn['’]t\s+agree\s+more\s+with|completely\s+agree\s+with\s+your\s+point)\b",
+        1.3,
+        "bot formulaic agreement",
+    ),
+    (
+        r"\b(?:thank\s+you\s+(?:so\s+much\s+)?for\s+sharing\s+(?:your\s+perspective|this\s+insight|your\s+journey|these\s+insights))\b",
+        1.3,
+        "bot appreciation formula",
+    ),
+    (
+        r"\b(?:looking\s+forward\s+to\s+(?:reading\s+more|your\s+next\s+post|more\s+content))\b",
+        1.1,
+        "bot forward-looking signoff",
+    ),
+    (
+        r"\b(?:napakagandang\s+punto\s+nito|napakahalagang\s+paalala\s+nito)\b",
+        1.4,
+        "Taglish bot moral praise",
+    ),
+    (
+        r"\b(?:maraming\s+salamat\s+sa\s+pagbabahagi\s+ng\s+(?:inspirasyong?|kaalaman|iyong|napakagandang))\b",
+        1.4,
+        "Taglish bot gratitude formula",
+    ),
+    (
+        r"\b(?:keep\s+(?:inspiring\s+us|up\s+the\s+(?:great|amazing)\s+work))\b",
+        1.1,
+        "bot encouragement signoff",
+    ),
+    # Question & Answer (Q&A) AI Signatures
+    (
+        r"\b(?:to\s+answer\s+your\s+question|in\s+answer\s+to\s+your\s+question|answering\s+your\s+question),?\s+[a-z]",
+        1.4,
+        "QA direct answer opener",
+    ),
+    (
+        r"\b(?:great|excellent|good)\s+question!?,?\s+(?:let['’]s\s+(?:break\s+(?:it\s+)?down|explore|dive\s+in|examine)|here['’]s\s+(?:the\s+answer|how))\b",
+        1.4,
+        "QA enthusiastic opener",
+    ),
+    (
+        r"\bhere\s+are\s+(?:the\s+)?(?:key|main|core)?\s+(?:differences|distinctions|steps|reasons|factors)\s+(?:between|for|to)\b",
+        1.3,
+        "QA comparative breakdown opener",
+    ),
+    (
+        r"\b(?:to\s+understand\s+this\s+concept,?\s+let['’]s\s+break\s+it\s+down)\b",
+        1.3,
+        "QA didactic breakdown opener",
+    ),
+    (
+        r"\b(?:when\s+addressing\s+this\s+question|in\s+order\s+to\s+answer\s+this\s+question)\b",
+        1.1,
+        "QA formal address formula",
+    ),
+    (
+        r"\b(?:ang\s+sagot\s+sa\s+iyong\s+(?:tanong|katanungan)\s+ay)\b",
+        1.4,
+        "Taglish QA direct opener",
+    ),
+    (
+        r"\b(?:upang\s+masagot\s+ang\s+(?:iyong\s+)?(?:tanong|katanungang?\s+ito)|para\s+masagot\s+ang\s+tanong\s+na\s+ito)\b",
+        1.3,
+        "Taglish QA intent opener",
+    ),
+    (
+        r"\b(?:narito\s+ang\s+(?:detalyadong\s+)?paliwanag\s+(?:kung\s+bakit|hinggil\s+sa|ukol\s+sa|tungkol\s+sa))\b",
+        1.3,
+        "Taglish QA explanation opener",
+    ),
+    (
+        r"\b(?:upang\s+lubos\s+na\s+maunawaan\s+ang\s+konseptong\s+ito)\b",
+        1.3,
+        "Taglish QA comprehension intro",
+    ),
+    (
+        r"\b(?:hope\s+this\s+(?:clears?\s+things\s+up|answers?\s+your\s+question|helps?\s+clarify\s+the\s+concept|helps?\s+with\s+your\s+(?:assignment|homework|studies|project)))\b",
+        1.4,
+        "QA helpfulness closer",
+    ),
+    (
+        r"\b(?:let\s+me\s+know\s+if\s+you\s+(?:have\s+any\s+(?:more|other|follow-up)\s+questions|need\s+(?:further|more)\s+(?:clarification|details|help|assistance)))\b",
+        1.4,
+        "QA follow-up invitation",
+    ),
+    (
+        r"\b(?:feel\s+free\s+to\s+ask\s+if\s+(?:anything\s+is\s+unclear|you['’]d\s+like\s+(?:more|code)\s+examples))\b",
+        1.3,
+        "QA clarification offer",
+    ),
+    (
+        r"\b(?:sana\s+(?:ay\s+)?nakatulong\s+ang\s+paliwanag\s+na\s+ito\s+sa\s+iyong\s+(?:pag-aaral|takdang-aralin|tanong|assignment))\b",
+        1.4,
+        "Taglish QA helpfulness closer",
+    ),
+    (
+        r"\b(?:huwag\s+mag-atubiling\s+magtanong\s+(?:kung\s+may|ulit)|sabihin\s+mo\s+lang\s+kung\s+may\s+tanong\s+ka\s+pa)\b",
+        1.4,
+        "Taglish QA follow-up invitation",
+    ),
+    (
+        r"\b(?:kung\s+may\s+(?:karagdagang\s+|iba\s+pang\s+)tanong,?\s+(?:huwag\s+mag-atubiling|sabihin\s+mo\s+lang))\b",
+        1.4,
+        "Taglish QA conditional follow-up",
+    ),
+    # Personal Essay, "About Me" & Reflective Narrative AI Signatures
+    (
+        r"\b(?:from\s+a\s+young\s+age,?\s+i\s+have\s+always|since\s+my\s+early\s+childhood,?\s+i\s+have|growing\s+up,?\s+i\s+(?:often\s+)?found\s+myself\s+pondering)\b",
+        1.4,
+        "personal essay childhood opener",
+    ),
+    (
+        r"\b(?:standing\s+at\s+the\s+crossroads\s+of|at\s+this\s+pivotal\s+juncture\s+in\s+my\s+(?:life|journey|academic))\b",
+        1.3,
+        "personal essay crossroads trope",
+    ),
+    (
+        r"\b(?:mula\s+pagkabata,?\s+lagi\s+kong|sa\s+aking\s+paglaki,?\s+naging\s+malaking\s+bahagi)\b",
+        1.3,
+        "Taglish personal essay opener",
+    ),
+    (
+        r"\b(?:it\s+was\s+not\s+(?:merely|just)\s+a\s+(?:challenge|struggle|setback|obstacle);?\s*it\s+was\s+a\s+defining\s+crucible)\b",
+        1.5,
+        "reflective crucible formula",
+    ),
+    (
+        r"\b(?:served\s+as\s+a\s+catalyst\s+for\s+(?:my\s+)?(?:personal\s+)?growth|sparked\s+a\s+profound\s+transformation)\b",
+        1.3,
+        "catalyst for growth formula",
+    ),
+    (
+        r"\b(?:taught\s+me\s+the\s+profound\s+value\s+of|instilled\s+in\s+me\s+a\s+(?:deep|profound)\s+sense\s+of)\s+[a-z]+(?:\s+and\s+[a-z]+)?\b",
+        1.3,
+        "profound lesson cliché",
+    ),
+    (
+        r"\b(?:in\s+retrospect,?\s+i\s+realize\s+that|looking\s+back\s+on\s+this\s+journey,?\s+i\s+(?:see|realize))\b",
+        1.2,
+        "retrospective awakening formula",
+    ),
+    (
+        r"\b(?:shaped\s+me\s+into\s+the\s+person\s+i\s+am\s+today|forged\s+my\s+character\s+and\s+resolve)\b",
+        1.3,
+        "character formation cliché",
+    ),
+    (
+        r"\b(?:sa\s+pagbabalik-tanaw,?\s+napagtanto\s+ko|ang\s+karanasang\s+ito\s+ang\s+naghubog\s+sa\s+akin)\b",
+        1.4,
+        "Taglish reflective growth formula",
+    ),
+    (
+        r"\b(?:i\s+am\s+a\s+passionate,?\s+driven\s+individual\s+who\s+thrives\s+at\s+the\s+intersection\s+of)\b",
+        1.5,
+        "about-me intersection trope",
+    ),
+    (
+        r"\b(?:thrives?\s+at\s+the\s+intersection\s+of\s+[a-z\s]+(?:\s+and\s+[a-z\s]+)?)\b",
+        1.3,
+        "intersection of disciplines cliché",
+    ),
+    (
+        r"\b(?:beyond\s+(?:my\s+)?academic\s+pursuits,?\s+i\s+find\s+solace\s+in|when\s+i\s+am\s+not\s+coding,?\s+i\s+find\s+(?:solace|peace)\s+in)\b",
+        1.4,
+        "about-me solace cliché",
+    ),
+    (
+        r"\b(?:my\s+(?:ultimate\s+)?mission\s+is\s+to\s+(?:empower|drive|build|create|develop|foster|bridge|inspire|[a-z]+\s+(?:solutions|systems|tools|communities)))\b",
+        1.3,
+        "about-me mission statement trope",
+    ),
+    (
+        r"\b(?:isa\s+akong\s+masigasig\s+at\s+determinadong|ang\s+aking\s+pangunahing\s+adhikain\s+ay)\b",
+        1.3,
+        "Taglish about-me trope",
+    ),
+    # Latest-Generation Reasoning & Analytical Discourse Signatures (DeepSeek-R1, Claude 3.5, GPT-4o)
+    (
+        r"\b(?:to\s+understand\s+why\s+[a-z\s]+,?\s+we\s+need\s+to\s+consider)\b",
+        1.4,
+        "reasoning decomposition opener",
+    ),
+    (
+        r"\b(?:under\s+the\s+cap\s+theorem,?\s+(?:the\s+system\s+must|we\s+must))\b",
+        1.4,
+        "theoretical trade-off framing",
+    ),
+    (
+        r"\b(?:when\s+a\s+network\s+splits\s+into\s+two|cannot\s+replicate\s+to\s+the\s+majority\s+quorum)\b",
+        1.4,
+        "distributed consensus reasoning trope",
+    ),
+    (
+        r"\b(?:our\s+findings\s+reveal\s+a\s+statistically\s+significant\s+(?:decrease|increase|difference|correlation))\b",
+        1.3,
+        "empirical findings assertion trope",
+    ),
+    (
+        r"\b(?:there\s+is\s+a\s+quiet\s+honesty\s+in|inhabit\s+a\s+fragile\s+liminal\s+space)\b",
+        1.4,
+        "literary reflective AI trope",
+    ),
+    (
+        r"\b(?:ang\s+pagbabago\s+ng\s+klima\s+ay\s+isa\s+sa\s+pinakamalubhang\s+banta)\b",
+        1.4,
+        "Tagalog formal crisis assertion",
+    ),
+    (
+        r"\b(?:upang\s+mapigilan\s+ang\s+krisis\s+na\s+ito,?\s+kinakailangan\s+ang\s+malawakang)\b",
+        1.4,
+        "Tagalog policy resolution formula",
+    ),
 )
 
 _COMPILED_PATTERNS: tuple[tuple[re.Pattern[str], float, str], ...] = tuple(
@@ -339,6 +666,36 @@ _LISTICLE_REGEX: re.Pattern[str] = re.compile(
     r"(?:^|\n)\s*(?:\d+\.|\-|\*)\s+\*\*[^*]+\*\*:", re.IGNORECASE
 )
 _EMDASH_REGEX: re.Pattern[str] = re.compile(r"(?:—|--)[^—\n]{10,80}(?:—|--)", re.IGNORECASE)
+_EMOJI_BULLET_REGEX: re.Pattern[str] = re.compile(
+    r"(?:^|\n|\s)(?:👉|✨|📌|💡|1️⃣|2️⃣|3️⃣|4️⃣|5️⃣|[0-9]\uFE0F?\u20E3)",
+    re.UNICODE,
+)
+_HUMAN_INFORMAL_REGEX: re.Pattern[str] = re.compile(
+    r"(?:\b(?:haha+|lods|lodi|charot|eme|pota|puta|tangina|gago|sana\s+all|skl|tbh|lmao|fml|hays|"
+    r"walang\s+kwenta|ang\s+corny|tara\s+g|nakakaiyak|sobrang\s+init|di\s+ko\s+na\s+kaya|"
+    r"umay|bwisit|nakakabwisit|sarap\s+ng|tulog\s+na|kain\s+tayo|pre|dude|"
+    r"ganto\s+kasi|isipin\s+mo|depende\s+sa|basta\s+ang\s+alam\s+ko|"
+    r"nakasagot\s+ako|di\s+ko\s+sure|answer\s+for\s+item|sa\s+tingin\s+ko|"
+    r"my\s+lola|my\s+lolo|nanay\s+ko|tatay\s+ko|nung\s+(?:grade|bata)\s+ako|di\s+ko\s+akalain|"
+    r"ako\s+nga\s+pala|simpleng\s+tao\s+lang|sa\s+totoo\s+lang|sa\s+probinsya|hand-me-down|"
+    r"hi\s+everyone|hello\s+everyone|to\s+be\s+(?:completely\s+)?honest|if\s+you\s+asked\s+me|"
+    r"way\s+too\s+many|when\s+i['’]m\s+not|"
+    # Technical & Developer informal phrases
+    r"spent\s+the\s+entire\s+weekend|chasing\s+a\s+bug|single\s+missing\s+comma|docker-compose|"
+    r"yaml\s+is\s+honestly|cursed\s+configuration|indentation\s+errors|failing\s+in\s+ci|"
+    r"passing\s+locally|i\s+swear\s+next\s+project|raw\s+bash\s+scripts|broken\s+migrations|"
+    r"someone\s+accidentally|nag-migrate\s+kayo|git\s+pull\s+muna|pr\s+review|"
+    r"bodge\s+wire|borrow\s+checker|null\s+pointer|hit\s+a\s+cuda\s+out\s+of\s+memory|"
+    # Workplace / Professional Taglish & Casual Office
+    r"send\s+ko\s+lang\s+po|pa-check\s+na\s+lang|update\s+ko\s+lang|regarding\s+sa\s+budget|"
+    r"mamaya\s+pong?|paki-review\s+po|if\s+ok\s+na\s+sa\s+inyo|medyo\s+bloated|"
+    r"open\s+tickets\s+ko|magla-log\s+in\s+na\s+lang|will\s+keep\s+you\s+posted|salamat\s+po\s+sa\s+understanding|"
+    # Lab & Experimental Observations
+    r"in\s+our\s+lab\s+trials|we\s+noticed\s+that\s+the|we\s+repeated\s+the\s+assay|"
+    r"fresh\s+reagents|drop-off\s+every\s+single\s+time|our\s+working\s+hypothesis)\b|"
+    r"\b(?:short|long)\s+answer\s*:?)",
+    re.IGNORECASE,
+)
 
 
 def extract_ai_stylistic_signals(text: str) -> tuple[float, list[str]]:
@@ -355,6 +712,11 @@ def extract_ai_stylistic_signals(text: str) -> tuple[float, list[str]]:
         score += 1.2
         matched.append(f"formatted listicle ({len(list_matches)} items)")
 
+    emoji_matches = _EMOJI_BULLET_REGEX.findall(text)
+    if len(emoji_matches) >= 2:
+        score += 1.1
+        matched.append(f"emoji bullet structure ({len(emoji_matches)} items)")
+
     if _EMDASH_REGEX.search(text):
         score += 0.5
         matched.append("em-dash clause")
@@ -362,25 +724,42 @@ def extract_ai_stylistic_signals(text: str) -> tuple[float, list[str]]:
     return score, matched
 
 
+def extract_human_informal_signals(text: str) -> tuple[float, list[str]]:
+    """Extract informal colloquial markers characteristic of human casual writing."""
+    matches = _HUMAN_INFORMAL_REGEX.findall(text)
+    if not matches:
+        return 0.0, []
+    score = min(2.0, 0.6 * len(matches))
+    return score, [f"casual colloquial markers ({len(matches)})"]
+
+
 def compute_hybrid_ai_probability(
     raw_ai_prob: float,
     ai_marker_score: float,
     *,
+    human_marker_score: float = 0.0,
     min_ai_threshold: float = 0.8748,
     human_max_threshold: float | None = None,
 ) -> float:
     """
-    Synthesize neural probability with discourse stylistic signals.
-    Prevents false human verdicts on texts with strong AI conversational or didactic markers.
+    Synthesize neural probability with discourse stylistic signals and human casual safeguards.
+    Prevents false human verdicts on texts with strong AI conversational or didactic markers,
+    while protecting authentic casual colloquial human text from spurious false positives.
     """
-    if ai_marker_score < 1.0 or raw_ai_prob >= min_ai_threshold:
-        return raw_ai_prob
-
     human_bound = (
         human_max_threshold
         if human_max_threshold is not None
         else max(0.05, 1.0 - min_ai_threshold)
     )
+
+    # Human informal safeguard: protect authentic casual speech when no AI discourse markers exist
+    if ai_marker_score < 0.5 and human_marker_score >= 0.6:
+        if raw_ai_prob > human_bound:
+            raw_ai_prob = min(raw_ai_prob, human_bound * 0.85)
+        return raw_ai_prob
+
+    if ai_marker_score < 1.0 or raw_ai_prob >= min_ai_threshold:
+        return raw_ai_prob
 
     if ai_marker_score >= 2.5:
         target_ai = max(min_ai_threshold + 0.05, 0.89)
@@ -553,11 +932,23 @@ class TextDetector:
                 dtype=log_odds.dtype,
             )
             document_log_odds = (log_odds * weights).sum() / weights.sum()
+
+            # Long-form multi-chunk pooling:
+            # When multiple chunks exist (chunk_count >= 2), prevent neutral or transitional
+            # paragraphs from diluting strong AI core sections. If top chunks lean AI, blend
+            # the global weighted average with top-quartile chunk log-odds.
+            if chunk_count >= 2:
+                k = max(1, math.ceil(chunk_count * 0.5))
+                top_k_log_odds = self._torch.topk(log_odds, k=k).values.mean()
+                if top_k_log_odds > 0:
+                    document_log_odds = 0.7 * document_log_odds + 0.3 * top_k_log_odds
+
             temperature = self.calibration.temperature if self.calibration else 1.0
             raw_ai_probability = float(self._torch.sigmoid(document_log_odds / temperature).item())
             calibration = self.calibration
 
             stylistic_score, detected_markers = extract_ai_stylistic_signals(text)
+            human_informal_score, human_markers = extract_human_informal_signals(text)
             human_max_threshold = (
                 calibration.human_max_ai_probability if calibration else None
             )
@@ -567,6 +958,7 @@ class TextDetector:
             ai_probability = compute_hybrid_ai_probability(
                 raw_ai_probability,
                 stylistic_score,
+                human_marker_score=human_informal_score,
                 min_ai_threshold=min_ai_threshold,
                 human_max_threshold=human_max_threshold,
             )

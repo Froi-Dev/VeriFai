@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ai-corpus", type=Path, required=True)
     parser.add_argument("--labeled-corpus", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--prior-corpus", type=Path, default=None, help="Existing maximized jsonl corpus to merge with")
     parser.add_argument("--add-tagalog-ai", type=int, default=150)
     parser.add_argument("--add-taglish-ai", type=int, default=250)
     parser.add_argument("--add-english-ai", type=int, default=250)
@@ -51,11 +52,40 @@ def load_labeled(path: Path) -> list[dict[str, str | int]]:
                 {
                     "text": text,
                     "label": label,
-                    "group_id": f"labeled:{original_id}",
+                    "group_id": original_id,
                     "language": language,
                     "domain": domain,
                     "source": source,
                     "origin": "labeled",
+                }
+            )
+    return rows
+
+
+def load_prior_corpus(path: Path) -> list[dict[str, str | int]]:
+    rows: list[dict[str, str | int]] = []
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            text = normalize_text(row.get("text"))
+            label = normalize_text(row.get("label")).casefold()
+            group_id = normalize_text(row.get("group_id") or row.get("prompt"))
+            language = normalize_text(row.get("language")).casefold() or "unknown"
+            domain = normalize_text(row.get("domain") or row.get("category")).casefold() or "essay"
+            source = normalize_text(row.get("source") or row.get("model")).casefold() or "unknown"
+            if len(text) < 20 or label not in {"human", "ai"} or not group_id:
+                continue
+            rows.append(
+                {
+                    "text": text,
+                    "label": label,
+                    "group_id": group_id,
+                    "language": language,
+                    "domain": domain,
+                    "source": source,
+                    "origin": "prior_corpus",
                 }
             )
     return rows
@@ -90,7 +120,7 @@ def load_stratified_ai(
                 {
                     "text": text,
                     "label": "ai",
-                    "group_id": f"current-prompt:{prompt.casefold()}",
+                    "group_id": prompt,
                     "language": lang,
                     "domain": category or "essay",
                     "source": model,
@@ -98,12 +128,8 @@ def load_stratified_ai(
                 }
             )
 
-    selected: list[dict[str, str | int]] = []
-    rng = random.Random(seed)
-    models = ["claude", "chatgpt", "gemini", "deepseek", "gpt"]
-
     for lang, total_needed in target_counts.items():
-        active_models = [m for m in models if (lang, m) in by_lang_model]
+        active_models = sorted({m for (l, m) in by_lang_model if l == lang})
         if not active_models:
             continue
         per_model = total_needed // len(active_models)
@@ -118,32 +144,23 @@ def load_stratified_ai(
 
 
 def assign_splits(rows: list[dict[str, str | int]], seed: int) -> None:
-    groups: dict[tuple[str, str], list[dict[str, str | int]]] = defaultdict(list)
+    groups: dict[str, list[dict[str, str | int]]] = defaultdict(list)
     for row in rows:
-        groups[(str(row["label"]), str(row["group_id"]))].append(row)
-
-    grouped_by_label: dict[str, list[str]] = defaultdict(list)
-    for label, group_id in groups:
-        grouped_by_label[label].append(group_id)
-
-    assignments: dict[tuple[str, str], str] = {}
-    for label, group_ids in grouped_by_label.items():
-        ordered = sorted(group_ids)
-        if len(ordered) < 20:
-            raise ValueError(f"{label} class needs at least 20 independent groups")
-        random.Random(f"{seed}:{label}").shuffle(ordered)
-        ordered.sort(key=lambda group_id: len(groups[(label, group_id)]), reverse=True)
-        assigned_rows = Counter({split: 0 for split in SPLIT_NAMES})
-        for group_id in ordered:
-            split = min(
-                SPLIT_NAMES,
-                key=lambda name: assigned_rows[name] / SPLIT_RATIOS[name],
-            )
-            assignments[(label, group_id)] = split
-            assigned_rows[split] += len(groups[(label, group_id)])
+        groups[str(row["group_id"])].append(row)
+    ordered = sorted(groups)
+    if len(ordered) < 20:
+        raise ValueError("dataset needs at least 20 independent groups")
+    random.Random(seed).shuffle(ordered)
+    ordered.sort(key=lambda group_id: len(groups[group_id]), reverse=True)
+    assigned_rows = Counter({split: 0 for split in SPLIT_NAMES})
+    assignments: dict[str, str] = {}
+    for group_id in ordered:
+        split = min(SPLIT_NAMES, key=lambda name: assigned_rows[name] / SPLIT_RATIOS[name])
+        assignments[group_id] = split
+        assigned_rows[split] += len(groups[group_id])
 
     for row in rows:
-        row["split"] = assignments[(str(row["label"]), str(row["group_id"]))]
+        row["split"] = assignments[str(row["group_id"])]
 
 
 def deduplicate(rows: list[dict[str, str | int]]) -> list[dict[str, str | int]]:
@@ -160,9 +177,11 @@ def deduplicate(rows: list[dict[str, str | int]]) -> list[dict[str, str | int]]:
 def main() -> None:
     args = parse_args()
     labeled_rows = load_labeled(args.labeled_corpus)
+    prior_rows = load_prior_corpus(args.prior_corpus) if args.prior_corpus and args.prior_corpus.exists() else []
+
     existing_texts = {
         hashlib.sha256(str(r["text"]).casefold().encode()).hexdigest()
-        for r in labeled_rows
+        for r in (labeled_rows + prior_rows)
     }
 
     target_counts = {
@@ -172,7 +191,7 @@ def main() -> None:
     }
     ai_rows = load_stratified_ai(args.ai_corpus, target_counts, args.seed, existing_texts)
 
-    all_rows = deduplicate(labeled_rows + ai_rows)
+    all_rows = deduplicate(labeled_rows + prior_rows + ai_rows)
     assign_splits(all_rows, args.seed)
 
     counts_by_split = {

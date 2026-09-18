@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
-from app.FakeNewsAnalyzer.adjudicator import GeminiAdjudicator
+from app.FakeNewsAnalyzer.fast_verifier import FastNewsVerifier
 from app.FakeNewsAnalyzer.image_fact_checker import (
     ImagePreprocessingError,
     OcrUnavailableError,
@@ -25,8 +25,9 @@ from app.Global.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["News verification"])
-adjudicator = GeminiAdjudicator(settings)
-news_verifier = NewsVerifier(settings, adjudicator=adjudicator)
+news_verifier = FastNewsVerifier(
+    settings, gemini_client=gemini_vision_client, fallback=NewsVerifier(settings),
+)
 image_fact_checker = PhilippineImageFactChecker(
     settings,
     vision_client=gemini_vision_client,
@@ -61,7 +62,7 @@ async def verify_news(
     try:
         async with asyncio.timeout(settings.news_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("news", payload.text, version="v8"),
+                cache_key("news", payload.text, version="v9-fast"),
                 settings.news_result_cache_seconds,
                 produce,
                 cache_when=lambda value: value.get("status") == "SUCCESS",
@@ -122,9 +123,13 @@ async def verify_news_image(
     try:
         async with asyncio.timeout(settings.image_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("image", image_bytes, version="v12"),
+                cache_key("image", image_bytes, version="v13-fast"),
                 settings.image_result_cache_seconds,
                 produce,
+                cache_when=lambda value: (
+                    value.get("status") == "success"
+                    and (value.get("verification") or {}).get("status") == "SUCCESS"
+                ),
             )
     except TimeoutError as exc:
         logger.warning("Image fact-check exceeded its end-to-end deadline")

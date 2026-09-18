@@ -310,6 +310,7 @@ class UserResponse(BaseModel):
 
 class AuthResponse(BaseModel):
     user: UserResponse
+    access_token: str | None = None
 
 
 class MessageResponse(BaseModel):

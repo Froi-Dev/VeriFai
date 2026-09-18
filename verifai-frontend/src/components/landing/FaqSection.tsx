@@ -8,19 +8,19 @@ type FaqItem = {
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "How does Verif.Ai accurately analyze Taglish and casual Filipino text?",
+    question: "Can I check Filipino and Taglish writing?",
     answer:
-      "Most online detectors are only trained on formal English from abroad, so they often mistake normal Taglish slang or campus conversations for AI-generated text. Verif.Ai was trained on real Filipino student essays, local news, and casual Taglish alongside AI examples, helping it distinguish genuine local writing from repetitive AI formulas.",
+      "Yes. Text Analyzer accepts English, Filipino, and Taglish passages and checks for patterns associated with AI writing. Read the assessment alongside the original text, especially for short passages or mixed-language writing.",
   },
   {
-    question: "Does Verif.Ai give a definitive '100% fake' or '100% real' verdict?",
+    question: "Is an assessment proof that content is real or fake?",
     answer:
-      "No, and by design. No detector can be 100% infallible. Instead of an abrupt guess, Verif.Ai gives you a calibrated likelihood percentage, highlighted writing clues, and links to verified news coverage. Borderline cases are marked as 'Review Recommended' so you can make an informed judgment.",
+      "No. Writing and image assessments identify patterns; they do not establish authorship or provenance. News Checker compares claims with available reporting. Review the explanation, limitations, and linked sources before drawing a conclusion.",
   },
   {
-    question: "Is my submitted text or uploaded screenshot saved or used to train models?",
+    question: "Where can I find my previous checks?",
     answer:
-      "No. Your submissions are analyzed securely in real-time. Your text, documents, and screenshots are never stored permanently, never shared publicly, and never used to train public AI models.",
+      "Completed analyses appear in your workspace’s Scan history. You can review scan summaries, delete individual entries, or clear your history using the controls on that page.",
   },
   {
     question: "How does fact-checking work with screenshots and images?",
@@ -30,7 +30,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Can schools, student publications, and teams use Verif.Ai?",
     answer:
-      "Yes. Verif.Ai provides both an intuitive web dashboard for in-depth checks and a fast browser extension for quick everyday verification while browsing.",
+      "The web workspace is available for checking writing, news, and images. A browser extension is planned, but a downloadable package is not yet available.",
   },
 ];
 
@@ -45,10 +45,10 @@ export function FaqSection() {
     <section id="faq" className="section faq-section">
       <div className="container">
         <div className="center-heading">
-          <p className="kicker">FREQUENTLY ASKED QUESTIONS</p>
+          <p className="kicker">Common questions</p>
           <h2>Clear answers to common questions.</h2>
           <p>
-            Everything you need to know about our Taglish analysis, fact-checking, and privacy protections.
+            What each tool can tell you, and how to use the results.
           </p>
         </div>
 

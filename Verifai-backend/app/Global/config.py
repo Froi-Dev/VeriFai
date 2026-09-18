@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     gemini_api_keys: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
     gemini_vision_model: str = "gemini-3.5-flash-lite"
+    news_fast_model: str = "gemini-3.5-flash-lite"
     gemini_timeout_seconds: float = Field(default=30.0, ge=2.0, le=60.0)
     gemini_key_cooldown_seconds: int = Field(default=60, ge=5, le=3_600)
 

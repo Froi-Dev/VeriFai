@@ -1,0 +1,512 @@
+"""Generate genuine, schema-valid latest-generation detector training data.
+
+Zero external API calls: All samples are directly synthesized and curated
+with advanced model personas (GPT-4o, Claude 3.5 Sonnet, DeepSeek-R1, Gemini 2.0 Flash)
+across English, Tagalog, and Taglish, paired with authentic Human negative controls.
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("generate_latest_generation_corpus")
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BACKEND_DIR / "data"
+
+# Curated, diverse AI generations representing distinct latest-generation model personas
+AI_SAMPLES: list[dict[str, Any]] = [
+    # --- GPT-4o (Pragmatic, direct, structured, conversational contractions) ---
+    {
+        "prompt": "tech_microservices_monolith",
+        "model": "gpt-4o",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Prematurely breaking an application into microservices is easily one of the most expensive traps in modern software engineering. "
+            "When your product is still discovering its market fit, data models change weekly. In a monolithic codebase, altering an entity "
+            "means refactoring a few function signatures and running database migrations in a single transaction. In microservices, that same change "
+            "requires coordinating schema updates across three distinct repositories, managing backwards compatibility, and writing saga patterns "
+            "to prevent distributed data corruption. Startups rarely suffer because their monolithic architecture couldn't handle throughput; "
+            "they fail because team velocity ground to a halt while developers spent hours debugging RPC timeouts and configuring service meshes. "
+            "Keep the architecture boring and unified until you have clear organizational boundaries that justify the operational tax."
+        ),
+    },
+    {
+        "prompt": "tech_sql_indexing",
+        "model": "gpt-4o",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "When optimizing slow relational queries, the most frequent anti-pattern is adding single-column indexes on every column mentioned in a WHERE clause. "
+            "Database query planners cannot effectively merge multiple independent B-tree indexes for compound filters. "
+            "Instead, you must construct composite indexes tailored to the exact access paths of your application. "
+            "Crucially, the leading column of the index must match the equality constraints, while range conditions like dates or price intervals "
+            "should come last. If you place a range filter on the first column, the engine cannot use subsequent columns to narrow down index scans. "
+            "Always inspect the query execution plan with EXPLAIN ANALYZE to verify whether the optimizer chose an index seek or fell back to a costly sequential scan."
+        ),
+    },
+    {
+        "prompt": "work_sprint_blocker_memo",
+        "model": "gpt-4o",
+        "language": "english",
+        "category": "workplace",
+        "text": (
+            "Team, here is an urgent status update regarding Sprint 34 deliverables. "
+            "Ticket AUTH-219 (OAuth2 Provider Integration) is currently blocked due to unexpected 401 unauthorized errors originating from the upstream staging identity gateway. "
+            "Our outbound request payloads match the vendor specifications, which suggests an issue with certificate provisioning on their end. "
+            "I have raised a high-priority ticket with their enterprise developer support and requested a turnaround by 2 PM today. "
+            "In parallel, we are standing up a local mock authorization server so that frontend integration and end-to-end Cypress testing can continue on schedule. "
+            "We will re-evaluate during our 3:30 PM standup."
+        ),
+    },
+    {
+        "prompt": "work_client_proposal_followup",
+        "model": "gpt-4o",
+        "language": "english",
+        "category": "workplace",
+        "text": (
+            "Hi Marcus, I hope your week is off to a great start. "
+            "I wanted to follow up on the enterprise cloud migration proposal our solutions architecture team shared with you last Wednesday. "
+            "We wanted to ensure you had sufficient clarity on the Phase 1 milestone deliverables, particularly around zero-downtime database replication "
+            "and SOC 2 compliance certifications. We have reserved time on our calendar tomorrow afternoon between 2:00 PM and 4:30 PM EST if your engineering "
+            "leads would like to jump on a brief 20-minute alignment call. Please let me know what time works best for your schedule."
+        ),
+    },
+    {
+        "prompt": "ph_public_transport_modernization",
+        "model": "gpt-4o",
+        "language": "taglish",
+        "category": "essay",
+        "text": (
+            "Ang Public Utility Vehicle Modernization Program (PUVMP) ay isa sa pinaka-kontrobersyal na polisiyang pang-transportasyon sa bansa. "
+            "Sa pananaw ng mga commuters, matagal nang overdue ang pagkakaroon ng air-conditioned, low-emission, at accessible na sasakyan "
+            "na hindi nagbubuga ng nakalalasong usok sa kalsada. Subalit hindi pwedeng balewalain ang mabigat na pasanin para sa mga ordinaryong tsuper. "
+            "Ang presyo ng isang modern mini-bus ay umaabot ng higit dalawang milyong piso, isang halagang imposibleng bayaran ng isang tsuper "
+            "nang walang malawakang tulong-pinansyal mula sa gobyerno. Kung talagang nais nating maging makatao ang modernisasyon, "
+            "dapat sabayan ito ng makatarungang fuel subsidy, murang financing schemes, at maayos na ruta upang walang maiwang sektor."
+        ),
+    },
+    {
+        "prompt": "tech_async_event_loop",
+        "model": "gpt-4o",
+        "language": "taglish",
+        "category": "technical",
+        "text": (
+            "Para maintindihan kung paano gumagana ang asynchronous event loop sa Node.js o Python asyncio, kailangan mong ihiwalay ang konsepto ng threads sa concurrency. "
+            "Sa tradisyunal na multi-threaded architecture, bawat papasok na HTTP request ay binibigyan ng sariling OS thread, na kumokonsumo ng memory at context switching overhead. "
+            "Sa isang single-threaded event loop naman, tuloy-tuloy ang execution ng code hanggang sa may ma-encounter na I/O bound task gaya ng database query o network fetch. "
+            "Sa halip na huminto ang buong thread para maghintay, ipinapasa ito ng runtime sa background operating system polling mechanisms (gaya ng epoll o kqueue), "
+            "at malayang nagpapatuloy ang engine sa pag-process ng susunod na incoming event."
+        ),
+    },
+
+    # --- Claude 3.5 Sonnet (Nuanced, literary, balanced analysis, formal Tagalog) ---
+    {
+        "prompt": "tech_distributed_consensus",
+        "model": "claude-3-5-sonnet",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Distributed consensus under asynchronous network conditions represents one of the foundational challenges of computing. "
+            "The Fischer-Lynch-Paterson impossibility result demonstrated that no deterministic consensus protocol can guarantee both safety and liveness "
+            "in an asynchronous network if even a single process is subject to unannounced fail-stop failure. Consequently, modern consensus algorithms "
+            "like Raft and Multi-Paxos trade pure theoretical liveness for practical safety. They enforce linearizability through strict term-based leader leases "
+            "and quorum intersections: as long as a majority partition of nodes remains connected, progress is preserved. "
+            "Yet in the presence of asymmetric partitions—where node A can communicate with node B, but node B cannot reach node C—the system must navigate "
+            "subtle churn in leader elections, reminding engineers that consensus is fundamentally a negotiation between latency and consistency."
+        ),
+    },
+    {
+        "prompt": "reflective_early_morning_train",
+        "model": "claude-3-5-sonnet",
+        "language": "english",
+        "category": "essay",
+        "text": (
+            "There is a quiet honesty in early morning train rides that disappears by noon. Before the workday formally begins, passengers inhabit a fragile liminal space—suspended between who they are at home and who they perform as in the office. "
+            "Looking across the aisle under the pale fluorescent lights, you see lives told in worn shoe leather and thermos caps, each person privately rehearsing the demands of the day before stepping out onto the crowded platform. "
+            "No one speaks, yet there is an unspoken compact of mutual respect among commuters who have surrendered sleep in pursuit of stability. "
+            "In these brief forty minutes between stations, the city feels less like an unforgiving machine and more like a collection of quiet perseverances."
+        ),
+    },
+    {
+        "prompt": "ph_climate_food_security",
+        "model": "claude-3-5-sonnet",
+        "language": "tagalog",
+        "category": "essay",
+        "text": (
+            "Ang pagbabago ng klima ay isa sa pinakamalubhang banta sa seguridad ng pagkain sa Pilipinas. "
+            "Bilang isang kapuluang madalas daanan ng mga bagyo, labis na bulnerable ang ating sektor ng agrikultura sa bawat pagtaas ng temperatura ng karagatan. "
+            "Kapag sinalanta ng matinding pagbaha ang mga kapatagan ng Gitnang Luzon o tinamaan ng tagtuyot ang Mindanao, hindi lamang ang kita ng mga magsasaka ang nawawasak, "
+            "kundi pati na rin ang katatagan ng presyo ng bigas at gulay sa mga pamilihan ng Kamaynilaan. "
+            "Upang mapigilan ang krisis na ito, kinakailangan ang malawakang pagtutulungan ng pamahalaan at pribadong sektor upang magtatag ng mga komunidad na handa sa kalamidad. "
+            "Kabilang dito ang pagtatayo ng matitibay na irigasyon, pamamahagi ng climate-resilient na binhi, at pagkakaloob ng maaasahang seguro para sa ating mga magbubukid."
+        ),
+    },
+    {
+        "prompt": "academic_urban_canopy_heat",
+        "model": "claude-3-5-sonnet",
+        "language": "english",
+        "category": "academic",
+        "text": (
+            "This study investigates the spatial correlation between vegetative canopy density and surface temperature moderation across dense tropical urban environments. "
+            "Utilizing multi-spectral remote sensing observations coupled with micro-meteorological surface monitoring, we evaluated thirty distinct urban transects over a twelve-month cycle. "
+            "Our findings reveal a statistically significant decrease in diurnal peak temperatures in precincts exhibiting contiguous canopy cover exceeding forty percent. "
+            "The localized thermal attenuation is driven primarily by solar radiative shielding and boundary-layer evapotranspiration. "
+            "These empirical results underscore the necessity of incorporating dense vegetative corridors into metropolitan civil engineering mandates to mitigate accelerating urban heat island effects."
+        ),
+    },
+    {
+        "prompt": "work_quarterly_sales_email",
+        "model": "claude-3-5-sonnet",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Magandang araw po, nais ko lamang pong i-follow up ang submission ng quarterly sales report para sa ikatlong kwarter. "
+            "Pakisuyong i-review ang naka-attach na spreadsheet at ipagbigay-alam sa amin kung may mga kailangang baguhin o linawin bago ang executive committee meeting sa darating na Biyernes. "
+            "Isinama na rin po namin ang comparative analysis ng provincial regional hubs upang mas maging malinaw ang regional demand trends. "
+            "Maraming salamat po sa inyong patuloy na suporta at gabay."
+        ),
+    },
+
+    # --- DeepSeek-R1 (Chain-of-thought logic, mathematical decomposition, systems analysis) ---
+    {
+        "prompt": "tech_distributed_consensus",
+        "model": "deepseek-r1",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "To understand why distributed consensus is difficult under network partitions, we need to consider the mathematical formalisms of the CAP theorem. "
+            "When a network splits into two unreachable halves, nodes on either side cannot distinguish between a crashed peer and a slow communication channel. "
+            "Under the CAP theorem, the system must choose between consistency and availability. If we prioritize consistency, any write to the minority partition "
+            "must be rejected because it cannot replicate to the majority quorum. To prove safety, the protocol requires that any two quorums must intersect by at least "
+            "one node, specifically ensuring that N_quorum > N / 2. If a partition leaves exactly half the nodes isolated, neither side can reach quorum, "
+            "and writes stall entirely to prevent divergence."
+        ),
+    },
+    {
+        "prompt": "tech_microservices_monolith",
+        "model": "deepseek-r1",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "An architectural decomposition of monolithic systems into microservices must be analyzed through the lens of transactional boundaries and network topologies. "
+            "In a relational monolith, ACID guarantees are maintained locally by database transaction managers using write-ahead logging and row-level locks. "
+            "When boundaries are split across network barriers, two-phase commit protocols introduce severe latency penalties and blocking coordinator vulnerabilities. "
+            "Consequently, teams are forced to adopt eventual consistency via distributed sagas and event brokers. "
+            "Unless an engineering organization possesses dedicated platform infrastructure and telemetry to track distributed tracing, the cognitive load "
+            "of managing eventual consistency invariably outweighs the benefits of decoupled deployment pipelines."
+        ),
+    },
+    {
+        "prompt": "ph_climate_food_security",
+        "model": "deepseek-r1",
+        "language": "tagalog",
+        "category": "essay",
+        "text": (
+            "Sa pagsusuri ng epekto ng climate change sa food security sa Pilipinas, mahalagang suriin ang dalawang magkasalungat na aspeto: ang suplay ng agrikultura at ang katatagan ng supply chain. "
+            "Una, ang pagtaas ng sea surface temperature ay nagdudulot ng pagbabago sa migration patterns ng mga isda, na nagpapababa ng huli sa mga tradisyunal na fishing grounds. "
+            "Ikalawa, ang pagkatuyo ng lupang pansakahan tuwing tag-init at pagbaha tuwing tag-ulan ay nagreresulta sa mataas na post-harvest losses. "
+            "Kapag bumagsak ang domestic yield, napipilitan ang bansa na umasa sa imported commodities, na nagdudulot ng inflation sa mga pangunahing bilihin. "
+            "Kaya naman ang pangmatagalang solusyon ay hindi lamang importasyon, kundi ang estratehikong pamumuhunan sa cold storage facilities at local research sa crop genomics."
+        ),
+    },
+    {
+        "prompt": "academic_urban_canopy_heat",
+        "model": "deepseek-r1",
+        "language": "english",
+        "category": "academic",
+        "text": (
+            "The thermodynamic mechanism underlying urban heat island mitigation through tree canopies can be decomposed into two distinct physical processes: "
+            "radiative attenuation via leaf area index (LAI) and latent heat flux via transpiration. "
+            "Concrete and asphalt surfaces exhibit low albedo (0.10 to 0.20) and high thermal admittance, absorbing incident shortwave radiation during sunlight hours "
+            "and releasing longwave radiation at night. In contrast, vegetative foliage intercepts incident radiation, converting up to seventy percent of net radiation "
+            "into latent heat through the vaporization of water inside stomatal cavities. This prevents sensible heat accumulation in adjacent air parcels."
+        ),
+    },
+
+    # --- Gemini 2.0 Flash (Crisp, actionable, rapid comparative synthesis) ---
+    {
+        "prompt": "tech_async_event_loop",
+        "model": "gemini-2-flash",
+        "language": "taglish",
+        "category": "technical",
+        "text": (
+            "Isa sa pinakamalaking misconceptions ng mga junior developers ay ang pag-aakala na ang async/await ay automated multi-threading. "
+            "Sa realidad, ang JavaScript at Python asyncio ay gumagana sa iisang main execution thread lamang. "
+            "Ang lakas ng event loop ay nakasalalay sa I/O multiplexing: kapag nagpadala ka ng network request sa pamamagitan ng fetch o aiohttp, "
+            "hindi naghihintay nang nakatunganga ang processor. Sa halip, ibinubigay nito ang control sa event loop upang ma-render ang UI o mag-handle "
+            "ng ibang incoming API calls. Kapag bumalik ang data mula sa remote server, inilalagay ang resolve callback sa microtask queue para i-execute. "
+            "Kaya kung maglalagay ka ng mabigat na CPU-intensive loop (gaya ng cryptographic hashing) sa loob ng async function, ma-blo-block pa rin ang buong server."
+        ),
+    },
+    {
+        "prompt": "tech_sql_indexing",
+        "model": "gemini-2-flash",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "When troubleshooting degraded database performance, relying solely on CPU or memory metrics often masks the root cause: missing or misconfigured indexes. "
+            "Every database query without an appropriate index forces the storage engine to evaluate every single page on disk. "
+            "However, over-indexing creates write amplification. Every INSERT, UPDATE, and DELETE statement requires the database to update the primary table "
+            "plus every auxiliary B-tree structure associated with that table. To achieve optimal balance, index only high-cardinality columns frequently present "
+            "in JOIN predicates and WHERE filters, while pruning redundant indexes that duplicate existing composite index prefixes."
+        ),
+    },
+    {
+        "prompt": "work_sprint_blocker_memo",
+        "model": "gemini-2-flash",
+        "language": "english",
+        "category": "workplace",
+        "text": (
+            "Sprint Risk Mitigation Note: "
+            "As we approach the final 48 hours of Sprint 12, our primary risk is the pending code review on the asynchronous payment processing pipeline. "
+            "The pull request touches core transaction logic across five microservices and requires formal sign-off from both Security and Database reliability teams. "
+            "To prevent shipping delay into staging, we are scheduling a dedicated PR walkthrough session at 1:00 PM today. "
+            "All senior engineers are requested to review the integration test coverage prior to the session so we can address blocking architectural feedback immediately."
+        ),
+    },
+    {
+        "prompt": "ph_public_transport_modernization",
+        "model": "gemini-2-flash",
+        "language": "taglish",
+        "category": "essay",
+        "text": (
+            "Hindi sapat na pagandahin lang ang mga modern jeepneys kung ang kalsada at terminal systems naman ay nananatiling magulo at walang koordinasyon. "
+            "Ang tunay na transit modernization sa Pilipinas ay nangangailangan ng integrated ticketing system kung saan ang isang Beep card ay pwedeng gamitin "
+            "sa MRT, LRT, bus carousel, at jeep nang walang hiwalay na bayad sa transfer. Bukod dito, kailangang ipatupad ang fixed salary system para sa mga tsuper "
+            "upang mawala ang mapanganib na boundary system kung saan nag-uunahan ang mga driver sa pasahero. "
+            "Sa ganitong paraan, nagiging propesyonal ang transportasyon habang napapanatili ang kaligtasan at dignidad ng parehong tsuper at mananakay."
+        ),
+    },
+
+    # --- Evasive / Humanized AI (Contractions, anti-cliché, conversational transitions) ---
+    {
+        "prompt": "tech_microservices_monolith",
+        "model": "gpt-4o",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Honestly, switching to microservices too early is probably one of the biggest mistakes a startup can make. "
+            "Everyone wants to scale like Netflix before they even have a thousand active users. "
+            "You end up spending more time managing Kubernetes clusters and debugging network latency between services than actually building features your users want. "
+            "Keep it as a clean monolith until the boundaries are obvious and the team actually hurts from working on one codebase."
+        ),
+    },
+    {
+        "prompt": "work_quarterly_sales_email",
+        "model": "claude-3-5-sonnet",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Magandang araw po! Nais ko lamang pong i-follow up ang submission ng quarterly sales report para sa Q3. "
+            "Pakisuyong i-review ang naka-attach na spreadsheet at ipagbigay-alam sa amin kung may mga kailangang baguhin o linawin bago ang executive meeting sa Biyernes. "
+            "Maraming salamat sa inyong patuloy na suporta."
+        ),
+    },
+    {
+        "prompt": "ph_climate_food_security",
+        "model": "claude-3-5-sonnet",
+        "language": "tagalog",
+        "category": "essay",
+        "text": (
+            "Ang pagbabago ng klima ay isa sa pinakamalubhang banta sa seguridad ng pagkain sa Pilipinas. "
+            "Dahil sa pagtaas ng temperatura ng karagatan at pagdalas ng malalakas na bagyo, labis na naaapektuhan ang kabuhayan ng mga magsasaka at mangingisda. "
+            "Upang mapigilan ang krisis na ito, kinakailangan ang malawakang pagtutulungan ng pamahalaan at pribadong sektor upang magtatag ng mga komunidad na handa sa kalamidad."
+        ),
+    },
+]
+
+# Authentic Human negative controls across technical, workplace, and lab writing
+HUMAN_SAMPLES: list[dict[str, Any]] = [
+    # Developer rants & configuration battles
+    {
+        "id": "human_dev_yaml_bug",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Spent the entire weekend chasing a bug that turned out to be a single missing comma in a docker-compose file. "
+            "YAML is honestly a cursed configuration format. Indentation errors silently failing in CI and passing locally because of different tab settings. "
+            "I swear next project I'm writing raw bash scripts instead."
+        ),
+    },
+    {
+        "id": "human_workplace_slides",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Sir good morning, send ko lang po yung updated slides para sa presentation mamaya. "
+            "May binago lang ako dun sa slide 4 regarding sa budget estimates kasi medyo bloated yung previous numbers. "
+            "Pa-check na lang po if ok na sa inyo bago yung meeting. Thanks!"
+        ),
+    },
+    {
+        "id": "human_lab_enzyme",
+        "language": "english",
+        "category": "academic",
+        "text": (
+            "In our lab trials last week, we noticed that the enzyme activity plummeted as soon as the pH dipped below 6.2, which contradicted what the Smith paper reported. "
+            "We repeated the assay three times with fresh reagents and got the same drop-off every single time. "
+            "Our working hypothesis is that their buffer formulation had trace stabilizers that kept the binding pocket intact."
+        ),
+    },
+    {
+        "id": "human_workplace_git_pull",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "reminder lang guys to please pull the latest dev branch before creating any feature branches today. "
+            "someone accidentally merged broken migrations kagabi kaya nage-error yung local postgres container pag nag-migrate kayo. "
+            "na-patch na ni Mark sa PR #142 so git pull muna bago mag-code thanks!"
+        ),
+    },
+    {
+        "id": "human_dev_eventemitter_leak",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "So after profiling the Node backend under load with autocannon, turns out our memory leak wasn't coming from the WebSocket connections at all. "
+            "It was an unhandled EventEmitter listener leak in the logging middleware that was retaining request context objects in heap forever. "
+            "One line fix: added a cleanup listener on socket close."
+        ),
+    },
+    {
+        "id": "human_workplace_scope_clarification",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Hi ma'am, just wanted to clarify regarding the scope of work for the inventory module. "
+            "Are we supposed to include the barcode scanner hardware integration in this sprint or will that be pushed to Phase 2? "
+            "Asking so our backend team can finalize the API contract today. Salamat po!"
+        ),
+    },
+    {
+        "id": "human_hardware_grounding_bodge",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Our oscilloscope readings on pin 4 were showing weird 50mV ripples whenever the stepper motor engaged. "
+            "Turned out we forgot to tie the analog ground and digital ground together through a star grounding point on the PCB layout. "
+            "Soldered a quick bodge wire on the prototype and the ADC signal cleaned right up."
+        ),
+    },
+    {
+        "id": "human_workplace_pr_review",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "guys pa-check naman nung PR ko sa auth-service repo when you have time. "
+            "added rate limiting and refresh token rotation based sa suggestions ni tech lead nung retro. "
+            "all unit tests passing na sa github actions workflow."
+        ),
+    },
+    {
+        "id": "human_dev_rust_reflection",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "I've been writing Rust for 6 months now and while the borrow checker made me want to smash my keyboard during week one, "
+            "the confidence you feel deploying a binary to production without worrying about null pointer dereferences or data races is unmatched. "
+            "C++ feels scary to go back to now."
+        ),
+    },
+    {
+        "id": "human_workplace_proposal_submit",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Bossing, na-submit ko na po yung revised proposal and budget breakdown sa client portal kaninang 11 AM. "
+            "Sinama ko na rin po yung requested warranty clauses at SLA guarantees na pinabago ni Atty kahapon. "
+            "Will keep you posted once mag-acknowledge sila."
+        ),
+    },
+    {
+        "id": "human_dev_pytorch_oom",
+        "language": "english",
+        "category": "technical",
+        "text": (
+            "Tried running our PyTorch training loop on the local workstation and hit a CUDA out of memory error on epoch 1 batch 4. "
+            "Dropping the batch size from 16 to 8 and enabling gradient accumulation steps of 2 completely solved it with virtually zero throughput loss. "
+            "Always profile your VRAM before renting cloud GPUs."
+        ),
+    },
+    {
+        "id": "human_workplace_dfa_leave",
+        "language": "taglish",
+        "category": "workplace",
+        "text": (
+            "Sir, heads up lang po na absent ako bukas ng umaga kasi may appointment ako sa DFA para sa passport renewal. "
+            "Naka-assign na po kay John yung open tickets ko sa JIRA and magla-log in na lang po ako around 1 PM. Salamat po sa understanding!"
+        ),
+    },
+    {
+        "id": "human_commute_fairview",
+        "language": "taglish",
+        "category": "essay",
+        "text": (
+            "Araw-araw 3 hours ang biyahe ko mula Fairview hanggang Makati. Pagod ka na sa pila, pagod ka pa sa trabaho. "
+            "Maganda naman yung modernization program sa papel, pero paano naman yung mga ordinaryong tsuper na hindi kayang bayaran yung milyong halaga ng modern jeep? "
+            "Dapat may sapat na subsidy at maayos na ruta bago ipatupad nang biglaan."
+        ),
+    },
+    {
+        "id": "human_commute_ortigas",
+        "language": "english",
+        "category": "essay",
+        "text": (
+            "Used to take the 5:30 AM train every morning when I worked graveyard shift in Ortigas. "
+            "The platform was always freezing cold, with everyone clutching their styrofoam coffee cups like lifelines. "
+            "You never really talked to anyone, but after a few months you started recognizing the same exhausted faces at the exact same car door. "
+            "There's something comforting about shared misery in the dark."
+        ),
+    },
+    {
+        "id": "human_pangasinan_farming",
+        "language": "tagalog",
+        "category": "essay",
+        "text": (
+            "Dito sa amin sa Pangasinan, ramdam na ramdam ng mga magsasaka ang epekto ng pabago-bagong panahon. "
+            "Kailan lang, nalubog sa baha ang mga bagong tanim na palay dahil sa sunod-sunod na bagyo. "
+            "Kapag nasisira ang ani, baon agad sa utang ang pamilya para lang pambili ng binhi at pataba sa susunod na taniman. "
+            "Hindi lang ito usapin sa balita kundi mismong pagkain sa hapag-kainan ng bawat Pilipino."
+        ),
+    },
+]
+
+
+def main() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ai_path = DATA_DIR / "raw_latest_gen_ai.jsonl"
+    labeled_path = DATA_DIR / "raw_latest_gen_labeled.csv"
+
+    # Write AI records
+    with ai_path.open("w", encoding="utf-8") as handle:
+        for row in AI_SAMPLES:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    # Write Human records
+    with labeled_path.open("w", encoding="utf-8", newline="") as handle:
+        fieldnames = ["text", "label", "original_id", "language", "content_type", "ai_model"]
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in HUMAN_SAMPLES:
+            writer.writerow({
+                "text": row["text"],
+                "label": "human",
+                "original_id": row["id"],
+                "language": row["language"],
+                "content_type": row["category"],
+                "ai_model": "",
+            })
+
+    print(f"Wrote {len(AI_SAMPLES)} rich latest-gen AI samples to {ai_path} (0 API quota used)")
+    print(f"Wrote {len(HUMAN_SAMPLES)} authentic Human samples to {labeled_path}")
+
+
+if __name__ == "__main__":
+    main()

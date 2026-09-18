@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import axios from "axios";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { ArrowLeft, Check, Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { Brand } from "@/components/Brand";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   getCurrentUser,
@@ -18,7 +19,7 @@ import {
 type AuthMode = "signin" | "signup" | "forgot" | "reset";
 
 function errorMessage(error: unknown): string {
-  if (!axios.isAxiosError(error)) return "Something went wrong.";
+  if (!axios.isAxiosError(error)) return "We couldn’t complete this request. Try again.";
   const detail = error.response?.data?.detail;
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
@@ -27,7 +28,7 @@ function errorMessage(error: unknown): string {
       .filter(Boolean)
       .join(". ");
   }
-  return "Unable to connect to the server.";
+  return "We couldn’t connect to Verif.Ai. Check your connection and try again.";
 }
 
 export function AuthPage() {
@@ -117,7 +118,7 @@ export function AuthPage() {
     reset: "Choose a new password.",
   }[mode];
   const intro = {
-    signin: "Enter your details to continue to your analysis workspace.",
+    signin: "Pick up where you left off. Sign in to check content and review your history.",
     signup: "Set up your account to start using Verif.Ai on the web.",
     forgot: "Enter your email. If an account exists, we’ll send a time-limited reset link.",
     reset: "Your new password will sign you out on every other device.",
@@ -128,21 +129,17 @@ export function AuthPage() {
   return (
     <main className="auth-page">
       <section className="auth-story" aria-label="About Verif.Ai">
-        <Link className="auth-brand" to="/" aria-label="Return to Verif.Ai home">
-          <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          <span>Verif.Ai</span>
-        </Link>
-        <motion.div className="auth-artwork" initial={reduceMotion ? false : { opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
-          <img src={`${import.meta.env.BASE_URL}images/auth-authenticity-scan.png`} alt="A human profile transitioning into a red digital authenticity scan" />
-          <span className="auth-scan-line" aria-hidden="true" />
-        </motion.div>
+        <Brand className="auth-brand" />
+        <div className="auth-story-copy">
+          <p className="auth-tagline">Tuklasin ang totoo sa bawat nilalaman.</p>
+        </div>
+        <span className="auth-story-scan" aria-hidden="true" />
       </section>
 
       <section className="auth-panel">
         <div className="auth-panel-inner">
           <Link className="auth-back" to="/"><ArrowLeft size={16} /> Back to home</Link>
           <motion.div initial={reduceMotion ? false : { opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
-            <p className="kicker">VERIF.AI ACCOUNT</p>
             {(mode === "signin" || mode === "signup") && (
               <div className="auth-mode" role="tablist" aria-label="Authentication options">
                 <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => changeMode("signin")}>Sign in</button>
@@ -203,7 +200,6 @@ export function AuthPage() {
 
                   <button className="button primary large auth-submit" type="submit" disabled={submitting}>
                     {submitting ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Set new password"}
-                    {!submitting && <ArrowRight size={17} />}
                   </button>
                   {message && <p className="auth-message" role="status" aria-live="polite"><LockKeyhole size={16} /> {message}</p>}
                 </form>

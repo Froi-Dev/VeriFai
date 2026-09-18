@@ -1,265 +1,116 @@
-import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import {
-  Activity,
-  ArrowRight,
-  CheckCircle,
-  Cpu,
-  Layers,
-  Search,
-  ShieldAlert,
-  Sliders,
-} from "lucide-react";
+import { useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { FileText, ScanSearch, BookOpen, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 
-type WorkflowStep = {
-  id: string;
-  stepNum: string;
-  title: string;
-  shortDesc: string;
-  badge: string;
-  details: string;
-};
-
-const WORKFLOW_STEPS: WorkflowStep[] = [
+const steps = [
   {
-    id: "step-1",
-    stepNum: "01",
-    title: "Submit Content",
-    shortDesc: "Paste text, drop a file, or upload a social media screenshot.",
-    badge: "Step 1",
-    details:
-      "Enter any passage or upload a screenshot. Verif.Ai recognizes Filipino, English, and natural Taglish conversational code-switching instantly.",
+    title: "Choose what to check",
+    icon: FileText,
+    summary: "Start with the content you want to understand.",
+    description:
+      "Use Text Analyzer for AI writing patterns, Media Analyzer for visual manipulation, or News Checker for factual claims. Each tool answers a different question.",
+    note: "Checking how something was written does not tell you whether it is true.",
   },
   {
-    id: "step-2",
-    stepNum: "02",
-    title: "Scan Writing Patterns",
-    shortDesc: "Checks for natural human rhythm versus robotic AI formulas.",
-    badge: "Step 2",
-    details:
-      "Verif.Ai looks for natural human variety versus telltale AI patterns—such as overly uniform sentences, repetitive transitions, or formal textbook wording.",
+    title: "Run the analysis",
+    icon: ScanSearch,
+    summary: "Paste your text or upload an image.",
+    description:
+      "Keep the original context wherever possible. Submit the content using the selected tool and follow the progress in the assessment panel.",
+    note: "Longer passages can provide more context than an isolated phrase.",
   },
   {
-    id: "step-3",
-    stepNum: "03",
-    title: "Review Clues & Confidence",
-    shortDesc: "Get a transparent score and highlighted clues to guide your judgment.",
-    badge: "Step 3",
-    details:
-      "You get a straightforward result: Likely Human, Review Recommended, or Likely AI. Clear explanations show you why, so you're always in control.",
+    title: "Review the evidence",
+    icon: BookOpen,
+    summary: "Read the result, its context, and its limits.",
+    description:
+      "Compare the assessment with the original content. For news, open the linked sources and check the dates and details. Your completed analyses are available in scan history.",
+    note: "An assessment supports your judgment. It is not proof on its own.",
   },
 ];
 
 export function WorkflowInteractive() {
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [active, setActive] = useState(0);
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const reduceMotion = useReducedMotion();
-
-  const currentStep = WORKFLOW_STEPS[activeStepIndex];
-
+  const step = steps[active];
+  const Icon = step.icon;
   return (
-    <div className="workflow-grid">
-      {/* Left Column: Interactive Step Selector */}
-      <div className="steps-interactive" role="tablist" aria-label="Workflow pipeline steps">
-        {WORKFLOW_STEPS.map((step, idx) => {
-          const isActive = idx === activeStepIndex;
-          return (
-            <button
-              key={step.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`step-interactive-item ${isActive ? "active" : ""}`}
-              onClick={() => setActiveStepIndex(idx)}
-            >
-              <div className="step-num-badge">
-                <span>{step.stepNum}</span>
-              </div>
-              <div className="step-content-text">
-                <div className="step-header-row">
-                  <h3>{step.title}</h3>
-                  <span className="step-tag-pill">{step.badge}</span>
-                </div>
-                <p>{step.shortDesc}</p>
-              </div>
-            </button>
-          );
-        })}
-
-        <div className="workflow-footer-cta">
-          <Link to="/auth" className="inline-link">
-            Explore live verification tools <ArrowRight size={14} />
-          </Link>
-        </div>
+    <div className="verification-workflow">
+      <div
+        className="workflow-select"
+        role="tablist"
+        aria-label="How to verify content"
+        aria-orientation="vertical"
+      >
+        {steps.map((item, index) => (
+          <button
+            key={item.title}
+            ref={(element) => {
+              buttons.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            id={`workflow-tab-${index}`}
+            aria-selected={active === index}
+            aria-controls="workflow-panel"
+            tabIndex={active === index ? 0 : -1}
+            className={active === index ? "active" : ""}
+            onClick={() => setActive(index)}
+            onKeyDown={(event) => {
+              const next =
+                event.key === "ArrowDown"
+                  ? (active + 1) % steps.length
+                  : event.key === "ArrowUp"
+                    ? (active + steps.length - 1) % steps.length
+                    : event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? steps.length - 1
+                        : null;
+              if (next !== null) {
+                event.preventDefault();
+                setActive(next);
+                buttons.current[next]?.focus();
+              }
+            }}
+          >
+            <span className="workflow-step-number">{index + 1}</span>
+            <span>
+              <strong>{item.title}</strong>
+              <small>{item.summary}</small>
+            </span>
+          </button>
+        ))}
       </div>
-
-      {/* Right Column: Dynamic Pipeline Visualizer */}
-      <div className="workflow-visual-card">
-        <div className="workflow-card-toolbar">
-          <div className="window-dots" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-          <span className="workflow-toolbar-title">
-            Pipeline Inspection · Stage {currentStep.stepNum}
-          </span>
-          <span className="workflow-status-live">
-            <i className="pulse-dot" /> Active Pipeline
-          </span>
-        </div>
-
-        <motion.div
-          key={currentStep.id}
-          className="workflow-visual-body"
-          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-        >
-          {activeStepIndex === 0 && (
-            <div className="stage-panel stage-tokenization">
-              <div className="stage-head">
-                <Layers size={18} className="stage-icon" />
-                <div>
-                  <strong>Text & Language Reader</strong>
-                  <small>Recognizes Taglish, Filipino, and English naturally</small>
-                </div>
-              </div>
-
-              <p className="stage-desc">{currentStep.details}</p>
-
-              <div className="token-preview-stream">
-                <span className="stream-label">Sample Word Scan (Taglish):</span>
-                <div className="token-chips">
-                  <span className="token-chip prefix">[Start]</span>
-                  <span className="token-chip">Napak</span>
-                  <span className="token-chip">ahalaga</span>
-                  <span className="token-chip">na</span>
-                  <span className="token-chip">tandaan</span>
-                  <span className="token-chip highlight-token">sa</span>
-                  <span className="token-chip highlight-token">gc</span>
-                  <span className="token-chip">natin</span>
-                  <span className="token-chip">bukas</span>
-                  <span className="token-chip suffix">[End]</span>
-                </div>
-              </div>
-
-              <div className="stage-metrics-row">
-                <div className="metric-box">
-                  <span className="metric-title">Input Types</span>
-                  <strong className="metric-val">Text & Media</strong>
-                  <span className="metric-sub">Articles & screenshots</span>
-                </div>
-                <div className="metric-box">
-                  <span className="metric-title">Languages</span>
-                  <strong className="metric-val">Taglish / Filipino</strong>
-                  <span className="metric-sub">Plus standard English</span>
-                </div>
-                <div className="metric-box">
-                  <span className="metric-title">Speed</span>
-                  <strong className="metric-val">&lt; 1s</strong>
-                  <span className="metric-sub">Instant response</span>
-                </div>
-              </div>
+      <div
+        id="workflow-panel"
+        className="workflow-explanation"
+        role="tabpanel"
+        aria-labelledby={`workflow-tab-${active}`}
+        tabIndex={0}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={active}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.12 }}
+          >
+            <Icon size={30} strokeWidth={1.5} />
+            <h3>{step.title}</h3>
+            <p>{step.description}</p>
+            <div className="workflow-note">
+              <Info size={17} />
+              <p>{step.note}</p>
             </div>
-          )}
-
-          {activeStepIndex === 1 && (
-            <div className="stage-panel stage-attention">
-              <div className="stage-head">
-                <Cpu size={18} className="stage-icon" />
-                <div>
-                  <strong>Writing Pattern Analysis</strong>
-                  <small>Identifies natural variation vs. robotic habits</small>
-                </div>
-              </div>
-
-              <p className="stage-desc">{currentStep.details}</p>
-
-              <div className="attention-metrics-list">
-                <div className="attention-metric-item">
-                  <div className="metric-header">
-                    <span>Repetitive Phrasing</span>
-                    <strong>Formulaic (91%)</strong>
-                  </div>
-                  <div className="metric-bar-track">
-                    <div className="metric-bar-fill" style={{ width: "91%" }} />
-                  </div>
-                </div>
-
-                <div className="attention-metric-item">
-                  <div className="metric-header">
-                    <span>Robotic Sentence Cadence</span>
-                    <strong>Elevated (88%)</strong>
-                  </div>
-                  <div className="metric-bar-track">
-                    <div className="metric-bar-fill" style={{ width: "88%" }} />
-                  </div>
-                </div>
-
-                <div className="attention-metric-item">
-                  <div className="metric-header">
-                    <span>Overused AI Transitions</span>
-                    <strong>Frequent ('Bukod dito')</strong>
-                  </div>
-                  <div className="metric-bar-track">
-                    <div className="metric-bar-fill" style={{ width: "76%" }} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="stage-info-pill">
-                <Activity size={14} />
-                <span>Scanning for telltale writing habits common in AI chatbots</span>
-              </div>
-            </div>
-          )}
-
-          {activeStepIndex === 2 && (
-            <div className="stage-panel stage-calibration">
-              <div className="stage-head">
-                <Sliders size={18} className="stage-icon" />
-                <div>
-                  <strong>Confidence Breakdown</strong>
-                  <small>Empowers human judgment with clear guidance</small>
-                </div>
-              </div>
-
-              <p className="stage-desc">{currentStep.details}</p>
-
-              {/* Threshold Range Diagram */}
-              <div className="threshold-spectrum">
-                <div className="spectrum-zones">
-                  <div className="zone human-zone">
-                    <CheckCircle size={13} />
-                    <span>Likely Human (≤26%)</span>
-                  </div>
-                  <div className="zone review-zone">
-                    <Search size={13} />
-                    <span>Needs Review (26% - 50%)</span>
-                  </div>
-                  <div className="zone ai-zone">
-                    <ShieldAlert size={13} />
-                    <span>Likely AI (≥50%)</span>
-                  </div>
-                </div>
-                <div className="spectrum-ruler">
-                  <span className="tick">0%</span>
-                  <span className="tick marker-1">26%</span>
-                  <span className="tick marker-2">50%</span>
-                  <span className="tick">100%</span>
-                </div>
-              </div>
-
-              <div className="stage-summary-badge">
-                <span className="badge-tag">Why this matters:</span>
-                <span className="badge-desc">
-                  When writing or claims fall in the review zone, Verif.Ai recommends double-checking verified sources rather than jumping to conclusions.
-                </span>
-              </div>
-            </div>
-          )}
-        </motion.div>
+            <Link to="/auth" className="inline-link">
+              Open your workspace
+            </Link>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
