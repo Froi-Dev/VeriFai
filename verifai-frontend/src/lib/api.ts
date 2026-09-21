@@ -5,12 +5,15 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
 }
 
 export const api = axios.create({
-  // Prefer the Vite/deployment same-origin proxy so Chromium privacy controls
-  // do not treat local frontend and API hostnames as different sites.
-  baseURL: import.meta.env.VITE_API_URL || "/api/v1",
+  // Prefer environment variable, fallback to live Render backend in production
+  baseURL:
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD
+      ? "https://verifai-api-10as.onrender.com/api/v1"
+      : "/api/v1"),
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
-  timeout: 15_000,
+  timeout: 45_000,
 });
 
 let refreshInFlight: Promise<void> | null = null;
