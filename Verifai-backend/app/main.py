@@ -23,7 +23,7 @@ from app.FakeNewsAnalyzer.news import image_fact_checker, news_verifier
 from app.FakeNewsAnalyzer.news import router as news_router
 from app.Global.cache import result_cache
 from app.Global.config import settings
-from app.Global.db import engine
+from app.Global.db import Base, engine
 from app.Global.middleware import (
     ExposureProtectionMiddleware,
     OriginProtectionMiddleware,
