@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if settings.text_model_warmup:
+    if settings.text_analyzer_backend == "roberta" and settings.text_model_warmup:
         try:
             await asyncio.to_thread(text_detector.warmup)
         except Exception:
@@ -133,7 +133,7 @@ app.add_middleware(OriginProtectionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_origin_regex=r"^chrome-extension://.*$",
+    allow_origin_regex=r"^(chrome-extension://.*|https://.*\.trycloudflare\.com|https://.*\.loca\.lt)$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Guest-Token"],

@@ -48,7 +48,10 @@ async def guest_detect_text(
         async with text_inference_semaphore:
             loop = asyncio.get_running_loop()
             t0 = loop.time()
-            result = await asyncio.to_thread(text_detector.analyze, payload.text)
+            if hasattr(text_detector, "analyze_async"):
+                result = await text_detector.analyze_async(payload.text)
+            else:
+                result = await asyncio.to_thread(text_detector.analyze, payload.text)
             elapsed_ms = round((loop.time() - t0) * 1000.0, 1)
             data = result.__dict__.copy()
             data["inference_time_ms"] = elapsed_ms
@@ -151,7 +154,7 @@ def consent(payload: GuestConsent, request: Request, response: Response):
         max_age=TTL,
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         path="/",
         domain=settings.cookie_domain,
     )

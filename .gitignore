@@ -23,3 +23,22 @@ __pycache__/
 .idea/
 .vscode/
 *.log
+
+# Runtime records and private local security-audit output
+/Verifai-backend/logs/
+/audit/
+
+# Local databases, dumps, credentials, and Python build output
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.p8
+*.jks
+.npmrc
+.pypirc
+.netrc
+credentials.json
+service-account*.json
+*.py[cod]
+htmlcov/

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     refresh_cookie_name: str = "verifai_refresh"
     cookie_domain: str | None = None
     cookie_secure: bool = False
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     environment: str = "development"
@@ -96,6 +97,13 @@ class Settings(BaseSettings):
     text_model_max_concurrent_inferences: int = Field(default=2, ge=1, le=8)
     text_model_warmup: bool = False
     text_model_review_threshold: float = Field(default=0.65, gt=0.5, lt=1.0)
+
+    # Temporary backend selector: "gemini" uses the Gemini Generative Language
+    # API for text analysis (no model weights required); "roberta" uses the
+    # local fine-tuned RoBERTa model.  Switch back to "roberta" when server
+    # resources for the 1.2 GB model are available.
+    text_analyzer_backend: Literal["roberta", "gemini"] = "gemini"
+    gemini_text_detection_model: str = "gemini-3.5-flash-lite"
 
     google_search_api_key: SecretStr | None = None
     google_cse_id: str | None = None

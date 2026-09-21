@@ -1,0 +1,15 @@
+title = "Verifai secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "database-url-password"
+description = "Database connection string containing a password"
+regex = '''(?i)(?:postgres(?:ql)?(?:\+[a-z0-9_]+)?|mysql(?:\+[a-z0-9_]+)?|mongodb(?:\+srv)?|redis)://[^:\s/'"]+:([^@\s/'"]+)@'''
+secretGroup = 1
+
+[[rules.allowlists]]
+description = "Explicit example placeholder"
+regexTarget = "secret"
+regexes = ['''^CHANGE_ME$''']

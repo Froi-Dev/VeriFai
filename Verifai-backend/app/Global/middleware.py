@@ -118,11 +118,19 @@ class OriginProtectionMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         origin = request.headers.get("origin")
+        is_allowed_tunnel = bool(
+            origin
+            and (
+                origin.endswith(".trycloudflare.com")
+                or origin.endswith(".loca.lt")
+            )
+        )
         if (
             request.method not in self.SAFE_METHODS
             and origin
             and origin.rstrip("/") not in settings.allowed_origins
             and not origin.startswith("chrome-extension://")
+            and not is_allowed_tunnel
         ):
             return JSONResponse(status_code=403, content={"detail": "Origin not allowed"})
         return await call_next(request)

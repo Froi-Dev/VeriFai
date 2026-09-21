@@ -27,16 +27,36 @@ from app.Global.schemas import ImageDetectionResponse, TextDetectionRequest, Tex
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/detector", tags=["Detection"])
 
-text_detector = TextDetector(
-    settings.text_model_path,
-    device=settings.text_model_device,
-    ai_label_id=settings.text_model_ai_label_id,
-    max_length=settings.text_model_max_length,
-    stride=settings.text_model_stride,
-    batch_size=settings.text_model_batch_size,
-    max_concurrent_inferences=settings.text_model_max_concurrent_inferences,
-    review_threshold=settings.text_model_review_threshold,
-)
+# ---------------------------------------------------------------------------
+# Text analyzer backend selection
+# ---------------------------------------------------------------------------
+# TEXT_ANALYZER_BACKEND=gemini  → lightweight Gemini API classifier (default,
+#                                  no model weights required)
+# TEXT_ANALYZER_BACKEND=roberta → local fine-tuned RoBERTa model (~1.2 GB)
+# ---------------------------------------------------------------------------
+
+if settings.text_analyzer_backend == "gemini":
+    from app.ContentDetector.text_detector_gemini import GeminiTextDetector
+
+    text_detector = GeminiTextDetector(
+        gemini_client=gemini_vision_client,
+        model=settings.gemini_text_detection_model,
+        review_threshold=settings.text_model_review_threshold,
+    )
+    logger.info("Text analyzer backend: Gemini API (%s)", settings.gemini_text_detection_model)
+else:
+    text_detector = TextDetector(
+        settings.text_model_path,
+        device=settings.text_model_device,
+        ai_label_id=settings.text_model_ai_label_id,
+        max_length=settings.text_model_max_length,
+        stride=settings.text_model_stride,
+        batch_size=settings.text_model_batch_size,
+        max_concurrent_inferences=settings.text_model_max_concurrent_inferences,
+        review_threshold=settings.text_model_review_threshold,
+    )
+    logger.info("Text analyzer backend: local RoBERTa model")
+
 image_detector = GeminiImageDetector(gemini_vision_client)
 text_inference_semaphore = asyncio.Semaphore(settings.text_model_max_concurrent_inferences)
 SUPPORTED_IMAGE_CONTENT_TYPES = {
@@ -66,7 +86,10 @@ async def detect_text(
         async with text_inference_semaphore:
             loop = asyncio.get_running_loop()
             t0 = loop.time()
-            result = await asyncio.to_thread(text_detector.analyze, payload.text)
+            if hasattr(text_detector, "analyze_async"):
+                result = await text_detector.analyze_async(payload.text)
+            else:
+                result = await asyncio.to_thread(text_detector.analyze, payload.text)
             elapsed_ms = round((loop.time() - t0) * 1000.0, 1)
             data = result.__dict__.copy()
             data["inference_time_ms"] = elapsed_ms

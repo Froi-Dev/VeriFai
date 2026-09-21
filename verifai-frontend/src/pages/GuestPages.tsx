@@ -4,7 +4,6 @@ import axios from "axios";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
-  Clipboard,
   FileImage,
   FileText,
   ImageUp,
@@ -17,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { TrialLayout, trialScanners } from "@/components/TrialLayout";
+import { TextFileUpload } from "@/components/TextFileUpload";
 import { api } from "@/lib/api";
 import { acceptConsent, getQuota, guestError, guestHeaders, type Quota, type Scanner } from "@/services/guest";
 import {
@@ -320,7 +320,7 @@ export function GuestScannerPage() {
         }
       } else {
         if (text.trim().length < 20) {
-          setError("Please paste at least 20 characters for text analysis.");
+          setError("Please enter or upload at least 20 characters for text analysis.");
           setBusy(false);
           return;
         }
@@ -408,7 +408,7 @@ export function GuestScannerPage() {
                   ? "Upload an image"
                   : kind === "news"
                   ? "Add news to check"
-                  : "Paste text"}
+                  : "Add text"}
               </h2>
               <p>
                 {kind === "image"
@@ -444,6 +444,14 @@ export function GuestScannerPage() {
           )}
 
           <form onSubmit={e => { e.preventDefault(); void scan(); }}>
+            {kind === "text" && (
+              <TextFileUpload
+                disabled={busy || !quota?.quotas[kind].remaining}
+                onPaste={() => void pasteClipboard()}
+                onLoad={(uploadedText) => { setText(uploadedText); setResult(undefined); setError(""); }}
+                onError={setError}
+              />
+            )}
             {isImageMode ? (
               <>
                 <input
@@ -515,7 +523,6 @@ export function GuestScannerPage() {
                 <div className="text-input-toolbar">
                   <span><FileText size={15} /> Text to analyze</span>
                   <div>
-                    <button type="button" onClick={pasteClipboard}><Clipboard size={14} /> Paste</button>
                     {text && <button type="button" onClick={() => setText("")}><X size={14} /> Clear</button>}
                   </div>
                 </div>
@@ -527,7 +534,7 @@ export function GuestScannerPage() {
                   value={text}
                   disabled={busy || !quota?.quotas[kind].remaining}
                   onChange={e => setText(e.target.value)}
-                  placeholder={kind === "news" ? "Paste or type the news story here…" : "Paste the text you want to check here…"}
+                  placeholder={kind === "news" ? "Paste or type the news story here…" : "Paste text here or upload a .txt file above…"}
                   aria-label="Text to analyze"
                 />
                 <div className="text-input-meta" style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", fontSize: "12px", color: "var(--soft)" }}>

@@ -29,6 +29,7 @@ import {
 import axios from "axios";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NewsReport } from "@/components/NewsReport";
+import { TextFileUpload } from "@/components/TextFileUpload";
 import { Brand } from "@/components/Brand";
 import { api } from "@/lib/api";
 import { logoutUser, type AuthUser } from "@/services/auth";
@@ -429,6 +430,12 @@ export function DashboardPage() {
   const [scanStage, setScanStage] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<ScanResult[]>(() => readStoredHistory(readStoredUser()?.id));
+  const [scanStats, setScanStats] = useState<{
+    total: number;
+    textCount: number;
+    mediaCount: number;
+    newsCount: number;
+  } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const newsFileInput = useRef<HTMLInputElement>(null);
   const previewUrls = useRef(new Map<string, string>());
@@ -500,6 +507,7 @@ export function DashboardPage() {
           };
         });
         setHistory(loaded);
+        setScanStats(response.data.stats);
         cacheHistory(loaded, user?.id);
       } catch (err) {
         console.warn("Could not load scans from backend:", err);
@@ -610,7 +618,7 @@ export function DashboardPage() {
       return;
     }
     if (kind === "text" && text.trim().length < 20) {
-      setError("Paste at least 20 characters for a useful text analysis.");
+      setError("Enter or upload at least 20 characters for a useful text analysis.");
       return;
     }
     if (kind === "news" && newsMode === "text" && newsText.trim().length < 5) {
@@ -751,6 +759,13 @@ export function DashboardPage() {
       }
       setProgress(100);
       setResult(nextResult);
+      setScanStats((current) => current && ({
+        ...current,
+        total: current.total + 1,
+        textCount: current.textCount + (nextResult.kind === "text" ? 1 : 0),
+        mediaCount: current.mediaCount + (nextResult.kind === "media" ? 1 : 0),
+        newsCount: current.newsCount + (nextResult.kind === "news" ? 1 : 0),
+      }));
       setHistory((current) => {
         const next = [nextResult, ...current.filter((item) => item.id !== nextResult.id)];
         cacheHistory(next, user?.id);
@@ -834,6 +849,10 @@ export function DashboardPage() {
   const textScanCount = history.filter((item) => item.kind === "text").length;
   const mediaScanCount = history.filter((item) => item.kind === "media").length;
   const newsScanCount = history.filter((item) => item.kind === "news").length;
+  const allTimeTotal = scanStats?.total ?? history.length;
+  const allTimeTextCount = scanStats?.textCount ?? textScanCount;
+  const allTimeMediaCount = scanStats?.mediaCount ?? mediaScanCount;
+  const allTimeNewsCount = scanStats?.newsCount ?? newsScanCount;
   const weeklyScans = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -853,6 +872,7 @@ export function DashboardPage() {
   const weeklyMaximum = Math.max(1, ...weeklyScans.map((day) => day.count));
 
   const deleteScan = async (scanId: string) => {
+    const deletedScan = history.find((item) => item.id === scanId);
     try {
       const numId = parseInt(scanId.replace(/\D/g, ""), 10);
       if (!isNaN(numId)) {
@@ -866,6 +886,15 @@ export function DashboardPage() {
       cacheHistory(next, user?.id);
       return next;
     });
+    if (deletedScan) {
+      setScanStats((current) => current && ({
+        ...current,
+        total: Math.max(0, current.total - 1),
+        textCount: current.textCount - (deletedScan.kind === "text" ? 1 : 0),
+        mediaCount: current.mediaCount - (deletedScan.kind === "media" ? 1 : 0),
+        newsCount: current.newsCount - (deletedScan.kind === "news" ? 1 : 0),
+      }));
+    }
   };
 
   const clearHistory = async () => {
@@ -875,6 +904,7 @@ export function DashboardPage() {
       console.warn("Failed to clear scan history on backend", e);
     }
     setHistory([]);
+    setScanStats({ total: 0, textCount: 0, mediaCount: 0, newsCount: 0 });
     cacheHistory([], user?.id);
   };
   const newsVerification = result?.kind === "news"
@@ -1093,10 +1123,10 @@ export function DashboardPage() {
                 <div><h1>Kumusta, {firstName}.</h1><p>Suriin muna bago ibahagi. Piliin sa menu ang gusto mong i-check.</p></div>
               </section>
               <section className="overview-summary" aria-label="Account summary">
-                <div><span>Total analyses</span><strong>{history.length}</strong><small>All time</small></div>
-                <div><span>Text scans</span><strong>{textScanCount}</strong><small>All time</small></div>
-                <div><span>Media scans</span><strong>{mediaScanCount}</strong><small>All time</small></div>
-                <div><span>News checks</span><strong>{newsScanCount}</strong><small>All time</small></div>
+                <div><span>Total analyses</span><strong>{allTimeTotal}</strong><small>All time</small></div>
+                <div><span>Text scans</span><strong>{allTimeTextCount}</strong><small>All time</small></div>
+                <div><span>Media scans</span><strong>{allTimeMediaCount}</strong><small>All time</small></div>
+                <div><span>News checks</span><strong>{allTimeNewsCount}</strong><small>All time</small></div>
               </section>
               <section className="overview-insights-grid">
                 <article className="weekly-chart-card">
@@ -1133,7 +1163,7 @@ export function DashboardPage() {
           {(view === "text" || view === "media") && (<>
         <section className="analyzer-page-heading" id="new-analysis">
           <h1>{view === "text" ? "Text Analyzer" : "Media Analyzer"}</h1>
-          <p>{view === "text" ? "Paste written content to check for signals associated with AI-generated writing." : "Upload an image to check for visible AI-generated or manipulated signals."}</p>
+          <p>{view === "text" ? "Paste text or upload a .txt file to check for signals associated with AI-generated writing." : "Upload an image to check for visible AI-generated or manipulated signals."}</p>
         </section>
 
         {view === "text" && (
@@ -1280,22 +1310,27 @@ export function DashboardPage() {
             <div className="analysis-card-heading">
               <span className="analysis-number" aria-hidden="true"><FileText size={19} /></span>
               <div>
-                <h2>Paste text</h2>
+                <h2>Add text</h2>
                 <p>Check an article, message, caption, or written passage.</p>
               </div>
             </div>
+            <TextFileUpload
+              disabled={scanning !== null}
+              onPaste={() => void pasteText()}
+              onLoad={(uploadedText) => { setText(uploadedText); setResult(null); setError(""); }}
+              onError={setError}
+            />
             <div className="text-input-shell">
               <div className="text-input-toolbar">
                 <span><FileText size={15} /> Text to analyze</span>
                 <div>
-                  <button type="button" onClick={pasteText}><Clipboard size={14} /> Paste</button>
                   {text && <button type="button" onClick={() => setText("")}><X size={14} /> Clear</button>}
                 </div>
               </div>
               <textarea
                 value={text}
                 onChange={(event) => setText(event.target.value.slice(0, 10_000))}
-                placeholder="Paste the text you want to check here…"
+                placeholder="Paste text here or upload a .txt file above…"
                 aria-label="Text to analyze"
               />
               <div className="text-input-meta">
@@ -1332,7 +1367,7 @@ export function DashboardPage() {
                 <div className="text-result-empty">
                   <span><FileText size={20} /></span>
                   <strong>Your result will appear here</strong>
-                  <p>Paste your text and select “Analyze text” to see the estimated human and AI likelihood.</p>
+                  <p>Paste or upload your text and select “Analyze text” to see the estimated human and AI likelihood.</p>
                 </div>
               )}
 
