@@ -180,8 +180,12 @@ def fingerprint(value: str | None) -> str:
 def encrypt_sensitive(value: str | None) -> str | None:
     if not value or settings.data_encryption_key is None:
         return None
-    cipher = Fernet(settings.data_encryption_key.get_secret_value().encode())
-    return "enc:" + cipher.encrypt(value.encode()).decode()
+    try:
+        cipher = Fernet(settings.data_encryption_key.get_secret_value().encode())
+        return "enc:" + cipher.encrypt(value.encode()).decode()
+    except Exception:
+        # Avoid crashing registration/audit logging if encryption key is malformed
+        return None
 
 
 def decrypt_sensitive(value: str | None) -> str | None:
@@ -190,5 +194,6 @@ def decrypt_sensitive(value: str | None) -> str | None:
     try:
         cipher = Fernet(settings.data_encryption_key.get_secret_value().encode())
         return cipher.decrypt(value[4:].encode()).decode()
-    except (InvalidToken, ValueError):
+    except Exception:
         return None
+

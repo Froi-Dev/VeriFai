@@ -119,15 +119,27 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException):
 async def unexpected_error_handler(request: Request, exc: Exception):
     request_id = getattr(request.state, "request_id", None)
     logger.exception(
-        "Unhandled API error on %s %s request_id=%s",
+        "Unhandled API error on %s %s request_id=%s: %s",
         request.method,
         request.url.path,
         request_id,
+        exc,
     )
+    headers: dict[str, str] = {}
+    origin = request.headers.get("origin")
+    if origin and (
+        origin.rstrip("/") in settings.allowed_origins
+        or origin.endswith(".workers.dev")
+        or origin.endswith(".pages.dev")
+    ):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=500,
         content={"detail": "An unexpected error occurred", "request_id": request_id},
+        headers=headers,
     )
+
 
 
 @app.exception_handler(RequestTooLargeError)
