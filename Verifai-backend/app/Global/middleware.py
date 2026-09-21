@@ -121,7 +121,9 @@ class OriginProtectionMiddleware(BaseHTTPMiddleware):
         is_allowed_tunnel = bool(
             origin
             and (
-                origin.endswith(".trycloudflare.com")
+                origin.endswith(".workers.dev")
+                or origin.endswith(".pages.dev")
+                or origin.endswith(".trycloudflare.com")
                 or origin.endswith(".loca.lt")
             )
         )

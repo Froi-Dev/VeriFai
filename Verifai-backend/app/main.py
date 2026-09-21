@@ -133,7 +133,7 @@ app.add_middleware(OriginProtectionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_origin_regex=r"^(chrome-extension://.*|https://.*\.trycloudflare\.com|https://.*\.loca\.lt)$",
+    allow_origin_regex=r"^(chrome-extension://.*|https://.*\.workers\.dev|https://.*\.pages\.dev|https://.*\.trycloudflare\.com|https://.*\.loca\.lt)$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Guest-Token"],
