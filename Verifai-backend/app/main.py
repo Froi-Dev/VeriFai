@@ -43,12 +43,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(_: FastAPI):
     # Ensure database schema is initialized on first boot in cloud environments
     try:
-        from app.Auth.models import User, SessionRecord, AuditLog, PasswordResetToken, IdempotencyKeyRecord, ScanResult  # noqa: F401
-        from app.ContentDetector.guest_quota import GuestIdentity, GuestSession, GuestUsage  # noqa: F401
+        import app.Auth.models  # noqa: F401
+        import app.ContentDetector.guest_quota  # noqa: F401
         Base.metadata.create_all(bind=engine)
         logger.info("Database schema verified/created successfully")
     except Exception:
         logger.exception("Failed to initialize database tables on startup")
+
 
     if settings.text_analyzer_backend == "roberta" and settings.text_model_warmup:
         try:
