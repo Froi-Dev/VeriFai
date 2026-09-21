@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     environment: str = "development"
-    trusted_hosts: str = "localhost,127.0.0.1,testserver"
+    trusted_hosts: str = "localhost,127.0.0.1,testserver,*.onrender.com,onrender.com"
     max_request_bytes: int = Field(default=10_485_760, ge=1024, le=10_485_760)
     data_encryption_key: SecretStr | None = None
 

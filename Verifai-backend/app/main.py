@@ -126,25 +126,29 @@ async def request_too_large_handler(request: Request, exc: RequestTooLargeError)
     return JSONResponse(status_code=413, content={"detail": "Request too large"})
 
 
-# Middleware is executed bottom-to-top.
+# Middleware execution in Starlette/FastAPI:
+# Middlewares run in REVERSE order of addition (outermost added LAST).
+# CORSMiddleware must be added last so it handles OPTIONS preflights first
+# before TrustedHostMiddleware or HTTPSRedirectMiddleware evaluate the request.
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(ExposureProtectionMiddleware)
 app.add_middleware(OriginProtectionMiddleware)
+app.add_middleware(RequestIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+if settings.is_production:
+    app.add_middleware(HTTPSRedirectMiddleware)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_list)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_origin_regex=r"^(chrome-extension://.*|https://.*\.workers\.dev|https://.*\.pages\.dev|https://.*\.trycloudflare\.com|https://.*\.loca\.lt)$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Guest-Token"],
+    allow_headers=["*"],
     expose_headers=["X-Request-ID", "X-Cache"],
     max_age=600,
 )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_list)
-if settings.is_production:
-    app.add_middleware(HTTPSRedirectMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RequestIdMiddleware)
+
 
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
