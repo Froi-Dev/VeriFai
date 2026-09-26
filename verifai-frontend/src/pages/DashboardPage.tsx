@@ -1,3 +1,6 @@
+import { T } from "@/i18n/LanguageContext";
+import { useLanguage } from "@/i18n/useLanguage";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -413,6 +416,7 @@ function newsVerdictHeading(result: NewsVerificationResponse) {
 }
 
 export function DashboardPage() {
+  const { t } = useLanguage();
   const [user, setUser] = useState(readStoredUser);
   const [profileName, setProfileName] = useState(() => readStoredUser()?.name || "");
   const [profileMessage, setProfileMessage] = useState("");
@@ -1113,14 +1117,14 @@ export function DashboardPage() {
             <Menu size={19} />
           </button>
           <div><span>{view === "overview" ? "Overview" : view === "text" ? "Text Analyzer" : view === "media" ? "Media Analyzer" : view === "news" ? "News Checker" : view === "extension" ? "Download Extension" : view === "profile" ? "Profile Settings" : "Scan history"}</span></div>
-
+          <LanguageToggle />
         </header>
 
         <main className="dashboard-main">
           {view === "overview" && (
             <motion.div className="dashboard-overview" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
               <section className="overview-welcome compact-welcome">
-                <div><h1>Kumusta, {firstName}.</h1><p>Suriin muna bago ibahagi. Piliin sa menu ang gusto mong i-check.</p></div>
+                <div><h1><T>{"Kumusta, "}</T>{firstName}.</h1><p><T>{"Suriin muna bago ibahagi. Piliin sa menu ang gusto mong i-check."}</T></p></div>
               </section>
               <section className="overview-summary" aria-label="Account summary">
                 <div><span>Total analyses</span><strong>{allTimeTotal}</strong><small>All time</small></div>
@@ -1657,7 +1661,7 @@ export function DashboardPage() {
           <section className="dashboard-tool-page">
             <div className="tool-page-heading">
               <h1>Download Extension</h1>
-              <p>Gamitin ang Verif.AI habang nagbabasa at nagba-browse online gamit ang Chrome o Edge.</p>
+              <p><T>{"Gamitin ang Verif.AI habang nagbabasa at nagba-browse online gamit ang Chrome o Edge."}</T></p>
             </div>
             <div className="extension-download-card">
               <div className="extension-product">
@@ -1665,11 +1669,11 @@ export function DashboardPage() {
                 <div>
                   <small>BROWSER EXTENSION</small>
                   <h2>Verif.AI for Chrome and Edge</h2>
-                  <p>Naka-sign in bilang <strong>{user?.name}</strong> ({user?.email}). I-download ang opisyal na extension package para sa iyong browser.</p>
+                  <p><T>{"Naka-sign in bilang "}</T><strong>{user?.name}</strong> ({user?.email}<T>{"). I-download ang opisyal na extension package para sa iyong browser."}</T></p>
                 </div>
               </div>
               <div className="extension-download-action">
-                <span>Naka-verify na Account · v1.0.0</span>
+                <span><T>{"Naka-verify na Account · v1.0.0"}</T></span>
                 <a
                   className="button primary large"
                   href={`${import.meta.env.BASE_URL}downloads/verifai-extension.zip`}
@@ -1682,27 +1686,27 @@ export function DashboardPage() {
 
             <div className="trial-extension-grid" style={{ marginTop: "24px" }}>
               <section className="trial-panel">
-                <h2>I-install sa Chrome at Edge</h2>
+                <h2><T>{"I-install sa Chrome at Edge"}</T></h2>
                 <ol className="trial-install-steps">
                   <li>
                     <strong>I-download at i-extract</strong>
-                    <p>Pindutin ang <b>Download Extension (.zip)</b> sa itaas at i-extract ang ZIP sa isang folder sa computer.</p>
+                    <p><T>{"Pindutin ang "}</T><b>Download Extension (.zip)</b><T>{" sa itaas at i-extract ang ZIP sa isang folder sa computer."}</T></p>
                   </li>
                   <li>
-                    <strong>Buksan ang Extensions sa Browser</strong>
-                    <p>I-type ang <code>chrome://extensions</code> sa Chrome o <code>edge://extensions</code> sa Edge address bar.</p>
+                    <strong><T>{"Buksan ang Extensions sa Browser"}</T></strong>
+                    <p><T>{"I-type ang "}</T><code>chrome://extensions</code><T>{" sa Chrome o "}</T><code>edge://extensions</code><T>{" sa Edge address bar."}</T></p>
                   </li>
                   <li>
-                    <strong>I-load ang extension</strong>
-                    <p>I-on ang <b>Developer mode</b> sa kanang itaas, pindutin ang <b>Load unpacked</b>, at piliin ang na-extract na folder.</p>
+                    <strong><T>{"I-load ang extension"}</T></strong>
+                    <p><T>{"I-on ang "}</T><b>Developer mode</b><T>{" sa kanang itaas, pindutin ang "}</T><b>Load unpacked</b><T>{", at piliin ang na-extract na folder."}</T></p>
                   </li>
                   <li>
-                    <strong>Ikonekta ang iyong account</strong>
-                    <p>Pindutin ang <b>Connect to Extension</b> sa kanan upang i-sync ang iyong Verif.AI account.</p>
+                    <strong><T>{"Ikonekta ang iyong account"}</T></strong>
+                    <p><T>{"Pindutin ang "}</T><b>Connect to Extension</b><T>{" sa kanan upang i-sync ang iyong Verif.AI account."}</T></p>
                   </li>
                   <li>
-                    <strong>Magsimulang mag-check</strong>
-                    <p>Mag-right-click sa kahit anong highlighted text o larawan habang nagba-browse → <b>Scan with Verif.AI</b>.</p>
+                    <strong><T>{"Magsimulang mag-check"}</T></strong>
+                    <p><T>{"Mag-right-click sa kahit anong highlighted text o larawan habang nagba-browse → "}</T><b>Scan with Verif.AI</b>.</p>
                   </li>
                 </ol>
               </section>
@@ -1712,13 +1716,11 @@ export function DashboardPage() {
                   <span className="analysis-number"><Link2 size={19} /></span>
                   <div>
                     <h2>Connect your account</h2>
-                    <p>I-sync ang iyong Verif.AI workspace sa browser.</p>
+                    <p><T>{"I-sync ang iyong Verif.AI workspace sa browser."}</T></p>
                   </div>
                 </div>
 
-                <p style={{ color: "var(--soft)", fontSize: "14px", lineHeight: "1.6" }}>
-                  Ikonekta ang browser extension sa iyong account (<strong>{user?.email}</strong>) para sa direktang pagsusuri mula sa web browser.
-                </p>
+                <p style={{ color: "var(--soft)", fontSize: "14px", lineHeight: "1.6" }}><T>{"Ikonekta ang browser extension sa iyong account ("}</T><strong>{user?.email}</strong><T>{") para sa direktang pagsusuri mula sa web browser."}</T></p>
                 <button
                   className="button primary"
                   style={{ width: "100%", margin: "16px 0" }}
@@ -1733,12 +1735,10 @@ export function DashboardPage() {
                 </button>
                 {extensionStatus && (
                   <p className="trial-connection-status" role="status" style={{ fontSize: "13px", padding: "12px", background: "var(--muted)", borderRadius: "var(--control)" }}>
-                    {extensionStatus}
+                    {t(extensionStatus)}
                   </p>
                 )}
-                <p className="trial-fine-print" style={{ fontSize: "12px", color: "var(--soft)", marginTop: "12px" }}>
-                  Kapag nag-expire ang session token, bumalik dito at kumonekta muli anumang oras.
-                </p>
+                <p className="trial-fine-print" style={{ fontSize: "12px", color: "var(--soft)", marginTop: "12px" }}><T>{"Kapag nag-expire ang session token, bumalik dito at kumonekta muli anumang oras."}</T></p>
               </aside>
             </div>
 
@@ -1746,7 +1746,7 @@ export function DashboardPage() {
               <Info size={17} />
               <div>
                 <strong>Verif.AI Browser Extension</strong>
-                <span>Eksklusibong tampok para sa mga rehistradong miyembro. Protektahan ang iyong sarili mula sa fake news at AI deception saanman sa web.</span>
+                <span><T>{"Eksklusibong tampok para sa mga rehistradong miyembro. Protektahan ang iyong sarili mula sa fake news at AI deception saanman sa web."}</T></span>
               </div>
             </div>
           </section>

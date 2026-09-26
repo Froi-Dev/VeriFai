@@ -1,3 +1,5 @@
+import { T } from "@/i18n/LanguageContext";
+import { useLanguage } from "@/i18n/useLanguage";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import axios from "axios";
@@ -41,6 +43,7 @@ function formatBytes(bytes: number) {
 }
 
 export function GuestConsentPage() {
+  const { t } = useLanguage();
   const [accepted, setAccepted] = useState([false, false]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -55,16 +58,16 @@ export function GuestConsentPage() {
   return (
     <TrialLayout page="consent">
       <header className="tool-page-heading">
-        <h1>Subukan ng Libre</h1>
-        <p>Text, image, at fact checks. Walang account na kailangan.</p>
+        <h1><T>{"Subukan ng Libre"}</T></h1>
+        <p><T>{"Text, image, at fact checks. Walang account na kailangan."}</T></p>
       </header>
       <div className="trial-onboarding-grid">
         <section className="trial-panel">
           <div className="analysis-card-heading">
             <span className="analysis-number"><ShieldCheck size={19} /></span>
             <div>
-              <h2>Bago tayo magsimula</h2>
-              <p>Basahin at tanggapin ang dalawang pahintulot upang magpatuloy.</p>
+              <h2><T>{"Bago tayo magsimula"}</T></h2>
+              <p><T>{"Basahin at tanggapin ang dalawang pahintulot upang magpatuloy."}</T></p>
             </div>
           </div>
           <form onSubmit={async event => {
@@ -101,24 +104,24 @@ export function GuestConsentPage() {
                 <span>
                   <strong>{title}</strong>
                   <small>{description}</small>
-                  <span className="trial-consent-choice">Accept / Tanggapin</span>
+                  <span className="trial-consent-choice"><T>{"Accept / Tanggapin"}</T></span>
                 </span>
               </label>
             ))}
-            {error && <p className="trial-error" role="alert">{error}</p>}
+            {error && <p className="trial-error" role="alert">{t(error)}</p>}
             <div className="trial-form-footer">
-              <span>{accepted.filter(Boolean).length} / 2 tinanggap</span>
+              <span>{accepted.filter(Boolean).length}<T>{" / 2 tinanggap"}</T></span>
               <button className="button primary" disabled={busy || !accepted.every(Boolean)}>
-                {busy ? <><LoaderCircle className="spin" size={17} /> Inihahanda…</> : <>Tanggapin at magsimula <ArrowRight size={17} /></>}
+                {busy ? <><LoaderCircle className="spin" size={17} /><T>{" Inihahanda…"}</T></> : <><T>{"Tanggapin at magsimula "}</T><ArrowRight size={17} /></>}
               </button>
             </div>
           </form>
         </section>
         <aside className="trial-panel trial-included">
           <p className="kicker">GUEST TRIAL</p>
-          <h2>Tatlong paraan para mag-check.</h2>
+          <h2><T>{"Tatlong paraan para mag-check."}</T></h2>
           <p style={{ fontSize: "14px", color: "var(--soft)", marginBottom: "16px" }}>
-            No account required (<Link to="/register" style={{ color: "var(--ph-blue)", textDecoration: "underline", fontWeight: 600 }}>Gumawa ng Account rito</Link>)
+            No account required (<Link to="/register" style={{ color: "var(--ph-blue)", textDecoration: "underline", fontWeight: 600 }}><T>{"Gumawa ng Account rito"}</T></Link>)
           </p>
           <ul>
             {trialScanners.map(({ key, label, icon: Icon }) => (
@@ -133,13 +136,10 @@ export function GuestConsentPage() {
           </ul>
           <div className="trial-note">
             <Info size={17} />
-            <p>Rolling 24 oras ang limits para sa libreng pagsubok.</p>
+            <p><T>{"Rolling 24 oras ang limits para sa libreng pagsubok."}</T></p>
           </div>
-          <p className="trial-fine-print">
-            Bawat tinanggap na scan request ay gumagamit ng isang trial. Hindi nire-reset ng pag-clear ng cookies ang backend quota.
-          </p>
-          <Link className="trial-text-link" to="/auth">
-            May account na? Mag-log in <ArrowRight size={15} />
+          <p className="trial-fine-print"><T>{"Bawat tinanggap na scan request ay gumagamit ng isang trial. Hindi nire-reset ng pag-clear ng cookies ang backend quota."}</T></p>
+          <Link className="trial-text-link" to="/auth"><T>{"May account na? Mag-log in "}</T><ArrowRight size={15} />
           </Link>
         </aside>
       </div>
@@ -148,6 +148,7 @@ export function GuestConsentPage() {
 }
 
 export function GuestScannerPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryScanner = searchParams.get("scanner") as Scanner | null;
@@ -566,7 +567,7 @@ export function GuestScannerPage() {
             </button>
           </form>
 
-          {error && <p className="trial-error" role="alert" style={{ marginTop: "16px" }}>{error}</p>}
+          {error && <p className="trial-error" role="alert" style={{ marginTop: "16px" }}>{t(error)}</p>}
           <p className="trial-fine-print">Analysis is an informational estimate. Review context carefully before sharing.</p>
         </article>
 

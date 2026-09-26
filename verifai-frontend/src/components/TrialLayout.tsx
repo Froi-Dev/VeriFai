@@ -1,3 +1,5 @@
+import { T } from "@/i18n/LanguageContext";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft, FileImage, FileText, Menu, Newspaper, ShieldCheck, UserRound, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -70,7 +72,7 @@ export function TrialLayout({ page, children, scanner, onScannerChange, busy }: 
             </button>
           ) : !hasGuestToken && !user ? (
             <button onClick={() => { navigate("/guest/consent"); setSidebarOpen(false); }}>
-              <ShieldCheck size={18} /><span>Subukan ng Libre</span>
+              <ShieldCheck size={18} /><span><T>{"Subukan ng Libre"}</T></span>
             </button>
           ) : (
             trialScanners.map(({ key, label, icon: Icon }) => (
@@ -111,9 +113,7 @@ export function TrialLayout({ page, children, scanner, onScannerChange, busy }: 
                 textDecoration: "underline",
                 fontWeight: 700,
               }}
-            >
-              (Gumawa ng Account rito)
-            </Link>
+            ><T>{"(Gumawa ng Account rito)"}</T></Link>
           </div>
         </div>
       </aside>
@@ -124,8 +124,9 @@ export function TrialLayout({ page, children, scanner, onScannerChange, busy }: 
             <span className="trial-topbar-title">{title}</span>
           </div>
           <div className="trial-topbar-actions">
+            <LanguageToggle />
             {!user && (
-              <Link className="button secondary trial-account-link" to="/register">Gumawa ng account</Link>
+              <Link className="button secondary trial-account-link" to="/register"><T>{"Gumawa ng account"}</T></Link>
             )}
           </div>
         </header>

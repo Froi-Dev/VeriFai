@@ -1,3 +1,6 @@
+import { T } from "@/i18n/LanguageContext";
+import { useLanguage } from "@/i18n/useLanguage";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
@@ -85,6 +88,7 @@ function Reveal({
 }
 
 function HeroArtwork() {
+  const { t } = useLanguage();
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
@@ -100,7 +104,7 @@ function HeroArtwork() {
         src={`${import.meta.env.BASE_URL}images/verification-stack-ph.png`}
         width="1024"
         height="1280"
-        alt="Mga patong ng papel na nagpapakita ng content, pagsusuri, at source checking."
+        alt={t("Mga patong ng papel na nagpapakita ng content, pagsusuri, at source checking.")}
         initial={reduced ? false : { opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
@@ -124,15 +128,9 @@ function HeroArtwork() {
           Confidence & context
         </span>
       </div>
-      <div className="ph-art-motto" aria-hidden="true">
-        Mas malinaw.
-        <br />
-        Mas mapanuri.
-        <br />
-        Mas may alam.
-        <i />
+      <div className="ph-art-motto" aria-hidden="true"><T>{"Mas malinaw."}</T><br /><T>{"Mas mapanuri."}</T><br /><T>{"Mas may alam."}</T><i />
       </div>
-      <figcaption>Illustration ng verification process</figcaption>
+      <figcaption><T>{"Illustration ng verification process"}</T></figcaption>
     </motion.figure>
   );
 }
@@ -144,16 +142,12 @@ function TextVisual() {
         <span>
           <FileText size={17} /> Text Analyzer
         </span>
-        <small>Halimbawa</small>
+        <small><T>{"Halimbawa"}</T></small>
       </div>
       <div className="ph-writing-paper">
-        <span className="ph-document-byline">Isang post sa feed mo</span>
-        <p>
-          “Sa panahon ngayon, <mark>napakahalagang maging mapanuri</mark> sa
-          impormasyong nakikita natin online.{" "}
-          <mark>Sa kabuuan, ang pagiging responsable</mark> ay nagsisimula sa
-          bawat isa.”
-        </p>
+        <span className="ph-document-byline"><T>{"Isang post sa feed mo"}</T></span>
+        <p><T>{"“Sa panahon ngayon, "}</T><mark><T>{"napakahalagang maging mapanuri"}</T></mark><T>{" sa impormasyong nakikita natin online."}</T>{" "}
+          <mark><T>{"Sa kabuuan, ang pagiging responsable"}</T></mark><T>{" ay nagsisimula sa bawat isa.”"}</T></p>
         <div className="ph-writing-lines">
           <i />
           <i />
@@ -169,16 +163,11 @@ function TextVisual() {
       >
         <Search size={21} />
         <div>
-          <strong>May pattern. Pero hindi pa patunay.</strong>
-          <p>
-            Ang paulit-ulit na phrasing ay isa lang sa mga tinitingnan. Basahin
-            ang buong paliwanag.
-          </p>
+          <strong><T>{"May pattern. Pero hindi pa patunay."}</T></strong>
+          <p><T>{"Ang paulit-ulit na phrasing ay isa lang sa mga tinitingnan. Basahin ang buong paliwanag."}</T></p>
         </div>
       </motion.div>
-      <span className="ph-preview-footnote">
-        Illustrative example · hindi aktuwal na analysis
-      </span>
+      <span className="ph-preview-footnote"><T>{"Illustrative example · hindi aktuwal na analysis"}</T></span>
     </div>
   );
 }
@@ -190,18 +179,13 @@ function NewsVisual() {
         <span>
           <Newspaper size={17} /> News Checker
         </span>
-        <small>Halimbawa</small>
+        <small><T>{"Halimbawa"}</T></small>
       </div>
       <div className="ph-forwarded">
         <span>
-          <MessageCircle size={17} /> Forwarded sa GC
-        </span>
-        <p>
-          “Walang pasok bukas
-          <br />
-          sa buong bansa!”
-        </p>
-        <small>May source ba? Anong petsa?</small>
+          <MessageCircle size={17} /><T>{" Forwarded sa GC"}</T></span>
+        <p><T>{"“Walang pasok bukas"}</T><br /><T>{"sa buong bansa!”"}</T></p>
+        <small><T>{"May source ba? Anong petsa?"}</T></small>
       </div>
       <svg
         className="ph-source-lines"
@@ -222,23 +206,21 @@ function NewsVisual() {
       <div className="ph-source-nodes">
         <div>
           <ShieldCheck />
-          <strong>Orihinal na source</strong>
-          <small>Sino ang naglabas?</small>
+          <strong><T>{"Orihinal na source"}</T></strong>
+          <small><T>{"Sino ang naglabas?"}</T></small>
         </div>
         <div>
           <Newspaper />
-          <strong>Kaugnay na ulat</strong>
-          <small>May sumusuporta ba?</small>
+          <strong><T>{"Kaugnay na ulat"}</T></strong>
+          <small><T>{"May sumusuporta ba?"}</T></small>
         </div>
         <div>
           <Search />
-          <strong>Petsa at lugar</strong>
-          <small>Para kanino ito?</small>
+          <strong><T>{"Petsa at lugar"}</T></strong>
+          <small><T>{"Para kanino ito?"}</T></small>
         </div>
       </div>
-      <span className="ph-preview-footnote">
-        Sundan ang ebidensya bago mag-forward.
-      </span>
+      <span className="ph-preview-footnote"><T>{"Sundan ang ebidensya bago mag-forward."}</T></span>
     </div>
   );
 }
@@ -257,7 +239,7 @@ function MediaVisual() {
         <span>
           <FileImage size={17} /> Media Analyzer
         </span>
-        <small>Halimbawa</small>
+        <small><T>{"Halimbawa"}</T></small>
       </div>
       <div className="ph-image-scene" aria-hidden="true">
         <div className="ph-scene-sun" />
@@ -273,26 +255,16 @@ function MediaVisual() {
       </div>
       <div className="ph-media-observations">
         <span>
-          <span />
-          Ilaw at anino
-        </span>
+          <span /><T>{"Ilaw at anino"}</T></span>
         <span>
-          <span />
-          Texture at detalye
-        </span>
+          <span /><T>{"Texture at detalye"}</T></span>
         <span>
-          <span />
-          Hindi tugmang bahagi
-        </span>
+          <span /><T>{"Hindi tugmang bahagi"}</T></span>
       </div>
-      <p className="ph-media-caption">
-        May kakaiba sa larawan?
-        <br />
-        <strong>Tingnan natin nang mas malapitan.</strong>
+      <p className="ph-media-caption"><T>{"May kakaiba sa larawan?"}</T><br />
+        <strong><T>{"Tingnan natin nang mas malapitan."}</T></strong>
       </p>
-      <span className="ph-preview-footnote">
-        Illustration · hindi aktuwal na analysis
-      </span>
+      <span className="ph-preview-footnote"><T>{"Illustration · hindi aktuwal na analysis"}</T></span>
     </div>
   );
 }
@@ -303,10 +275,8 @@ const modules = [
     icon: FileText,
     label: "Para sa mga salitang nababasa mo",
     title: (
-      <>
-        Tao ba ang sumulat?
-        <br />
-        <em>O may tulong ng AI?</em>
+      <><T>{"Tao ba ang sumulat?"}</T><br />
+        <em><T>{"O may tulong ng AI?"}</T></em>
       </>
     ),
     description:
@@ -323,10 +293,8 @@ const modules = [
     icon: Newspaper,
     label: "Para sa balitang mabilis kumalat",
     title: (
-      <>
-        Viral na.
-        <br />
-        <em>Verified na ba?</em>
+      <><T>{"Viral na."}</T><br />
+        <em><T>{"Verified na ba?"}</T></em>
       </>
     ),
     description:
@@ -343,10 +311,8 @@ const modules = [
     icon: FileImage,
     label: "Para sa larawang kapani-paniwala",
     title: (
-      <>
-        Mukhang totoo.
-        <br />
-        <em>Pero buo ba ang kuwento?</em>
+      <><T>{"Mukhang totoo."}</T><br />
+        <em><T>{"Pero buo ba ang kuwento?"}</T></em>
       </>
     ),
     description:
@@ -361,15 +327,16 @@ const modules = [
 ];
 
 function ContactSection() {
+  const { t } = useLanguage();
   const [prepared, setPrepared] = useState(false);
   function prepareEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const subject = encodeURIComponent(
-      `Verif.AI — Mensahe mula kay ${data.get("name")}`,
+      `Verif.AI — ${t("Mensahe mula kay")} ${data.get("name")}`,
     );
     const body = encodeURIComponent(
-      `Pangalan: ${data.get("name")}\nEmail: ${data.get("email")}\n\n${data.get("message")}`,
+      `${t("Pangalan")}: ${data.get("name")}\nEmail: ${data.get("email")}\n\n${data.get("message")}`,
     );
     window.location.href = `mailto:verif.ai.dev2026@gmail.com?subject=${subject}&body=${body}`;
     setPrepared(true);
@@ -379,15 +346,10 @@ function ContactSection() {
       <div className="ph-shell ph-contact-grid">
         <Reveal>
           <span className="ph-section-label">Contact us</span>
-          <h2>
-            May tanong?
-            <br />
-            <em>Usap tayo.</em>
+          <h2><T>{"May tanong?"}</T><br />
+            <em><T>{"Usap tayo."}</T></em>
           </h2>
-          <p>
-            May suggestion, napansing problema, o gustong makipag-collaborate?
-            Gusto naming marinig.
-          </p>
+          <p><T>{"May suggestion, napansing problema, o gustong makipag-collaborate? Gusto naming marinig."}</T></p>
           <a className="ph-email-link" href="mailto:verif.ai.dev2026@gmail.com">
             <Mail size={20} />
             verif.ai.dev2026@gmail.com
@@ -396,12 +358,10 @@ function ContactSection() {
         <Reveal delay={0.1}>
           <form className="ph-contact-form" onSubmit={prepareEmail}>
             <div className="ph-contact-fields">
-              <label>
-                Pangalan
-                <input
+              <label><T>{"Pangalan"}</T><input
                   name="name"
                   autoComplete="name"
-                  placeholder="Pangalan mo"
+                  placeholder={t("Pangalan mo")}
                   required
                   maxLength={100}
                 />
@@ -418,23 +378,20 @@ function ContactSection() {
                 />
               </label>
             </div>
-            <label>
-              Ano ang maitutulong namin?
-              <textarea
+            <label><T>{"Ano ang maitutulong namin?"}</T><textarea
                 name="message"
-                placeholder="Ikuwento mo rito."
+                placeholder={t("Ikuwento mo rito.")}
                 required
                 maxLength={5000}
                 rows={4}
               />
             </label>
-            <Button className="ph-button ph-button-blue" type="submit">
-              Buksan sa email <ArrowUpRight size={17} />
+            <Button className="ph-button ph-button-blue" type="submit"><T>{"Buksan sa email "}</T><ArrowUpRight size={17} />
             </Button>
             <p className="ph-contact-note" role="status">
               {prepared
-                ? "Nakahanda na ang mensahe para sa email app mo. Kung hindi ito bumukas, gamitin ang email address sa tabi."
-                : "Magbubukas ang email app mo. Ikaw pa rin ang magpapadala."}
+                ? t("Nakahanda na ang mensahe para sa email app mo. Kung hindi ito bumukas, gamitin ang email address sa tabi.")
+                : t("Magbubukas ang email app mo. Ikaw pa rin ang magpapadala.")}
             </p>
           </form>
         </Reveal>
@@ -444,6 +401,7 @@ function ContactSection() {
 }
 
 export function HomePage() {
+  const { language, t } = useLanguage();
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const loggedInUser = (() => {
@@ -456,7 +414,6 @@ export function HomePage() {
   })();
   useEffect(() => {
     document.documentElement.classList.remove("dark");
-    document.title = "Verif.AI — ’Wag basta maniwala. Siguraduhing tama.";
     const update = () => setScrolled(window.scrollY > 50);
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenu(false);
@@ -470,12 +427,14 @@ export function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    document.title = t("Verif.AI — ’Wag basta maniwala. Siguraduhing tama.");
+  }, [t]);
+
   return (
     <MotionConfig reducedMotion="user">
-      <div className="ph-site" id="top" lang="fil">
-        <a className="skip-link" href="#main-content">
-          Pumunta sa nilalaman
-        </a>
+      <div className="ph-site" id="top" lang={language}>
+        <a className="skip-link" href="#main-content"><T>{"Pumunta sa nilalaman"}</T></a>
         <header
           className={`ph-header ${scrolled || menu ? "is-scrolled" : ""}`}
         >
@@ -484,21 +443,20 @@ export function HomePage() {
             <nav className="ph-desktop-nav" aria-label="Main navigation">
               {navigation.map(([label, href]) => (
                 <a key={href} href={href}>
-                  {label}
+                  {t(label)}
                 </a>
               ))}
             </nav>
             <div className="ph-nav-actions">
-              <span className="ph-nav-message">
-                Para sa mas ligtas na internet
-              </span>
+              <LanguageToggle />
+              <span className="ph-nav-message"><T>{"Para sa mas ligtas na internet"}</T></span>
               <Link className="ph-button ph-nav-cta" to={loggedInUser ? "/dashboard" : "/auth"}>
-                {loggedInUser ? "Pumunta sa Dashboard" : "Magsimula"} <ArrowRight size={16} />
+                {loggedInUser ? t("Pumunta sa Dashboard") : t("Magsimula")} <ArrowRight size={16} />
               </Link>
               <Button
                 className="ph-menu"
                 variant="ghost"
-                aria-label={menu ? "Isara ang menu" : "Buksan ang menu"}
+                aria-label={menu ? t("Isara ang menu") : t("Buksan ang menu")}
                 aria-expanded={menu}
                 aria-controls="ph-mobile-menu"
                 onClick={() => setMenu(!menu)}
@@ -515,7 +473,7 @@ export function HomePage() {
             >
               {navigation.map(([label, href]) => (
                 <a href={href} key={href} onClick={() => setMenu(false)}>
-                  {label}
+                  {t(label)}
                 </a>
               ))}
               <a href="#faq" onClick={() => setMenu(false)}>
@@ -525,7 +483,7 @@ export function HomePage() {
                 Contact us
               </a>
               <Link to={loggedInUser ? "/dashboard" : "/auth"}>
-                {loggedInUser ? "Pumunta sa Dashboard" : "Mag-sign in"}
+                {loggedInUser ? t("Pumunta sa Dashboard") : t("Mag-sign in")}
               </Link>
             </nav>
           )}
@@ -535,11 +493,8 @@ export function HomePage() {
             <div className="ph-hero-grain" aria-hidden="true" />
             <div className="ph-shell ph-hero-grid">
               <div className="ph-hero-copy">
-                <p className="ph-hero-kicker">Magbasa. Suriin. Tiyakin.</p>
-                <h1>
-                  ’Wag basta
-                  <br />
-                  maniwala.<span>Siguraduhing tama.</span>
+                <p className="ph-hero-kicker"><T>{"Magbasa. Suriin. Tiyakin."}</T></p>
+                <h1><T>{"’Wag basta"}</T><br /><T>{"maniwala."}</T><span><T>{"Siguraduhing tama."}</T></span>
                 </h1>
                 <p className="ph-hero-description">
                   A Philippine-based content validation platform that helps you
@@ -552,12 +507,10 @@ export function HomePage() {
                       <FileText />
                     </span>
                     <p>
-                      <strong>Suriin</strong>
+                      <strong><T>{"Suriin"}</T></strong>
                       <small>
                         AI-generated
-                        <br />
-                        na content
-                      </small>
+                        <br /><T>{"na content"}</T></small>
                     </p>
                   </div>
                   <div>
@@ -565,10 +518,8 @@ export function HomePage() {
                       <Search />
                     </span>
                     <p>
-                      <strong>I-verify</strong>
-                      <small>
-                        Balita at
-                        <br />
+                      <strong><T>{"I-verify"}</T></strong>
+                      <small><T>{"Balita at"}</T><br />
                         viral claims
                       </small>
                     </p>
@@ -578,34 +529,24 @@ export function HomePage() {
                       <Users />
                     </span>
                     <p>
-                      <strong>Alamin</strong>
-                      <small>
-                        Mas may alam
-                        <br />
-                        na komunidad
-                      </small>
+                      <strong><T>{"Alamin"}</T></strong>
+                      <small><T>{"Mas may alam"}</T><br /><T>{"na komunidad"}</T></small>
                     </p>
                   </div>
                 </div>
                 <div className="ph-hero-actions">
                   <Link className="ph-button" to={loggedInUser ? "/dashboard" : "/auth"}>
-                    {loggedInUser ? "Pumunta sa Dashboard" : "Mag-verify na"} <ArrowRight size={20} />
+                    {loggedInUser ? t("Pumunta sa Dashboard") : t("Mag-verify na")} <ArrowRight size={20} />
                   </Link>
-                  <a className="ph-learn" href="#problem">
-                    Kilalanin ang Verif.AI
-                  </a>
+                  <a className="ph-learn" href="#problem"><T>{"Kilalanin ang Verif.AI"}</T></a>
                 </div>
               </div>
               <HeroArtwork />
               <div className="ph-hero-bottom">
                 <span>
-                  <i />
-                  Gawang tao. Tamang konteksto. Tiyak na totoo.
-                </span>
-                <a href="#problem" aria-label="Alamin ang problema">
-                  <ChevronDown size={18} />
-                  Scroll para malaman
-                </a>
+                  <i /><T>{"Gawang tao. Tamang konteksto. Tiyak na totoo."}</T></span>
+                <a href="#problem" aria-label={t("Alamin ang problema")}>
+                  <ChevronDown size={18} /><T>{"Scroll para malaman"}</T></a>
               </div>
             </div>
           </section>
@@ -613,17 +554,11 @@ export function HomePage() {
           <section className="ph-problem ph-section" id="problem">
             <div className="ph-shell">
               <Reveal className="ph-problem-heading">
-                <span className="ph-section-label">Ang problema</span>
-                <h2>
-                  Ang bilis i-share.
-                  <br />
-                  <em>Ang hirap bawiin.</em>
+                <span className="ph-section-label"><T>{"Ang problema"}</T></span>
+                <h2><T>{"Ang bilis i-share."}</T><br />
+                  <em><T>{"Ang hirap bawiin."}</T></em>
                 </h2>
-                <p>
-                  Isang headline. Isang screenshot. Isang “sabi nila.”
-                  <br />
-                  Minsan, bago pa ma-check, paniwala na ng lahat.
-                </p>
+                <p><T>{"Isang headline. Isang screenshot. Isang “sabi nila.”"}</T><br /><T>{"Minsan, bago pa ma-check, paniwala na ng lahat."}</T></p>
               </Reveal>
               <div className="ph-problem-grid">
                 <Reveal className="ph-problem-item">
@@ -631,22 +566,13 @@ export function HomePage() {
                     className="ph-problem-art ph-problem-chat"
                     aria-hidden="true"
                   >
-                    <span>“Totoo ba ’to?”</span>
-                    <span>“Sabi sa GC, oo.”</span>
-                    <span>
-                      “Share ko na.”
-                      <ArrowUpRight size={15} />
+                    <span><T>{"“Totoo ba ’to?”"}</T></span>
+                    <span><T>{"“Sabi sa GC, oo.”"}</T></span>
+                    <span><T>{"“Share ko na.”"}</T><ArrowUpRight size={15} />
                     </span>
                   </div>
-                  <h3>
-                    Maraming share.
-                    <br />
-                    Walang source.
-                  </h3>
-                  <p>
-                    Kapag paulit-ulit mong nakikita, madaling isipin na totoo.
-                    Pero hindi ebidensya ang dami ng nag-share.
-                  </p>
+                  <h3><T>{"Maraming share."}</T><br /><T>{"Walang source."}</T></h3>
+                  <p><T>{"Kapag paulit-ulit mong nakikita, madaling isipin na totoo. Pero hindi ebidensya ang dami ng nag-share."}</T></p>
                 </Reveal>
                 <Reveal className="ph-problem-item" delay={0.08}>
                   <div
@@ -654,19 +580,12 @@ export function HomePage() {
                     aria-hidden="true"
                   >
                     <span>Breaking news</span>
-                    <strong>“WALANG PASOK BUKAS”</strong>
-                    <small>Pero kailan pa ito?</small>
+                    <strong><T>{"“WALANG PASOK BUKAS”"}</T></strong>
+                    <small><T>{"Pero kailan pa ito?"}</T></small>
                     <i>2022</i>
                   </div>
-                  <h3>
-                    Totoong post.
-                    <br />
-                    Maling konteksto.
-                  </h3>
-                  <p>
-                    Lumang balita, putol na quote, o larawang iba ang
-                    pinanggalingan. Kapag kulang ang kuwento, iba ang dating.
-                  </p>
+                  <h3><T>{"Totoong post."}</T><br /><T>{"Maling konteksto."}</T></h3>
+                  <p><T>{"Lumang balita, putol na quote, o larawang iba ang pinanggalingan. Kapag kulang ang kuwento, iba ang dating."}</T></p>
                 </Reveal>
                 <Reveal className="ph-problem-item" delay={0.16}>
                   <div
@@ -680,17 +599,10 @@ export function HomePage() {
                       <i />
                       <i />
                     </div>
-                    <span>Tao o AI?</span>
+                    <span><T>{"Tao o AI?"}</T></span>
                   </div>
-                  <h3>
-                    Kapani-paniwala.
-                    <br />
-                    Pero gawa pala.
-                  </h3>
-                  <p>
-                    Kayang gumawa ng AI ng maayos na text at makatotohanang
-                    larawan. Hindi na sapat ang “mukha namang legit.”
-                  </p>
+                  <h3><T>{"Kapani-paniwala."}</T><br /><T>{"Pero gawa pala."}</T></h3>
+                  <p><T>{"Kayang gumawa ng AI ng maayos na text at makatotohanang larawan. Hindi na sapat ang “mukha namang legit.”"}</T></p>
                 </Reveal>
               </div>
             </div>
@@ -699,17 +611,11 @@ export function HomePage() {
           <section className="ph-solution" id="solution">
             <div className="ph-shell">
               <Reveal className="ph-solution-heading">
-                <span className="ph-section-label">Ang solusyon</span>
-                <h2>
-                  May paraan para
-                  <br />
-                  <em>mas makasiguro.</em>
+                <span className="ph-section-label"><T>{"Ang solusyon"}</T></span>
+                <h2><T>{"May paraan para"}</T><br />
+                  <em><T>{"mas makasiguro."}</T></em>
                 </h2>
-                <p>
-                  Iba-iba ang content. Iba-iba rin ang kailangang tingnan.
-                  <br />
-                  Kilalanin ang tatlong paraan ng pag-check sa Verif.AI.
-                </p>
+                <p><T>{"Iba-iba ang content. Iba-iba rin ang kailangang tingnan."}</T><br /><T>{"Kilalanin ang tatlong paraan ng pag-check sa Verif.AI."}</T></p>
               </Reveal>
               {modules.map((module, index) => (
                 <article
@@ -720,15 +626,15 @@ export function HomePage() {
                   <Reveal className="ph-module-copy">
                     <span className="ph-module-label">
                       <module.icon size={18} />
-                      {module.label}
+                      {t(module.label)}
                     </span>
                     <h3>{module.title}</h3>
-                    <p>{module.description}</p>
+                    <p>{t(module.description)}</p>
                     <ul>
                       {module.points.map((point) => (
                         <li key={point}>
                           <Check size={17} />
-                          {point}
+                          {t(point)}
                         </li>
                       ))}
                     </ul>
@@ -744,15 +650,11 @@ export function HomePage() {
           <section className="ph-how ph-section" id="how-it-works">
             <div className="ph-shell">
               <Reveal className="ph-how-heading">
-                <span className="ph-section-label">Paano gamitin</span>
-                <h2>
-                  May duda?
-                  <br />
-                  <em>Tatlong hakbang lang.</em>
+                <span className="ph-section-label"><T>{"Paano gamitin"}</T></span>
+                <h2><T>{"May duda?"}</T><br />
+                  <em><T>{"Tatlong hakbang lang."}</T></em>
                 </h2>
-                <p>
-                  Hindi kailangang maging eksperto para magsimulang mag-check.
-                </p>
+                <p><T>{"Hindi kailangang maging eksperto para magsimulang mag-check."}</T></p>
               </Reveal>
               <ol className="ph-how-steps">
                 <li>
@@ -760,11 +662,8 @@ export function HomePage() {
                     <span className="ph-step-icon">
                       <FileText size={26} />
                     </span>
-                    <h3>Ilagay ang content.</h3>
-                    <p>
-                      I-paste ang text o claim, o i-upload ang larawan na gusto
-                      mong suriin.
-                    </p>
+                    <h3><T>{"Ilagay ang content."}</T></h3>
+                    <p><T>{"I-paste ang text o claim, o i-upload ang larawan na gusto mong suriin."}</T></p>
                   </Reveal>
                 </li>
                 <li>
@@ -772,11 +671,8 @@ export function HomePage() {
                     <span className="ph-step-icon">
                       <Search size={26} />
                     </span>
-                    <h3>Hayaan itong masuri.</h3>
-                    <p>
-                      Titingnan ng Verif.AI ang mga pattern, source, o detalye
-                      ng content.
-                    </p>
+                    <h3><T>{"Hayaan itong masuri."}</T></h3>
+                    <p><T>{"Titingnan ng Verif.AI ang mga pattern, source, o detalye ng content."}</T></p>
                   </Reveal>
                 </li>
                 <li>
@@ -784,17 +680,13 @@ export function HomePage() {
                     <span className="ph-step-icon">
                       <ShieldCheck size={26} />
                     </span>
-                    <h3>Basahin bago mag-share.</h3>
-                    <p>
-                      Unawain ang resulta at mga limitasyon. Ikaw pa rin ang
-                      magdedesisyon.
-                    </p>
+                    <h3><T>{"Basahin bago mag-share."}</T></h3>
+                    <p><T>{"Unawain ang resulta at mga limitasyon. Ikaw pa rin ang magdedesisyon."}</T></p>
                   </Reveal>
                 </li>
               </ol>
               <Reveal className="ph-how-action">
-                <Link className="ph-button ph-button-blue" to="/auth">
-                  Subukan ang unang check <ArrowRight size={18} />
+                <Link className="ph-button ph-button-blue" to="/auth"><T>{"Subukan ang unang check "}</T><ArrowRight size={18} />
                 </Link>
               </Reveal>
             </div>
@@ -804,26 +696,15 @@ export function HomePage() {
             <div className="ph-shell ph-extension-grid">
               <Reveal>
                 <span className="ph-section-label">Browser extension</span>
-                <h2>
-                  Habang nagba-browse,
-                  <br />
-                  <em>may kasamang pang-check.</em>
+                <h2><T>{"Habang nagba-browse,"}</T><br />
+                  <em><T>{"may kasamang pang-check."}</T></em>
                 </h2>
-                <p>
-                  Gamitin ang Verif.AI sa mismong binabasa mo.
-                  Piliin ang content, buksan ang checker, at tingnan ang
-                  konteksto.
-                </p>
+                <p><T>{"Gamitin ang Verif.AI sa mismong binabasa mo. Piliin ang content, buksan ang checker, at tingnan ang konteksto."}</T></p>
                 <div className="ph-extension-status">
-                  <span />
-                  Available para sa Chrome · Rehistradong account lamang
-                </div>
-                <p className="ph-extension-note">
-                  Eksklusibo para sa mga may rehistradong account.
-                  Gumawa ng libreng account para ma-download at magamit ang extension.
-                </p>
+                  <span /><T>{"Available para sa Chrome · Rehistradong account lamang"}</T></div>
+                <p className="ph-extension-note"><T>{"Eksklusibo para sa mga may rehistradong account. Gumawa ng libreng account para ma-download at magamit ang extension."}</T></p>
                 <Link className="ph-underlined" to={loggedInUser ? "/dashboard/download-extension" : "/register"}>
-                  {loggedInUser ? "Download at Connect" : "Gumawa ng account para ma-download"} <ArrowUpRight size={17} />
+                  {loggedInUser ? t("Download at Connect") : t("Gumawa ng account para ma-download")} <ArrowUpRight size={17} />
                 </Link>
               </Reveal>
               <Reveal className="ph-extension-preview" delay={0.1}>
@@ -833,19 +714,15 @@ export function HomePage() {
                     <i />
                     <i />
                   </span>
-                  <div>Habang nagbabasa online</div>
+                  <div><T>{"Habang nagbabasa online"}</T></div>
                   <Puzzle size={18} />
                 </div>
                 <div className="ph-browser-content">
                   <div className="ph-browser-article">
                     <span />
-                    <h3>
-                      May nabasa kang
-                      <br />
-                      parang hindi tama?
-                    </h3>
+                    <h3><T>{"May nabasa kang"}</T><br /><T>{"parang hindi tama?"}</T></h3>
                     <p>
-                      <mark>Piliin ang bahaging gusto mong i-check.</mark>
+                      <mark><T>{"Piliin ang bahaging gusto mong i-check."}</T></mark>
                     </p>
                     <i />
                     <i />
@@ -855,15 +732,12 @@ export function HomePage() {
                   <div className="ph-extension-popover">
                     <BrandSymbol />
                     <strong>Verif.AI</strong>
-                    <p>Mas malinaw na konteksto, isang check lang.</p>
+                    <p><T>{"Mas malinaw na konteksto, isang check lang."}</T></p>
                     <span>
-                      <Search size={14} /> Suriin ang napiling text
-                    </span>
+                      <Search size={14} /><T>{" Suriin ang napiling text"}</T></span>
                   </div>
                 </div>
-                <span className="ph-preview-footnote">
-                  Preview ng planong extension
-                </span>
+                <span className="ph-preview-footnote"><T>{"Preview ng planong extension"}</T></span>
               </Reveal>
             </div>
           </section>
@@ -872,21 +746,19 @@ export function HomePage() {
             <div className="ph-shell ph-faq-grid">
               <Reveal>
                 <span className="ph-section-label">FAQ</span>
-                <h2>
-                  Mga tanong mo,
-                  <br />
-                  <em>sasagutin natin.</em>
+                <h2><T>{"Mga tanong mo,"}</T><br />
+                  <em><T>{"sasagutin natin."}</T></em>
                 </h2>
-                <p>Para malinaw bago ka magsimula.</p>
+                <p><T>{"Para malinaw bago ka magsimula."}</T></p>
               </Reveal>
               <div className="ph-questions">
                 {questions.map(([question, answer]) => (
                   <details key={question}>
                     <summary>
-                      {question}
+                      {t(question)}
                       <Plus size={19} />
                     </summary>
-                    <p>{answer}</p>
+                    <p>{t(answer)}</p>
                   </details>
                 ))}
               </div>
@@ -899,17 +771,13 @@ export function HomePage() {
             <div className="ph-footer-top">
               <div>
                 <Brand />
-                <p>
-                  Bago mag-share, siguraduhing tama.
-                  <br />
-                  Para sa mas may alam na Pilipinas.
-                </p>
+                <p><T>{"Bago mag-share, siguraduhing tama."}</T><br /><T>{"Para sa mas may alam na Pilipinas."}</T></p>
               </div>
               <div className="ph-footer-links">
                 <nav aria-label="Footer navigation">
-                  <a href="#problem">Ang problema</a>
-                  <a href="#solution">Ang solusyon</a>
-                  <a href="#how-it-works">Paano gamitin</a>
+                  <a href="#problem"><T>{"Ang problema"}</T></a>
+                  <a href="#solution"><T>{"Ang solusyon"}</T></a>
+                  <a href="#how-it-works"><T>{"Paano gamitin"}</T></a>
                 </nav>
                 <nav aria-label="Support navigation">
                   <a href="#extension">Extension</a>
@@ -921,8 +789,8 @@ export function HomePage() {
                     <Link to="/dashboard">Dashboard ({loggedInUser.name})</Link>
                   ) : (
                     <>
-                      <Link to="/auth">Mag-sign in</Link>
-                      <Link to="/register">Gumawa ng account</Link>
+                      <Link to="/auth"><T>{"Mag-sign in"}</T></Link>
+                      <Link to="/register"><T>{"Gumawa ng account"}</T></Link>
                     </>
                   )}
                 </nav>
@@ -930,8 +798,7 @@ export function HomePage() {
             </div>
             <div className="ph-footer-bottom">
               <span>© 2026 Verif.AI. All rights reserved.</span>
-              <span>
-                Gawa para sa Pilipinas. <i />
+              <span><T>{"Gawa para sa Pilipinas. "}</T><i />
                 <i />
                 <i />
               </span>

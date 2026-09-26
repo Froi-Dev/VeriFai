@@ -1,3 +1,6 @@
+import { T } from "@/i18n/LanguageContext";
+import { useLanguage } from "@/i18n/useLanguage";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import axios from "axios";
@@ -32,6 +35,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function AuthPage() {
+  const { t } = useLanguage();
   const publicPreview = import.meta.env.VITE_LANDING_ONLY === "true";
   const location = useLocation();
   const resetToken = new URLSearchParams(location.search).get("token") ?? "";
@@ -47,7 +51,6 @@ export function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = mode === "signup" ? "Mag-register | Verif.AI" : "Mag-log in | Verif.AI";
     if (!publicPreview && !resetToken) {
       getCurrentUser()
         .then(() => navigate("/dashboard", { replace: true }))
@@ -57,6 +60,10 @@ export function AuthPage() {
       document.title = "Verif.AI — Digital Content Authenticity Analysis";
     };
   }, [mode, navigate, publicPreview, resetToken]);
+
+  useEffect(() => {
+    document.title = mode === "signup" ? t("Mag-register | Verif.AI") : mode === "signin" ? t("Mag-log in | Verif.AI") : `${t("I-reset ang password")} | Verif.AI`;
+  }, [mode, t]);
 
   const changeMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -112,17 +119,17 @@ export function AuthPage() {
   };
 
   const title = {
-    signin: "Mag-log in",
-    signup: "Mag-register",
-    forgot: "I-reset ang password",
-    reset: "Pumili ng bagong password",
+    signin: t("Mag-log in"),
+    signup: t("Mag-register"),
+    forgot: t("I-reset ang password"),
+    reset: t("Pumili ng bagong password"),
   }[mode];
 
   const intro = {
-    signin: "I-access ang iyong Verif.AI workspace para sa walang limitasyong pagsusuri.",
-    signup: "Gumawa ng account para sa walang limitasyong access sa Verif.AI.",
-    forgot: "Ilagay ang iyong email address upang makatanggap ng time-limited reset link.",
-    reset: "Ang iyong bagong password ay magsa-sign out sa iyo sa lahat ng iba pang device.",
+    signin: t("I-access ang iyong Verif.AI workspace para sa walang limitasyong pagsusuri."),
+    signup: t("Gumawa ng account para sa walang limitasyong access sa Verif.AI."),
+    forgot: t("Ilagay ang iyong email address upang makatanggap ng time-limited reset link."),
+    reset: t("Ang iyong bagong password ay magsa-sign out sa iyo sa lahat ng iba pang device."),
   }[mode];
 
   const needsPassword = mode === "signin" || mode === "signup" || mode === "reset";
@@ -133,19 +140,20 @@ export function AuthPage() {
       <section className="auth-story" aria-label="About Verif.AI">
         <Brand className="auth-brand" />
         <div className="auth-story-copy">
-          <p className="auth-tagline">Tuklasin ang totoo sa bawat nilalaman.</p>
+          <p className="auth-tagline"><T>{"Tuklasin ang totoo sa bawat nilalaman."}</T></p>
         </div>
         <span className="auth-story-scan" aria-hidden="true" />
       </section>
 
       <section className="auth-panel">
         <div className="auth-panel-inner">
-          <Link className="auth-back" to="/"><ArrowLeft size={16} /> Bumalik sa home</Link>
+          <div className="auth-language"><LanguageToggle /></div>
+          <Link className="auth-back" to="/"><ArrowLeft size={16} /><T>{" Bumalik sa home"}</T></Link>
           <motion.div initial={reduceMotion ? false : { opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
             {(mode === "signin" || mode === "signup") && (
               <div className="auth-mode" role="tablist" aria-label="Authentication options">
-                <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => changeMode("signin")}>Mag-log in</button>
-                <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => changeMode("signup")}>Mag-register</button>
+                <button type="button" role="tab" aria-selected={mode === "signin"} onClick={() => changeMode("signin")}><T>{"Mag-log in"}</T></button>
+                <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => changeMode("signup")}><T>{"Mag-register"}</T></button>
               </div>
             )}
             <AnimatePresence mode="wait" initial={false}>
@@ -156,25 +164,25 @@ export function AuthPage() {
                 <form className="auth-form" onSubmit={handleSubmit}>
                   {mode === "signup" && (
                     <div className="auth-field">
-                      <label htmlFor="name">Buong pangalan</label>
-                      <input id="name" name="name" type="text" autoComplete="name" placeholder="Pangalan at Apelyido" value={name} onChange={(event) => setName(event.target.value)} maxLength={50} required />
+                      <label htmlFor="name"><T>{"Buong pangalan"}</T></label>
+                      <input id="name" name="name" type="text" autoComplete="name" placeholder={t("Pangalan at Apelyido")} value={name} onChange={(event) => setName(event.target.value)} maxLength={50} required />
                     </div>
                   )}
                   {mode !== "reset" && (
                     <div className="auth-field">
                       <label htmlFor="email">Email address</label>
-                      <input id="email" name="email" type="email" autoComplete="email" placeholder="ikaw@halimbawa.com" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={254} required />
+                      <input id="email" name="email" type="email" autoComplete="email" placeholder={t("ikaw@halimbawa.com")} value={email} onChange={(event) => setEmail(event.target.value)} maxLength={254} required />
                     </div>
                   )}
                   {needsPassword && (
                     <div className="auth-field">
                       <div className="auth-label-row">
-                        <label htmlFor="password">{mode === "reset" ? "Bagong password" : "Password"}</label>
-                        {mode === "signin" && <button type="button" onClick={() => changeMode("forgot")}>Nakalimutan ang password?</button>}
+                        <label htmlFor="password">{mode === "reset" ? t("Bagong password") : "Password"}</label>
+                        {mode === "signin" && <button type="button" onClick={() => changeMode("forgot")}><T>{"Nakalimutan ang password?"}</T></button>}
                       </div>
                       <div className="password-input">
-                        <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "signin" ? "current-password" : "new-password"} placeholder={mode === "signin" ? "Ilagay ang iyong password" : "Gumawa ng matatag na password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signin" ? 1 : 12} maxLength={128} required />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Itago ang password" : "Ipakita ang password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                        <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "signin" ? "current-password" : "new-password"} placeholder={mode === "signin" ? t("Ilagay ang iyong password") : t("Gumawa ng matatag na password")} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signin" ? 1 : 12} maxLength={128} required />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? t("Itago ang password") : t("Ipakita ang password")}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                       </div>
                       {needsConfirmation && (
                         <ul className="password-requirements" aria-label="Password requirements">
@@ -189,44 +197,35 @@ export function AuthPage() {
                   )}
                   {needsConfirmation && (
                     <div className="auth-field">
-                      <label htmlFor="password-confirmation">Kumpirmahin ang password</label>
+                      <label htmlFor="password-confirmation"><T>{"Kumpirmahin ang password"}</T></label>
                       <input id="password-confirmation" name="password-confirmation" type={showPassword ? "text" : "password"} autoComplete="new-password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} minLength={12} maxLength={128} required />
                     </div>
                   )}
                   {mode === "signup" && (
                     <label className="auth-consent">
                       <input type="checkbox" required />
-                      <span>Sumasang-ayon ako sa mga tuntunin ng Verif.AI at patakaran sa privacy.</span>
+                      <span><T>{"Sumasang-ayon ako sa mga tuntunin ng Verif.AI at patakaran sa privacy."}</T></span>
                     </label>
                   )}
 
                   <button className="button primary large auth-submit" type="submit" disabled={submitting}>
-                    {submitting ? "Mangyaring maghintay…" : mode === "signin" ? "Mag-log in" : mode === "signup" ? "Mag-register" : mode === "forgot" ? "Ipadala ang reset link" : "Itakda ang bagong password"}
+                    {submitting ? t("Mangyaring maghintay…") : mode === "signin" ? t("Mag-log in") : mode === "signup" ? t("Mag-register") : mode === "forgot" ? t("Ipadala ang reset link") : t("Itakda ang bagong password")}
                   </button>
-                  {message && <p className="auth-message" role="status" aria-live="polite"><LockKeyhole size={16} /> {message}</p>}
+                  {message && <p className="auth-message" role="status" aria-live="polite"><LockKeyhole size={16} /> {t(message)}</p>}
                 </form>
 
                 <p className="auth-switch">
                   {mode === "signin" ? (
-                    <>
-                      Bago palang sa Verif.AI?{" "}
-                      <button type="button" onClick={() => changeMode("signup")}>
-                        Gumawa ng account
-                      </button>
+                    <><T>{"Bago palang sa Verif.AI?"}</T>{" "}
+                      <button type="button" onClick={() => changeMode("signup")}><T>{"Gumawa ng account"}</T></button>
                     </>
                   ) : mode === "signup" ? (
-                    <>
-                      May account na?{" "}
-                      <button type="button" onClick={() => changeMode("signin")}>
-                        Mag-log in
-                      </button>
+                    <><T>{"May account na?"}</T>{" "}
+                      <button type="button" onClick={() => changeMode("signin")}><T>{"Mag-log in"}</T></button>
                     </>
                   ) : (
-                    <>
-                      Naalala mo na ang iyong password?{" "}
-                      <button type="button" onClick={() => changeMode("signin")}>
-                        Mag-log in
-                      </button>
+                    <><T>{"Naalala mo na ang iyong password?"}</T>{" "}
+                      <button type="button" onClick={() => changeMode("signin")}><T>{"Mag-log in"}</T></button>
                     </>
                   )}
                 </p>
@@ -241,9 +240,7 @@ export function AuthPage() {
                         textDecoration: "none",
                         fontWeight: 600,
                       }}
-                    >
-                      (Gusto munang subukan? Pindutin rito)
-                    </Link>
+                    ><T>{"(Gusto munang subukan? Pindutin rito)"}</T></Link>
                   </p>
                 )}
               </motion.div>
