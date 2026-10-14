@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      target: backend-local
+    environment:
+      TEXT_ANALYZER_BACKEND: roberta
+      TEXT_MODEL_DEVICE: cpu
+      TEXT_MODEL_WARMUP: 'true'
+      TEXT_ANALYSIS_DEADLINE_SECONDS: '120'
+    volumes:
+      - type: bind
+        source: ${TEXT_MODEL_HOST_PATH:-./models/text}
+        target: /models/text
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      start_period: 180s

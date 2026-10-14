@@ -31,9 +31,6 @@ The user explicitly requested glass navigation and scroll reveals, overriding th
 
 - File: public/images/verification-stack-ph.png
 - Generator: built-in image-generation tool
-- Reference inputs: AI design.png (paper-stack composition) and the supplied Philippine identity board (palette).
-- Final prompt: see artifacts/ui-review/hero-image-prompt.md.
-
 ## Scope
 
 Frontend presentation, branding, page composition, interactions, and copy. Preserve real authentication, validation, API clients and payloads, result calculations, history, uploads, and routes. Do not modify the backend or unrelated user changes.

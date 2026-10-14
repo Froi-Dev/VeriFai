@@ -28,6 +28,9 @@ __pycache__/
 /Verifai-backend/logs/
 /audit/
 
+# Optional Docker-mounted checkpoints (large local model files)
+/models/
+
 # Local databases, dumps, credentials, and Python build output
 *.sqlite
 *.sqlite3

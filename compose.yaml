@@ -1,0 +1,98 @@
+name: verifai
+services:
+  database:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: verifai
+      POSTGRES_USER: verifai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run docker/prepare_env.py first (see DOCKER.md)}
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U verifai -d verifai']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:8025:8025'
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      target: backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://verifai:${POSTGRES_PASSWORD}@database:5432/verifai
+      JWT_SECRET: ${JWT_SECRET:?Run docker/prepare_env.py first (see DOCKER.md)}
+      ENVIRONMENT: development
+      COOKIE_SECURE: 'false'
+      COOKIE_DOMAIN: ''
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      TRUSTED_HOSTS: localhost,127.0.0.1,backend
+      FRONTEND_RESET_URL: http://localhost:5173/auth/reset
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
+      RESULT_CACHE_URL: redis://redis:6379/1
+      TEXT_ANALYZER_BACKEND: gemini
+      TEXT_MODEL_PATH: /models/text
+      TEXT_MODEL_WARMUP: 'false'
+      IMAGE_OCR_WARMUP: 'false'
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@verifai.local}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+    ports:
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - backend-logs:/app/logs
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 12
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+    ports:
+      - '127.0.0.1:5173:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1/]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  database-data:
+  redis-data:
+  backend-logs:
