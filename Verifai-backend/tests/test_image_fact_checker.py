@@ -348,7 +348,9 @@ async def test_gemini_image_detector_normalizes_structured_result() -> None:
                 '{"classification":"Inconclusive","confidence":63,'
                 '"ai_probability":44,"summary":"Mixed visual signals.",'
                 '"signals":["Lighting is internally consistent"],'
-                '"limitations":"No provenance or metadata was inspected."}'
+                '"limitations":"No provenance or metadata was inspected.",'
+                '"local_edit_assessment":"inconclusive",'
+                '"local_edit_signals":["Small text cannot be assessed reliably."]}'
             )
 
     detector = GeminiImageDetector(FakeGeminiClient())
@@ -357,6 +359,8 @@ async def test_gemini_image_detector_normalizes_structured_result() -> None:
     assert result["classification"] == "Inconclusive"
     assert result["authentic_probability"] == 56
     assert result["model"] == "gemini-test"
+    assert result["local_edit_assessment"] == "inconclusive"
+    assert result["score_is_calibrated"] is False
 
 
 # ---------------------------------------------------------------------------

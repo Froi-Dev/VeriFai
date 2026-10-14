@@ -22,6 +22,8 @@ export type MediaScanData = {
   summary: string;
   signals?: string[];
   limitations?: string;
+  local_edit_assessment?: "suspected" | "no_clear_signals" | "inconclusive";
+  local_edit_signals?: string[];
 };
 
 export type NewsEvidenceItem = {
@@ -175,36 +177,41 @@ export function TextScanResultView({ data }: { data: TextScanData }) {
 
 export function MediaScanResultView({ data }: { data: MediaScanData }) {
   const aiProb = data.ai_probability ?? data.aiConfidence ?? (100 - (data.authentic_probability ?? 50));
-  const authProb = data.authentic_probability ?? data.humanConfidence ?? (100 - aiProb);
-  const conf = data.confidence > 1 ? Math.round(data.confidence) : Math.round(data.confidence * 100);
+  const classification = data.classification === "Likely authentic/camera-captured"
+    ? "No clear AI signals" : data.classification;
+  const localEditLabel = data.local_edit_assessment === "suspected"
+    ? "Localized manipulation suspected"
+    : data.local_edit_assessment === "no_clear_signals"
+      ? "No clear localized edit signals" : "Localized edits could not be ruled out";
 
   return (
     <div className="text-result-content">
       <div className="plain-verdict">
-        <span>Overall assessment · {conf}% CONFIDENCE</span>
-        <h3>{data.classification}</h3>
+        <span>Visual assessment</span>
+        <h3>{classification}</h3>
         <p>{data.summary}</p>
       </div>
 
       <div className="likelihood-bars">
         <div>
           <div>
-            <span>AI-generation likelihood</span>
-            <strong>{aiProb}%</strong>
+            <span>AI visual signal score (uncalibrated)</span>
+            <strong>{aiProb}/100</strong>
           </div>
           <span className="likelihood-track">
             <i className="ai-bar" style={{ width: `${aiProb}%` }} />
           </span>
         </div>
-        <div>
-          <div>
-            <span>Authentic/camera-captured likelihood</span>
-            <strong>{authProb}%</strong>
-          </div>
-          <span className="likelihood-track">
-            <i className="human-bar" style={{ width: `${authProb}%` }} />
-          </span>
-        </div>
+      </div>
+
+      <div className="plain-evidence">
+        <h3>{localEditLabel}</h3>
+        <p>A real photograph can contain AI-edited writing, faces, or interactions. A low AI score does not establish authenticity.</p>
+        {!!data.local_edit_signals?.length && (
+          <ul>{data.local_edit_signals.map((signal, index) => (
+            <li key={`${index}-${signal}`}><Info size={15} /><span>{signal}</span></li>
+          ))}</ul>
+        )}
       </div>
 
       {data.signals && data.signals.length > 0 && (
@@ -282,6 +289,9 @@ export function NewsScanResultView({ data }: { data: NewsVerificationData }) {
           url: item.url,
           relationship: item.relationship,
           image_url: item.image_url,
+          evidence_text: item.evidence_text,
+          explanation: item.explanation,
+          published_date: item.published_date,
         });
       }
     }
@@ -295,19 +305,9 @@ export function NewsScanResultView({ data }: { data: NewsVerificationData }) {
         explanation: data.closest_real_story.explanation || "",
         image_url: data.closest_real_story.image_url,
       }
-    : evidenceList.length > 0
-    ? {
-        title: evidenceList[0].title,
-        publisher: evidenceList[0].publisher,
-        url: evidenceList[0].url,
-        explanation: evidenceList[0].title,
-        image_url: evidenceList[0].image_url,
-      }
     : null;
 
-  const displayedSources = closestStory
-    ? evidenceList.filter((s) => s.url !== closestStory.url).slice(0, 6)
-    : evidenceList.slice(0, 6);
+  const displayedSources = evidenceList.slice(0, 6);
 
   const showVerdict = data.status !== "SEARCH_UNAVAILABLE";
 

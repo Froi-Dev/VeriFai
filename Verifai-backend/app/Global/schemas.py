@@ -42,6 +42,7 @@ class ImageDetectionResponse(BaseModel):
     classification: Literal[
         "Likely AI-generated",
         "Likely authentic/camera-captured",
+        "No clear AI signals",
         "Manipulation suspected",
         "Inconclusive",
     ]
@@ -52,6 +53,9 @@ class ImageDetectionResponse(BaseModel):
     signals: list[str] = Field(max_length=6)
     limitations: str
     model: str
+    local_edit_assessment: Literal["suspected", "no_clear_signals", "inconclusive"] = "inconclusive"
+    local_edit_signals: list[str] = Field(default_factory=list, max_length=4)
+    score_is_calibrated: bool = False
 
 
 class NewsVerificationRequest(StrictRequest):

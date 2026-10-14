@@ -12,6 +12,7 @@ from app.FakeNewsAnalyzer.image_fact_checker import GeminiVisionClient, Philippi
 from app.FakeNewsAnalyzer.news_verifier import (
     NewsSearchClient,
     NewsVerifier,
+    Article,
     SearchOutcome,
     SearchResult,
 )
@@ -48,7 +49,11 @@ def decision(verdict="VERIFIED", url=URL):
             "verdict": verdict,
             "confidence": 90,
             "explanation": "The source confirms the claim.",
-            "sources": [{"title": "PNA", "url": url, "relationship": "SUPPORTS"}],
+            "sources": [{
+                "title": "PNA", "url": url, "relationship": "SUPPORTS",
+                "evidence_quote": CLAIM,
+                "explanation": "The snippet explicitly reports the law signing.",
+            }],
             "reasoning": "The provided snippet reports the law signing.",
         }
     )
@@ -169,6 +174,149 @@ async def test_hallucinated_citation_cannot_verify(setup_engine):
     assert result["verdict"] == "UNVERIFIED"
     assert not result["evidence"]["supporting"]
     fallback.verify.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("relationship", ["SUPPORTS", "RELATED"])
+async def test_false_verdict_requires_contradicting_evidence(setup_engine, relationship):
+    engine, gemini, _, _ = setup_engine
+    payload = json.loads(decision(verdict="FALSE"))
+    payload["sources"][0]["relationship"] = relationship
+    gemini.generate.return_value = json.dumps(payload)
+    result = await engine.verify(CLAIM)
+    assert result["verdict"] == "UNVERIFIED"
+    assert result["confidence"] == 0
+    assert "confirms the claim" not in result["explanation"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quote", ["", "Invented evidence that is not in the snippet."])
+async def test_missing_or_invented_quote_cannot_establish_verdict(setup_engine, quote):
+    engine, gemini, _, _ = setup_engine
+    payload = json.loads(decision())
+    payload["sources"][0]["evidence_quote"] = quote
+    gemini.generate.return_value = json.dumps(payload)
+    result = await engine.verify(CLAIM)
+    assert result["verdict"] == "UNVERIFIED"
+    assert not result["evidence"]["supporting"]
+    assert result["evidence"]["related"][0]["evidence_text"] == ""
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["Sara", "Sarah"])
+async def test_relative_death_fact_check_does_not_refute_subject_death(setup_engine, name):
+    engine, gemini, search, _ = setup_engine
+    url = "https://verafiles.org/articles/photo-misleads-about-father"
+    snippet = "A photo of Vice President Sara Duterte misleadingly implies her father is dead."
+    search.search.return_value = SearchOutcome([
+        SearchResult(title="VP Sara photo MISLEADS, implies her father dead", url=url,
+                     domain="verafiles.org", snippet=snippet, published_date=None,
+                     provider="serper", query=f"{name} Duterte is Dead")
+    ], ["serper"], True)
+    payload = json.loads(decision(verdict="FALSE", url=url))
+    payload["confidence"] = 100
+    payload["sources"][0].update(
+        relationship="DEBUNKS", evidence_quote=snippet,
+        explanation="The source says the death claim is misleading.",
+    )
+    gemini.generate.return_value = json.dumps(payload)
+    result = await engine.verify(f"{name} Duterte is Dead")
+    assert result["verdict"] == "UNVERIFIED"
+    assert result["confidence"] == 0
+    assert not result["evidence"]["debunks"]
+    assert result["evidence"]["related"][0]["url"] == url
+
+
+@pytest.mark.asyncio
+async def test_explicit_debunk_keeps_false_and_exposes_passage(setup_engine):
+    engine, gemini, search, _ = setup_engine
+    snippet = "The agency denied the claim: the bridge has not collapsed."
+    search.search.return_value.results[0].snippet = snippet
+    payload = json.loads(decision(verdict="FALSE"))
+    payload["sources"][0].update(
+        relationship="CONTRADICTS", evidence_quote=snippet,
+        explanation="The agency explicitly denies the bridge collapse.",
+    )
+    gemini.generate.return_value = json.dumps(payload)
+    result = await engine.verify("The bridge has collapsed.")
+    assert result["verdict"] == "FALSE"
+    source = result["evidence"]["contradicting"][0]
+    assert source["evidence_text"] == snippet
+    assert source["url"] == URL
+    assert "explicitly denies" in source["explanation"]
+    assert any("full articles were not retrieved" in w for w in result["context_warnings"])
+
+
+@pytest.mark.asyncio
+async def test_social_post_alone_cannot_establish_false(setup_engine):
+    engine, gemini, search, _ = setup_engine
+    url = "https://www.facebook.com/some-account/posts/123"
+    source = search.search.return_value.results[0]
+    source.url = url
+    source.domain = "www.facebook.com"
+    payload = json.loads(decision(verdict="FALSE", url=url))
+    payload["sources"][0]["relationship"] = "DEBUNKS"
+    gemini.generate.return_value = json.dumps(payload)
+    result = await engine.verify(CLAIM)
+    assert result["verdict"] == "UNVERIFIED"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["Sara", "Sarah", "SaraH"])
+@pytest.mark.parametrize("already_found", [False, True])
+async def test_unresolved_claim_searches_archives_and_matches_exact_debunk(
+    setup_engine, name, already_found,
+):
+    engine, gemini, search, fallback = setup_engine
+    url = "https://verafiles.org/articles/fact-check-vp-sara-duterte-is-not-dead"
+    title = "FACT CHECK: VP Sara Duterte is NOT dead"
+    quote = "Vice President Sara Duterte is alive."
+    found = SearchResult(
+        title=title, url=url, domain="verafiles.org",
+        snippet="An online death hoax uses photographs from unrelated events.",
+        published_date="2025-03-13", provider="serper", query="Sara Duterte is Dead fact check",
+    )
+    found_outcome = SearchOutcome([found], ["serper"], True)
+    search.search.side_effect = [
+        found_outcome if already_found else outcome(empty=True), found_outcome,
+    ]
+    fallback.scraper.scrape.return_value = Article(
+        headline=title, article_text=quote + " The claim is false.", author="VERA Files",
+        publisher="VERA Files", published_date="2025-03-13", updated_date=None,
+        canonical_url=url, image_url="",
+    )
+    payload = json.loads(decision(verdict="FALSE", url=url))
+    payload["sources"][0].update(
+        relationship="DEBUNKS", evidence_quote=quote,
+        explanation="Vera Files directly debunked this death hoax on March 13, 2025.",
+    )
+    if already_found:
+        unknown = json.loads(decision(verdict="UNVERIFIED"))
+        unknown["sources"] = []
+        gemini.generate.side_effect = [json.dumps(unknown), json.dumps(payload)]
+    else:
+        gemini.generate.return_value = json.dumps(payload)
+    claim = f"{name} Duterte is Dead"
+    result = await engine.verify(claim)
+    assert result["original_text"] == claim
+    assert result["verdict"] == "FALSE"
+    assert result["evidence"]["debunks"][0]["url"] == url
+    assert result["evidence"]["debunks"][0]["evidence_text"] == quote
+    assert result["search"]["articles_scraped"] == 1
+    archive_queries = search.search.call_args_list[1].args[0]
+    assert any("site:verafiles.org" in q and "sara duterte" in q.lower() for q in archive_queries)
+    assert all("sarah" not in q.lower() for q in archive_queries)
+    fallback.scraper.scrape.assert_awaited_once_with(url)
+
+
+@pytest.mark.asyncio
+async def test_fact_check_retry_is_bounded_when_no_new_evidence(setup_engine):
+    engine, gemini, search, _ = setup_engine
+    gemini.generate.return_value = decision(verdict="FALSE")
+    result = await engine.verify(CLAIM)
+    assert result["verdict"] == "UNVERIFIED"
+    assert search.search.await_count == 2
+    assert gemini.generate.await_count == 1
 
 
 @pytest.mark.asyncio

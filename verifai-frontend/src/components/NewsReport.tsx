@@ -8,6 +8,8 @@ export type ReportSource = {
   image_url?: string;
   explanation?: string;
   relationship?: string;
+  evidence_text?: string;
+  published_date?: string | null;
 };
 
 export type ReportClaim = {
@@ -55,10 +57,10 @@ function SourceImage({ source }: { source: ReportSource }) {
 }
 
 function relationshipLabel(relationship?: string) {
-  if (relationship === "SUPPORTS") return "Supports this news";
-  if (relationship === "CONTRADICTS") return "Reports different facts";
+  if (relationship === "SUPPORTS") return "Supports the submitted claim";
+  if (relationship === "CONTRADICTS") return "Contradicts the submitted claim";
   if (relationship === "DEBUNKS") return "Debunks this claim";
-  return "Related report";
+  return "Related context — does not establish the claim";
 }
 
 export function NewsReport({
@@ -73,9 +75,7 @@ export function NewsReport({
 }: NewsReportProps) {
   const contextWarnings = warnings.filter(
     (warning) =>
-      !warning.startsWith("This input looks like a short headline.") &&
-      !warning.includes("Verified using search snippets") &&
-      !warning.includes("full article contents were not retrieved")
+      !warning.startsWith("This input looks like a short headline.")
   );
 
   return (
@@ -106,7 +106,7 @@ export function NewsReport({
         <article className="closest-story">
           <SourceImage source={closestStory} />
           <div>
-            <small>CLOSEST MATCHING REPORT</small>
+            <small>RELATED REPORT — CHECK THE CLAIM AND DATE</small>
             <h3>{closestStory.title}</h3>
             <p>{closestStory.explanation}</p>
             <a href={closestStory.url} target="_blank" rel="noreferrer">
@@ -136,11 +136,21 @@ export function NewsReport({
                 <strong>{source.publisher}</strong>
                 <span className="report-relationship">{relationshipLabel(source.relationship)}</span>
                 <p>{source.title}</p>
+                {source.published_date && <small>Published: {source.published_date}</small>}
+                {source.evidence_text && (
+                  <blockquote className="report-evidence-excerpt">{source.evidence_text}</blockquote>
+                )}
+                {source.explanation && <p className="report-evidence-reason">{source.explanation}</p>}
               </div>
               <ExternalLink size={16} />
             </a>
           ))}
         </div>
+      )}
+      {sources.length === 0 && (
+        <p className="report-context-note" role="note">
+          <Info size={16} /> No supporting or contradicting source evidence is available in this report.
+        </p>
       )}
     </div>
   );

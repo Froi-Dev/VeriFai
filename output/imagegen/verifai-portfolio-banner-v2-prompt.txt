@@ -1,0 +1,39 @@
+Generation mode: Built-in image_gen with three rendered reference screenshots.
+
+Create a corrected portfolio website banner for Verif.AI using the THREE most recent screenshots as visual reference images. The user rejected the previous banner because it did not match their real system. Fidelity to these references is the primary requirement.
+
+REFERENCE ROLES:
+1. Actual current Verif.AI website desktop hero: authoritative MAIN BRAND reference. Deep royal/navy blue full background, white and golden-yellow typography, very restrained red buttons. Logo is a stylized blue V with gold sun rays/stars enclosed in open blue/red scan corner brackets on a small white tile, NOT four squares. Brand wordmark Verif.AI with gold dot.
+2. Website extension marketing section: reference for the idea of a browser/article context, with a popup at right. It is a marketing preview, NOT the actual extension popup.
+3. Actual extension popup: authoritative EXTENSION UI reference. Match its plain warm cream #fffdf6 background, dark forest green #153e36 text, green #176c51 links/button, bold plain "VerifAI" header, modest spacing, and uncomplicated vertical layout. No fake elaborate extension interface.
+
+OUTPUT:
+One final polished wide landscape 2:1 portfolio project banner, preferably 2400x1200. The finished artwork itself is the banner, with no outer device, no surrounding room, no watermark. Build a carefully balanced composition with left 38% devoted to the real brand/headline and right 62% to website plus extension. Keep margins generous; no overlapping text.
+
+MAIN BRAND AND TEXT:
+Full-bleed deep Philippine blue #0b3d91 shaded toward navy #082452, like reference 1, subtle blue diagonal technical grid and paper texture. WHITE text, bright GOLD #f4b400 emphasis; small RED #d7263d accent only. Absolutely no large red wash, ivory main background, charcoal four-tile logo, or generic red SaaS dashboard from the rejected design.
+Top left faithfully reproduce reference 1's V scan-bracket sun/star logo and wordmark "Verif.AI".
+Small spaced kicker: "MAGBASA. SURIIN. TIYAKIN."
+Large bold Manrope-style exact headline:
+"’Wag basta"
+"maniwala."
+"Siguraduhing tama."
+First two lines white, last line gold. Scale to fit cleanly.
+Small descriptor: "AI content, news & image verification"
+Two understated bottom-left labels: "Web platform" and "Browser extension".
+
+PRODUCT VISUALS:
+At upper/right place a large, crisp, nearly front-facing desktop browser window showing the ACTUAL HOMEPAGE design from reference 1 faithfully: blue hero, white/gold Tagalog headline on left, exploded white paper and translucent blue verification layers on right, small white callout pills, authentic logo/nav. Reproduce the real page rather than inventing dashboard cards or statistics. Simplify very small text but retain composition/colors. It must look like this specific product.
+Overlapping lower right place a second smaller white browser/article context window with one lightly blue-highlighted passage, then a prominent actual extension popup on its right. A small clear caption above this foreground group reads "BROWSER EXTENSION".
+The extension popup should occupy about 23% of total banner width and visually replicate screenshot 3 in a compact floating 370px-wide cream panel. Its visible text in order:
+"VerifAI"
+"Checking connection…"
+"Connect / installation help · Create account"
+"Right-click selected text or an image → Scan with VerifAI. Results appear here."
+Green button with exact label "Disconnect & clear result"
+"Latest result"
+Leave the result area plain/empty as in the actual screenshot. This is a faithful UI depiction; do not invent scores, a successful result, connection state, check badges, scan buttons, or settings controls. Keep "VerifAI" plain dark green without the website logo beside it, exactly like the actual popup.
+Optional small context menu in article only if space allows: "Scan with VerifAI".
+
+POLISH:
+Sophisticated portfolio cover composition, soft realistic shadows separating browser layers, clear product hierarchy, rich blue field and restrained gold highlights. Reproduce logo faithfully using reference rather than inventing a replacement. Focus on the real website and the actual extension. No extra slogans, fake URLs, accuracy claims, testimonials, badges, stock humans, or unrelated ornaments.

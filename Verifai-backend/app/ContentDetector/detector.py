@@ -186,7 +186,7 @@ async def analyze_image(request: Request, response: Response, user, image: Uploa
     try:
         async with asyncio.timeout(settings.image_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("image-ai", image_bytes, version="v1"),
+                cache_key("image-ai", image_bytes, version="v2-local-edits"),
                 settings.image_result_cache_seconds,
                 produce,
             )
@@ -218,7 +218,11 @@ async def analyze_image(request: Request, response: Response, user, image: Uploa
             filename=image.filename or "image_scan",
             media_type="media",
             confidence_score=float(validated.confidence),
-            is_synthetic=(validated.classification in ("Likely AI-generated", "Manipulation suspected")),
+            is_synthetic=(
+                True
+                if validated.classification in ("Likely AI-generated", "Manipulation suspected")
+                else None
+            ),
             artifacts=validated.model_dump(),
         )
     return validated

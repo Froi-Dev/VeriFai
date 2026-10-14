@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1420" viewBox="0 0 1920 1420" role="img" aria-labelledby="title desc">
+  <title id="title">Verifai database entity relationship diagram</title>
+  <desc id="desc">PostgreSQL public schema and guest quota tables, with foreign key relationships.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#102747" flood-opacity=".10"/></filter>
+    <style>
+      text{font-family:Inter,"Segoe UI",Arial,sans-serif;fill:#1F2937}.title{font-size:34px;font-weight:750;letter-spacing:-.5px}.subtitle{font-size:15px;fill:#64748B}.section{font-size:13px;font-weight:700;letter-spacing:1.3px;fill:#64748B}.card{fill:#fff;stroke:#D8E1EC;stroke-width:1.2;filter:url(#shadow)}.head{fill:#0B3D91}.guesthead{fill:#147A72}.loosehead{fill:#68758A}.headtext{fill:#fff;font-size:15px;font-weight:700}.field{font-size:12.5px}.type{font-size:11.5px;fill:#78869A}.key{font-size:10px;font-weight:700;fill:#D7263D}.rule{stroke:#E8EDF3;stroke-width:1}.rel{fill:none;stroke:#8EA2BC;stroke-width:1.7}.relguest{fill:none;stroke:#54A69D;stroke-width:1.8}.badge{font-size:11px;font-weight:700;fill:#52647A}.note{font-size:12px;fill:#64748B}
+    </style>
+    <marker id="crow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10" fill="none" stroke="#8EA2BC" stroke-width="1.5"/></marker>
+    <marker id="cgreen" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10" fill="none" stroke="#54A69D" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1920" height="1420" fill="#F5F8FC"/>
+  <text x="64" y="68" class="title">Verifai database · ERD</text>
+  <text x="64" y="98" class="subtitle">PostgreSQL schema assembled from SQLAlchemy models and migrations · primary keys, foreign keys, and key constraints</text>
+  <rect x="1500" y="46" width="354" height="42" rx="21" fill="#E7EEF8"/><circle cx="1522" cy="67" r="5" fill="#0B3D91"/><text x="1536" y="72" class="subtitle" style="font-weight:650">public schema + guest quota tables</text>
+  <text x="64" y="145" class="section">ACCOUNT &amp; AUTHENTICATION</text>
+  <text x="1270" y="145" class="section">GUEST QUOTAS</text>
+  <text x="64" y="912" class="section">REQUEST SUPPORT</text>
+  <!-- connectors are behind the entity cards -->
+  <path class="rel" d="M415 314 H485" marker-end="url(#crow)"/><text x="425" y="303" class="badge">1 : N</text>
+  <path class="rel" d="M415 430 H458 V495 H485" marker-end="url(#crow)"/><text x="425" y="456" class="badge">1 : N</text>
+  <path class="rel" d="M415 488 H450 V709 H485" marker-end="url(#crow)"/><text x="420" y="680" class="badge">1 : N</text>
+  <path class="rel" d="M415 545 H435 V934 H485" marker-end="url(#crow)"/><text x="420" y="912" class="badge">1 : N</text>
+  <path class="rel" d="M415 600 H422 V1184 H485" marker-end="url(#crow)"/><text x="425" y="1159" class="badge">1 : N</text>
+  <path class="rel" d="M415 372 H1010 V310 H1080" marker-end="url(#crow)"/><text x="895" y="300" class="badge">1 : 0..1</text>
+  <path class="rel" d="M910 310 H1080" marker-end="url(#crow)"/><text x="969" y="299" class="badge">1 : N</text>
+  <path class="relguest" d="M1515 550 H1540 V460 H1565" marker-end="url(#cgreen)"/><text x="1520" y="531" class="badge">1 : N</text>
+  <path class="relguest" d="M1515 550 H1540 V730 H1565" marker-end="url(#cgreen)"/><text x="1520" y="710" class="badge">1 : N</text>
+  <!-- Users -->
+  <g transform="translate(65 178)"><rect class="card" width="350" height="470" rx="13"/><path class="head" d="M78 0H337Q350 0 350 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">users</text><text x="313" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">user_id</text><text x="315" y="78" class="type" text-anchor="end">integer</text><line x1="16" y1="91" x2="334" y2="91" class="rule"/>
+    <text x="18" y="116">username</text><text x="315" y="116" class="type" text-anchor="end">varchar(50)</text><line x1="16" y1="129" x2="334" y2="129" class="rule"/>
+    <text x="18" y="154" class="key">UQ</text><text x="54" y="154">email</text><text x="315" y="154" class="type" text-anchor="end">varchar(100)</text><line x1="16" y1="167" x2="334" y2="167" class="rule"/>
+    <text x="18" y="192">password</text><text x="315" y="192" class="type" text-anchor="end">text</text><line x1="16" y1="205" x2="334" y2="205" class="rule"/>
+    <text x="18" y="230">email_verified</text><text x="315" y="230" class="type" text-anchor="end">boolean</text><line x1="16" y1="243" x2="334" y2="243" class="rule"/>
+    <text x="18" y="268">mfa_enabled</text><text x="315" y="268" class="type" text-anchor="end">boolean</text><line x1="16" y1="281" x2="334" y2="281" class="rule"/>
+    <text x="18" y="306">failed_login_attempts</text><text x="315" y="306" class="type" text-anchor="end">integer</text><line x1="16" y1="319" x2="334" y2="319" class="rule"/>
+    <text x="18" y="344">last_login</text><text x="315" y="344" class="type" text-anchor="end">timestamp</text><line x1="16" y1="357" x2="334" y2="357" class="rule"/>
+    <text x="18" y="382">created_at · updated_at</text><text x="315" y="382" class="type" text-anchor="end">timestamp</text><line x1="16" y1="395" x2="334" y2="395" class="rule"/>
+    <text x="18" y="420">role · is_active</text><text x="315" y="420" class="type" text-anchor="end">varchar · boolean</text></g>
+  </g>
+  <!-- Left dependent entities -->
+  <g transform="translate(485 178)"><rect class="card" width="425" height="272" rx="13"/><path class="head" d="M78 0H412Q425 0 425 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">session_records</text><text x="389" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">token</text><text x="390" y="78" class="type" text-anchor="end">varchar(255)</text><line x1="16" y1="91" x2="409" y2="91" class="rule"/>
+    <text x="18" y="116">subject_type</text><text x="390" y="116" class="type" text-anchor="end">varchar(20)</text><line x1="16" y1="129" x2="409" y2="129" class="rule"/>
+    <text x="18" y="154" class="key">FK</text><text x="54" y="154">user_id · nullable</text><text x="390" y="154" class="type" text-anchor="end">integer</text><line x1="16" y1="167" x2="409" y2="167" class="rule"/>
+    <text x="18" y="192">email</text><text x="390" y="192" class="type" text-anchor="end">varchar(100)</text><line x1="16" y1="205" x2="409" y2="205" class="rule"/>
+    <text x="18" y="230">expires_at · created_at</text><text x="390" y="230" class="type" text-anchor="end">timestamp</text></g></g>
+  <g transform="translate(485 480)"><rect class="card" width="425" height="224" rx="13"/><path class="head" d="M78 0H412Q425 0 425 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">audit_logs</text><text x="389" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">log_id</text><text x="390" y="78" class="type" text-anchor="end">integer</text><line x1="16" y1="91" x2="409" y2="91" class="rule"/>
+    <text x="18" y="116" class="key">FK</text><text x="54" y="116">user_id · nullable</text><text x="390" y="116" class="type" text-anchor="end">integer</text><line x1="16" y1="129" x2="409" y2="129" class="rule"/>
+    <text x="18" y="154">action · ip_address</text><text x="390" y="154" class="type" text-anchor="end">varchar</text><line x1="16" y1="167" x2="409" y2="167" class="rule"/>
+    <text x="18" y="192">msg · type · timestamp</text><text x="390" y="192" class="type" text-anchor="end">varchar · timestamp</text></g></g>
+  <g transform="translate(485 730)"><rect class="card" width="425" height="224" rx="13"/><path class="head" d="M78 0H412Q425 0 425 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">scan_results</text><text x="389" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">id</text><text x="390" y="78" class="type" text-anchor="end">integer · identity</text><line x1="16" y1="91" x2="409" y2="91" class="rule"/>
+    <text x="18" y="116" class="key">FK</text><text x="54" y="116">user_id</text><text x="390" y="116" class="type" text-anchor="end">integer</text><line x1="16" y1="129" x2="409" y2="129" class="rule"/>
+    <text x="18" y="154">filename · media_type</text><text x="390" y="154" class="type" text-anchor="end">varchar</text><line x1="16" y1="167" x2="409" y2="167" class="rule"/>
+    <text x="18" y="192">confidence · synthetic · artifacts · review · created</text><text x="390" y="211" class="type" text-anchor="end">float · bool · json · varchar · timestamp</text></g></g>
+  <g transform="translate(485 980)"><rect class="card" width="425" height="184" rx="13"/><path class="head" d="M78 0H412Q425 0 425 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">password_reset_tokens</text><text x="389" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">token_hash</text><text x="390" y="78" class="type" text-anchor="end">varchar(64)</text><line x1="16" y1="91" x2="409" y2="91" class="rule"/>
+    <text x="18" y="116" class="key">FK</text><text x="54" y="116">user_id</text><text x="390" y="116" class="type" text-anchor="end">integer</text><line x1="16" y1="129" x2="409" y2="129" class="rule"/>
+    <text x="18" y="154">expires_at · created_at · used_at</text><text x="390" y="154" class="type" text-anchor="end">timestamp</text></g></g>
+  <g transform="translate(485 1190)"><rect class="card" width="425" height="150" rx="13"/><path class="head" d="M78 0H412Q425 0 425 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">auth_sessions</text><text x="389" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">session_id</text><text x="390" y="78" class="type" text-anchor="end">varchar(64)</text><line x1="16" y1="91" x2="409" y2="91" class="rule"/>
+    <text x="18" y="116" class="key">FK</text><text x="54" y="116">user_id + refresh/session metadata</text><text x="390" y="136" class="type" text-anchor="end">integer · hashes · timestamps</text></g></g>
+  <!-- One-to-one security state -->
+  <g transform="translate(1080 178)"><rect class="card" width="375" height="210" rx="13"/><path class="head" d="M78 0H362Q375 0 375 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">user_security_state</text><text x="339" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK · FK</text><text x="72" y="78">user_id</text><text x="340" y="78" class="type" text-anchor="end">integer</text><line x1="16" y1="91" x2="359" y2="91" class="rule"/>
+    <text x="18" y="116">locked_until</text><text x="340" y="116" class="type" text-anchor="end">timestamptz</text><line x1="16" y1="129" x2="359" y2="129" class="rule"/>
+    <text x="18" y="154">password_changed_at</text><text x="340" y="154" class="type" text-anchor="end">timestamptz</text><text x="18" y="188" class="note">At most one row per user</text></g></g>
+  <!-- Guest tables -->
+  <g transform="translate(1270 460)"><rect class="card" width="245" height="180" rx="13"/><path class="guesthead" d="M78 0H232Q245 0 245 13V48H0V13Q0 0 13 0Z"/><text x="16" y="31" class="headtext">guest_identities</text><g class="field"><text x="16" y="78" class="key">PK</text><text x="52" y="78">identity_hash</text><text x="229" y="78" class="type" text-anchor="end">varchar(64)</text><line x1="14" y1="91" x2="231" y2="91" class="rule"/><text x="16" y="123" class="note">Quota identity key</text></g></g>
+  <g transform="translate(1565 330)"><rect class="card" width="290" height="260" rx="13"/><path class="guesthead" d="M78 0H277Q290 0 290 13V48H0V13Q0 0 13 0Z"/><text x="16" y="31" class="headtext">guest_sessions</text><g class="field"><text x="16" y="78" class="key">PK</text><text x="52" y="78">token_hash</text><text x="274" y="78" class="type" text-anchor="end">varchar(64)</text><line x1="14" y1="91" x2="276" y2="91" class="rule"/><text x="16" y="119" class="key">FK</text><text x="52" y="119">identity_hash</text><text x="274" y="119" class="type" text-anchor="end">varchar(64)</text><line x1="14" y1="132" x2="276" y2="132" class="rule"/><text x="16" y="160">fingerprint_hash</text><text x="274" y="160" class="type" text-anchor="end">varchar(64)</text><line x1="14" y1="173" x2="276" y2="173" class="rule"/><text x="16" y="201">consent_version</text><text x="274" y="201" class="type" text-anchor="end">varchar(20)</text><text x="16" y="232">created_at · expires_at</text><text x="274" y="250" class="type" text-anchor="end">double precision</text></g></g>
+  <g transform="translate(1565 625)"><rect class="card" width="290" height="210" rx="13"/><path class="guesthead" d="M78 0H277Q290 0 290 13V48H0V13Q0 0 13 0Z"/><text x="16" y="31" class="headtext">guest_usage</text><g class="field"><text x="16" y="78" class="key">PK</text><text x="52" y="78">id</text><text x="274" y="78" class="type" text-anchor="end">serial</text><line x1="14" y1="91" x2="276" y2="91" class="rule"/><text x="16" y="119" class="key">FK</text><text x="52" y="119">identity_hash</text><text x="274" y="119" class="type" text-anchor="end">varchar(64)</text><line x1="14" y1="132" x2="276" y2="132" class="rule"/><text x="16" y="160">kind</text><text x="274" y="160" class="type" text-anchor="end">varchar(10)</text><text x="16" y="188">used_at</text><text x="274" y="188" class="type" text-anchor="end">double precision</text></g></g>
+  <!-- Standalone records -->
+  <g transform="translate(1080 950)"><rect class="card" width="375" height="220" rx="13"/><path class="loosehead" d="M78 0H362Q375 0 375 13V48H0V13Q0 0 13 0Z"/><text x="18" y="31" class="headtext">idempotency_records</text><text x="339" y="30" class="headtext" style="font-size:11px;opacity:.85">public</text>
+    <g class="field"><text x="18" y="78" class="key">PK</text><text x="54" y="78">record_id</text><text x="340" y="78" class="type" text-anchor="end">bigint · identity</text><line x1="16" y1="91" x2="359" y2="91" class="rule"/>
+    <text x="18" y="116">scope</text><text x="340" y="116" class="type" text-anchor="end">varchar(100)</text><line x1="16" y1="129" x2="359" y2="129" class="rule"/>
+    <text x="18" y="154" class="key">UQ</text><text x="54" y="154">scope + key_hash</text><text x="340" y="154" class="type" text-anchor="end">unique pair</text><line x1="16" y1="167" x2="359" y2="167" class="rule"/>
+    <text x="18" y="192">request_hash · created_at · expires_at</text><text x="340" y="210" class="type" text-anchor="end">varchar · timestamps</text></g></g>
+  <!-- Legend and notes -->
+  <rect x="1080" y="1200" width="775" height="140" rx="13" fill="#EAF0F7"/>
+  <text x="1105" y="1233" class="section">LEGEND</text><text x="1105" y="1265" class="note"><tspan class="key">PK</tspan> primary key</text><text x="1265" y="1265" class="note"><tspan class="key">FK</tspan> foreign key</text><text x="1415" y="1265" class="note"><tspan class="key">UQ</tspan> unique constraint / index</text>
+  <path d="M1106 1295H1170" class="rel" marker-end="url(#crow)"/><text x="1185" y="1300" class="note">one parent → many dependent rows</text><text x="1105" y="1325" class="note">Optional user_id fields are nullable. Guest quota tables are created by migration 003.</text>
+  <text x="64" y="1380" class="note">Source: Verifai-backend/app/Auth/models.py, app/ContentDetector/guest_quota.py, and migrations/001–003 · FK lines show declared references.</text>
+</svg>

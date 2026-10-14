@@ -4681,6 +4681,18 @@ class NewsVerifier:
             if remaining <= 0:
                 break
 
+        # Never publish a negative verdict without showing its decisive evidence.
+        if verdict in {"FALSE", "LIKELY_FALSE"} and not any(
+            item["source_tier"] <= 2 and item["evidence_text"].strip()
+            for item in [*groups["contradicting"], *groups["debunks"]]
+        ):
+            verdict = "UNVERIFIED"
+            confidence = 0
+            explanation = (
+                "No direct, credible evidence contradicting this exact claim was available "
+                "to include in the report. Related reports do not establish that it is false."
+            )
+
         closest_relationships = (
             {"CONTRADICTS", "DEBUNKS"}
             if verdict in {"FALSE", "LIKELY_FALSE"}

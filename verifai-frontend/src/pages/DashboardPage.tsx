@@ -32,6 +32,7 @@ import {
 import axios from "axios";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NewsReport } from "@/components/NewsReport";
+import { MediaScanResultView } from "@/components/ScanResults";
 import { TextFileUpload } from "@/components/TextFileUpload";
 import { Brand } from "@/components/Brand";
 import { api } from "@/lib/api";
@@ -80,6 +81,7 @@ type ImageDetectionResponse = {
   classification:
     | "Likely AI-generated"
     | "Likely authentic/camera-captured"
+    | "No clear AI signals"
     | "Manipulation suspected"
     | "Inconclusive";
   confidence: number;
@@ -89,6 +91,8 @@ type ImageDetectionResponse = {
   signals: string[];
   limitations: string;
   model: string;
+  local_edit_assessment?: "suspected" | "no_clear_signals" | "inconclusive";
+  local_edit_signals?: string[];
 };
 
 type NewsVerdict =
@@ -962,30 +966,12 @@ export function DashboardPage() {
         ...newsVerification.evidence.related,
       ].slice(0, 6)
     : [];
-  const closestRelatedReport = newsVerification
-    ? [
-        ...newsVerification.evidence.related,
-        ...newsVerification.evidence.contradicting,
-        ...newsVerification.evidence.debunks,
-        ...newsVerification.evidence.supporting,
-      ][0]
-    : undefined;
   const relatedNews = newsVerification
     ? newsVerification.closest_real_story.found
       ? newsVerification.closest_real_story
-      : closestRelatedReport
-        ? {
-            title: closestRelatedReport.title,
-            publisher: closestRelatedReport.publisher,
-            url: closestRelatedReport.url,
-            explanation: closestRelatedReport.explanation,
-            image_url: closestRelatedReport.image_url,
-          }
-        : null
+      : null
     : null;
-  const displayedNewsEvidence = relatedNews
-    ? newsEvidence.filter((item) => item.url !== relatedNews.url)
-    : newsEvidence;
+  const displayedNewsEvidence = newsEvidence;
 
   const goTo = (path: string) => {
     setSidebarOpen(false);
@@ -1279,31 +1265,8 @@ export function DashboardPage() {
               )}
 
               {!scanning && result?.kind === "media" && result.mediaAnalysis && (
-                <motion.div className="text-result-content" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="plain-verdict">
-                    <span>Overall assessment · {result.confidence}% CONFIDENCE</span>
-                    <h3>{result.classification}</h3>
-                    <p>{result.mediaAnalysis.summary}</p>
-                  </div>
-                  <div className="likelihood-bars">
-                    <div>
-                      <div><span>AI-generation likelihood</span><strong>{result.mediaAnalysis.ai_probability}%</strong></div>
-                      <span className="likelihood-track"><i className="ai-bar" style={{ width: `${result.mediaAnalysis.ai_probability}%` }} /></span>
-                    </div>
-                    <div>
-                      <div><span>Authentic/camera-captured likelihood</span><strong>{result.mediaAnalysis.authentic_probability}%</strong></div>
-                      <span className="likelihood-track"><i className="human-bar" style={{ width: `${result.mediaAnalysis.authentic_probability}%` }} /></span>
-                    </div>
-                  </div>
-                  <div className="plain-evidence">
-                    <h3>Visible signals considered</h3>
-                    <ul>
-                      {result.mediaAnalysis.signals.map((signal) => (
-                        <li key={signal}><Check size={15} /><span>{signal}</span></li>
-                      ))}
-                    </ul>
-                  </div>
-                  <p className="result-caution"><Info size={14} /> {result.mediaAnalysis.limitations || "Visual analysis is an estimate, not forensic proof. Check provenance and metadata too."}</p>
+                <motion.div initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, y: 0 }}>
+                  <MediaScanResultView data={result.mediaAnalysis} />
                 </motion.div>
               )}
             </aside>

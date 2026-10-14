@@ -583,3 +583,20 @@ footer{background:#0a0a0a;color:#fff;border-top:1px solid rgba(255,255,255,.08)}
   .news-checker-shell .text-result-heading{grid-template-columns:32px 1fr}
   .news-checker-shell .news-verdict>div{align-items:flex-start;flex-direction:column}
 }
+/* Keep the evidence itself readable instead of truncating it to a headline. */
+.unified-news-report .report-evidence-excerpt {
+  margin: 10px 0 6px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.unified-news-report .source-list > a p.report-evidence-reason {
+  white-space: normal;
+  overflow: visible;
+  font-size: 12px;
+  line-height: 1.5;
+}

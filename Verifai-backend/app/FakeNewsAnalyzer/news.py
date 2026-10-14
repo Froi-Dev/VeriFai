@@ -62,7 +62,7 @@ async def verify_news(
     try:
         async with asyncio.timeout(settings.news_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("news", payload.text, version="v10-claim-breakdown"),
+                cache_key("news", payload.text, version="v12-fact-check-retrieval"),
                 settings.news_result_cache_seconds,
                 produce,
                 cache_when=lambda value: value.get("status") == "SUCCESS",
@@ -123,7 +123,7 @@ async def verify_news_image(
     try:
         async with asyncio.timeout(settings.image_analysis_deadline_seconds):
             result, cache_hit = await result_cache.get_or_compute(
-                cache_key("image", image_bytes, version="v14-claim-breakdown"),
+                cache_key("image", image_bytes, version="v16-fact-check-retrieval"),
                 settings.image_result_cache_seconds,
                 produce,
                 cache_when=lambda value: (
