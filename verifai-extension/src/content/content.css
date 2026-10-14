@@ -1,0 +1,1000 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VeriFai — In-Page UI Design System
+   Matches VeriFai Brand: Stark Paper/Ink, Crimson Accent, Official Mark, Light & Dark Theme
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#verifai-trigger-btn,
+#verifai-trigger-btn *,
+#verifai-tooltip,
+#verifai-tooltip *,
+#verifai-snip-overlay,
+#verifai-snip-overlay *,
+#verifai-snip-toolbar,
+#verifai-snip-toolbar *,
+#verifai-inpage-loader,
+#verifai-inpage-loader *,
+#verifai-image-result-modal,
+#verifai-image-result-modal * {
+  box-sizing: border-box;
+}
+
+/* ─── Official Brand Mark ────────────────────────────────────────────────── */
+.verifai-brand-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 1.8px solid #d7263d;
+  border-radius: 5px;
+  display: inline-block;
+  color: #d7263d;
+  flex-shrink: 0;
+}
+
+.verifai-brand-mark::before,
+.verifai-brand-mark::after,
+.verifai-brand-mark i {
+  content: "";
+  position: absolute;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.verifai-brand-mark::before {
+  width: 4.5px;
+  height: 4.5px;
+  left: 2px;
+  top: 2px;
+}
+
+.verifai-brand-mark::after {
+  width: 4.5px;
+  height: 4.5px;
+  right: 2px;
+  bottom: 2px;
+}
+
+.verifai-brand-mark i:first-child {
+  width: 2px;
+  height: 4.5px;
+  right: 2px;
+  top: 2px;
+}
+
+.verifai-brand-mark i:last-child {
+  width: 4.5px;
+  height: 2px;
+  left: 2px;
+  bottom: 2px;
+}
+
+/* ─── Floating Text Selection Pill Container ─────────────────────────────── */
+#verifai-trigger-btn {
+  position: absolute;
+  z-index: 2147483647;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: #ffffff;
+  border: 1px solid #c5cedd;
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+  user-select: none;
+  opacity: 0;
+  pointer-events: auto;
+  transform: translateY(4px) scale(0.97);
+  transition: opacity 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+#verifai-trigger-btn.verifai-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+#verifai-trigger-btn:hover {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16), 0 4px 10px rgba(0, 0, 0, 0.08);
+  border-color: #1f2937;
+}
+
+/* Dark mode for trigger pill */
+#verifai-trigger-btn.verifai-dark {
+  background: #121214;
+  border-color: #27272a;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+#verifai-trigger-btn.verifai-dark:hover {
+  border-color: #3f3f46;
+}
+
+/* Brand header in trigger pill */
+.verifai-pill-brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px 0 6px;
+  height: 28px;
+  color: #1f2937;
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+#verifai-trigger-btn.verifai-dark .verifai-pill-brand {
+  color: #f4f4f5;
+}
+
+/* Primary "Analyze Text" Button */
+.verifai-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.verifai-pill-btn.primary {
+  background: #d7263d;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(215, 38, 61, 0.3);
+}
+
+.verifai-pill-btn.primary:hover {
+  background: #b51b30;
+  box-shadow: 0 4px 10px rgba(215, 38, 61, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Secondary "Check News Validity" Button */
+.verifai-pill-btn.secondary {
+  background: #eef2f7;
+  color: #1f2937;
+  border-color: #dce3ee;
+}
+
+.verifai-pill-btn.secondary:hover {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #1f2937;
+  transform: translateY(-1px);
+}
+
+#verifai-trigger-btn.verifai-dark .verifai-pill-btn.secondary {
+  background: #1e1e22;
+  color: #f4f4f5;
+  border-color: #27272a;
+}
+
+#verifai-trigger-btn.verifai-dark .verifai-pill-btn.secondary:hover {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #ffffff;
+}
+
+.verifai-pill-btn:active {
+  transform: translateY(0);
+}
+
+.verifai-pill-btn.loading {
+  cursor: wait !important;
+  opacity: 0.85;
+}
+
+.verifai-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: verifai-spin 600ms linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.verifai-spinner.dark-spin {
+  border-color: rgba(9, 9, 9, 0.2);
+  border-top-color: #1f2937;
+}
+
+@keyframes verifai-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Floating Result Card / Popup (White by default, Dark mode toggleable)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#verifai-tooltip {
+  position: absolute;
+  z-index: 2147483647;
+  width: 340px;
+  padding: 16px 18px;
+  border: 1px solid #dce3ee;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.05);
+  color: #1f2937;
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: auto;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+#verifai-tooltip.verifai-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ─── Dark Mode for Tooltip ──────────────────────────────────────────────── */
+#verifai-tooltip.verifai-dark {
+  background: #111113;
+  color: #f4f4f5;
+  border-color: #27272a;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Top bar row with Brand Mark, Title, Theme Toggle, Close */
+.verifai-card-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.verifai-card-brand-col {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-card-brand-col {
+  color: #ffffff;
+}
+
+.verifai-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Dark/Light Mode Switcher Button */
+.verifai-theme-toggle-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #dce3ee;
+  background: #eef2f7;
+  color: #616e81;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.verifai-theme-toggle-btn:hover {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-theme-toggle-btn {
+  background: #1e1e22;
+  color: #a1a1aa;
+  border-color: #27272a;
+}
+
+#verifai-tooltip.verifai-dark .verifai-theme-toggle-btn:hover {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #ffffff;
+}
+
+/* Close Button */
+.verifai-close-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #dce3ee;
+  background: #eef2f7;
+  color: #616e81;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+}
+
+.verifai-close-btn:hover {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-close-btn {
+  background: #1e1e22;
+  color: #a1a1aa;
+  border-color: #27272a;
+}
+
+#verifai-tooltip.verifai-dark .verifai-close-btn:hover {
+  background: #d7263d;
+  color: #ffffff;
+  border-color: #d7263d;
+}
+
+/* Verdict Badge (Real / Fake / Warning) */
+.verifai-verdict-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.verifai-verdict-pill.real {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.verifai-verdict-pill.fake {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.verifai-verdict-pill.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+#verifai-tooltip.verifai-dark .verifai-verdict-pill.real {
+  background: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+#verifai-tooltip.verifai-dark .verifai-verdict-pill.fake {
+  background: rgba(215, 38, 61, 0.2);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+#verifai-tooltip.verifai-dark .verifai-verdict-pill.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.verifai-card-title {
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+  color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-card-title {
+  color: #ffffff;
+}
+
+.verifai-card-desc {
+  font-size: 11.5px;
+  color: #616e81;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+#verifai-tooltip.verifai-dark .verifai-card-desc {
+  color: #a1a1aa;
+}
+
+/* Dual Likelihood / Confidence Bars */
+.verifai-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #eef2f7;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+#verifai-tooltip.verifai-dark .verifai-bars {
+  background: #141416;
+  border-color: #27272a;
+}
+
+.verifai-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.verifai-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 650;
+  color: #616e81;
+}
+
+#verifai-tooltip.verifai-dark .verifai-bar-labels {
+  color: #a1a1aa;
+}
+
+.verifai-bar-labels strong {
+  color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-bar-labels strong {
+  color: #ffffff;
+}
+
+.verifai-bar-track {
+  width: 100%;
+  height: 5px;
+  background: #e5e5e5;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#verifai-tooltip.verifai-dark .verifai-bar-track {
+  background: #27272a;
+}
+
+.verifai-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.verifai-bar-fill.ai {
+  background: #d7263d;
+}
+
+.verifai-bar-fill.human {
+  background: #16a34a;
+}
+
+/* Stylistic Signal Tags */
+.verifai-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.verifai-tag {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+#verifai-tooltip.verifai-dark .verifai-tag {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+/* Closest news story inside tooltip */
+.verifai-news-evidence {
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid #dce3ee;
+  border-left: 3px solid #d7263d;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+#verifai-tooltip.verifai-dark .verifai-news-evidence {
+  background: #141416;
+  border-color: #27272a;
+  border-left-color: #d7263d;
+}
+
+.verifai-news-evidence small {
+  font-size: 9px;
+  font-weight: 750;
+  color: #b51b30;
+  display: block;
+}
+
+.verifai-news-evidence a {
+  color: #1f2937;
+  font-weight: 700;
+  text-decoration: none;
+  display: block;
+  margin-top: 2px;
+}
+
+#verifai-tooltip.verifai-dark .verifai-news-evidence a {
+  color: #f4f4f5;
+}
+
+.verifai-news-evidence a:hover {
+  color: #d7263d;
+  text-decoration: underline;
+}
+
+/* Tooltip Footer & Actions */
+.verifai-tooltip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid #dce3ee;
+  font-size: 10px;
+  color: #616e81;
+  font-weight: 600;
+}
+
+#verifai-tooltip.verifai-dark .verifai-tooltip-footer {
+  border-color: #27272a;
+  color: #71717a;
+}
+
+.verifai-copy-btn {
+  background: #eef2f7;
+  border: 1px solid #c5cedd;
+  color: #1f2937;
+  font-size: 10px;
+  font-weight: 650;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.verifai-copy-btn:hover {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #1f2937;
+}
+
+#verifai-tooltip.verifai-dark .verifai-copy-btn {
+  background: #1e1e22;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+#verifai-tooltip.verifai-dark .verifai-copy-btn:hover {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   In-Page Snipping / Screen Cut Overlay
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#verifai-snip-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647;
+  cursor: crosshair;
+  user-select: none;
+  overflow: hidden;
+  background: transparent;
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+}
+
+#verifai-snip-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Top instruction pill on snipper */
+.verifai-snip-topbar {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #c5cedd;
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.verifai-snip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 750;
+  color: #1f2937;
+}
+
+.verifai-snip-hint {
+  color: #616e81;
+  font-size: 11px;
+}
+
+.verifai-snip-cancel-btn {
+  background: #eef2f7;
+  border: 1px solid #dce3ee;
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.verifai-snip-cancel-btn:hover {
+  background: #d7263d;
+  color: #fff;
+  border-color: #d7263d;
+}
+
+/* Floating Action Toolbar Anchored to Snipped Box */
+#verifai-snip-toolbar {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #ffffff;
+  border: 1px solid #c5cedd;
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+  user-select: none;
+}
+
+.verifai-snip-mode-select {
+  display: flex;
+  align-items: center;
+  background: #eef2f7;
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.verifai-snip-mode-btn {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #616e81;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.verifai-snip-mode-btn.active {
+  background: #1f2937;
+  color: #ffffff;
+}
+
+.verifai-snip-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 14px;
+  background: #d7263d;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(215, 38, 61, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.verifai-snip-confirm-btn:hover {
+  background: #b51b30;
+  box-shadow: 0 4px 10px rgba(215, 38, 61, 0.5);
+  transform: translateY(-1px);
+}
+
+.verifai-snip-cancel-action-btn {
+  background: transparent;
+  border: none;
+  color: #616e81;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 8px;
+  cursor: pointer;
+  height: 28px;
+  border-radius: 999px;
+  transition: all 0.12s ease;
+}
+
+.verifai-snip-cancel-action-btn:hover {
+  color: #1f2937;
+  background: #eef2f7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   In-Page Loading Card (Shown while Analyzing Image)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#verifai-inpage-loader {
+  position: fixed;
+  z-index: 2147483647;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 32px;
+  background: #ffffff;
+  border: 1px solid #c5cedd;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  color: #1f2937;
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+  text-align: center;
+  min-width: 280px;
+  user-select: none;
+  animation: verifai-modal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.verifai-loader-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d7263d;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.verifai-loader-icon::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #d7263d;
+  animation: verifai-spin 800ms linear infinite;
+}
+
+.verifai-loader-title {
+  font-size: 14px;
+  font-weight: 750;
+  margin: 0 0 4px;
+  color: #1f2937;
+}
+
+.verifai-loader-sub {
+  font-size: 11.5px;
+  color: #616e81;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   In-Page Image Result Modal
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#verifai-image-result-modal {
+  position: fixed;
+  z-index: 2147483647;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #c5cedd;
+  border-radius: 16px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.2);
+  color: #1f2937;
+  font-family: "Source Sans 3 Variable", "Segoe UI", sans-serif;
+  user-select: none;
+  animation: verifai-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+#verifai-image-result-modal.verifai-dark {
+  background: #111113;
+  color: #f4f4f5;
+  border-color: #27272a;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes verifai-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.verifai-modal-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.verifai-modal-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1f2937;
+  letter-spacing: -0.01em;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-modal-brand {
+  color: #ffffff;
+}
+
+.verifai-thumb-preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #dce3ee;
+  margin-bottom: 12px;
+  background: #000;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-thumb-preview {
+  border-color: #27272a;
+}
+
+.verifai-ocr-block {
+  padding: 8px 10px;
+  background: #eef2f7;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-ocr-block {
+  background: #141416;
+  border-color: #27272a;
+}
+
+.verifai-ocr-block small {
+  font-size: 9.5px;
+  font-weight: 750;
+  color: #616e81;
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.verifai-ocr-text {
+  color: #1f2937;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-ocr-text {
+  color: #f4f4f5;
+}
+
+.verifai-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.verifai-btn-dismiss {
+  flex: 1;
+  height: 32px;
+  background: #d7263d;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.verifai-btn-dismiss:hover {
+  background: #b51b30;
+}
+
+.verifai-btn-copy-modal {
+  height: 32px;
+  padding: 0 12px;
+  background: #eef2f7;
+  border: 1px solid #c5cedd;
+  color: #1f2937;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.verifai-btn-copy-modal:hover {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #1f2937;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-btn-copy-modal {
+  background: #1e1e22;
+  color: #f4f4f5;
+  border-color: #27272a;
+}
+
+#verifai-image-result-modal.verifai-dark .verifai-btn-copy-modal:hover {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+/* Keep the same blue, red and gold identity on every website. */
+.verifai-brand-symbol { flex-shrink:0; display:block; }
+#verifai-tooltip, #verifai-image-result-modal { border-color:#dce3ee; border-radius:16px; box-shadow:0 16px 48px #08245226; max-width:calc(100vw - 24px); max-height:calc(100vh - 32px); overflow-y:auto; }
+#verifai-trigger-btn { border-color:#c5cedd; max-width:calc(100vw - 16px); flex-wrap:wrap; }
+.verifai-card-title { color:#082452; font-family:"Manrope Variable","Segoe UI",sans-serif; letter-spacing:-.035em; }
+.verifai-card-brand-col, .verifai-modal-brand, .verifai-pill-brand { color:#0b3d91; }
+.verifai-pill-btn.secondary { color:#0b3d91; }
+.verifai-dark .verifai-card-title,.verifai-dark .verifai-card-brand-col,.verifai-dark .verifai-modal-brand { color:#dce8fc; }
+#verifai-tooltip button:focus-visible, #verifai-image-result-modal button:focus-visible, #verifai-trigger-btn button:focus-visible { outline:3px solid #f4b400; outline-offset:2px; }
+@media(prefers-reduced-motion:reduce) { #verifai-tooltip *,#verifai-image-result-modal *,#verifai-trigger-btn { animation:none!important; transition:none!important; } }

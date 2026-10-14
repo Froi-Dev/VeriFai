@@ -1,0 +1,309 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VeriFai — Cropper Window Overlay
+   Consistent with VeriFai theme: crimson accents (#d7263d) & stark contrast
+   ═══════════════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --ink: #1f2937;
+  --soft: #616e81;
+  --paper: #ffffff;
+  --line: #dce3ee;
+  --line2: #c5cedd;
+  --accent: #d7263d;
+  --accent2: #b51b30;
+  --tint: #fee2e2;
+  --dark: #082452;
+
+  font-family: "Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #1f2937;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.cropper-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Top Toolbar ────────────────────────────────────────────────────────── */
+.cropper-toolbar {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 20px;
+  background: rgba(10, 10, 10, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.cropper-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cropper-brand-mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  display: inline-block;
+  color: var(--accent);
+}
+
+.cropper-brand-mark::before,
+.cropper-brand-mark::after,
+.cropper-brand-mark i {
+  content: "";
+  position: absolute;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.cropper-brand-mark::before {
+  width: 5px;
+  height: 5px;
+  left: 3px;
+  top: 3px;
+}
+
+.cropper-brand-mark::after {
+  width: 5px;
+  height: 5px;
+  right: 3px;
+  bottom: 3px;
+}
+
+.cropper-brand-mark i:first-child {
+  width: 2px;
+  height: 5px;
+  right: 3px;
+  top: 3px;
+}
+
+.cropper-brand-mark i:last-child {
+  width: 5px;
+  height: 2px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.cropper-brand strong {
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.cropper-brand-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  background: rgba(215, 38, 61, 0.2);
+  color: #fca5a5;
+  border-radius: 4px;
+  border: 1px solid rgba(215, 38, 61, 0.4);
+}
+
+/* ─── Mode Toggle ────────────────────────────────────────────────────────── */
+.mode-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn:hover {
+  color: #fff;
+}
+
+.mode-btn.active {
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 750;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Toolbar Right Actions ──────────────────────────────────────────────── */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 7px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: var(--accent2);
+  transform: translateY(-0.5px);
+}
+
+.btn-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Canvas Area ────────────────────────────────────────────────────────── */
+.canvas-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1f2937;
+}
+
+canvas {
+  display: block;
+  user-select: none;
+}
+
+.selection-prompt {
+  position: absolute;
+  top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  animation: promptFade 0.3s ease;
+}
+
+.selection-prompt svg {
+  color: var(--accent);
+}
+
+@keyframes promptFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cropper-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:root { color-scheme:light; }
+body { background:#eef2f7; color:#1f2937; }
+.cropper-toolbar { background:#f8fafc; border-color:#dce3ee; padding:10px 16px; height:auto; min-height:64px; flex-wrap:wrap; gap:10px; backdrop-filter:none; }
+.toolbar-left { flex-wrap:wrap; gap:12px; }
+.cropper-brand strong { color:#082452; }
+.cropper-brand-pill { color:#0b3d91; border-color:#c5cedd; background:#eef2f7; }
+.mode-toggle { background:#eef2f7; border-color:#dce3ee; }
+.mode-btn { color:#616e81; }
+.mode-btn:hover { color:#0b3d91; }
+.mode-btn.active { background:#0b3d91; color:#fff; box-shadow:none; }
+.btn-cancel { background:#fff; color:#082452; border-color:#c5cedd; }
+.btn-confirm { border-radius:999px; }
+.canvas-wrapper { background:#e3e9f2; }
+.canvas-wrapper canvas { touch-action:none; max-width:100%; }
+.cropper-loading { color:#616e81; padding:24px; }
+.crop-progress,.crop-error { padding:12px 20px; background:#fff0f2; color:#9b1a2b; font-size:14px; }
+.crop-progress { background:#eaf1fc; color:#0b3d91; }
+.crop-result { width:min(600px,90vw); margin:50px auto; padding:32px; background:white; border:1px solid #dce3ee; border-radius:18px; overflow:auto; max-height:85vh; }
+.crop-result h1 { color:#082452; font:800 28px/1.2 "Manrope Variable",sans-serif; margin:18px 0; }
+.crop-result p { line-height:1.6; margin-bottom:18px; }
+.result-kicker { display:block; font-size:11px; letter-spacing:.12em; color:#0b3d91; margin-top:20px; }
+.result-confidence { color:#0b3d91; font-weight:650; }
+:focus-visible { outline:3px solid #f4b400; outline-offset:3px; }

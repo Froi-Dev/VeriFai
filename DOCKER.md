@@ -47,7 +47,9 @@ To deliver real email, set the SMTP variables shown in `.env.example` and recrea
 the backend with `docker compose up -d`. Mailpit is for local testing only.
 
 The included browser extension is installed separately in Chrome/Edge using Load
-unpacked on `extension/`, or the app's existing download. The default ports 5173
+unpacked on `verifai-extension/dist/`, or the app's download. The frontend Docker
+build compiles and packages this extension automatically. For a local unpacked
+build, run `npm ci` and `npm run build` inside `verifai-extension`. The default ports 5173
 and 8000 match the extension's connection URLs.
 
 ## Optional trained text model

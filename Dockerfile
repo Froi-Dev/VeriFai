@@ -22,11 +22,24 @@ RUN pip install --no-cache-dir torch==2.13.0 --index-url https://download.pytorc
     && pip install --no-cache-dir transformers==5.15.0 sentencepiece
 USER verifai
 
+FROM node:24-bookworm-slim AS extension-build
+WORKDIR /extension
+COPY verifai-extension/package.json verifai-extension/package-lock.json ./
+RUN npm ci
+COPY verifai-extension/ ./
+RUN npm run build
+
+FROM python:3.11-slim-bookworm AS extension-package
+COPY --from=extension-build /extension/dist /extension/dist
+COPY verifai-extension/package.py /extension/package.py
+RUN python /extension/package.py --output /artifacts/verifai-extension.zip
+
 FROM node:24-bookworm-slim AS frontend-build
 WORKDIR /frontend
 COPY verifai-frontend/package.json verifai-frontend/package-lock.json ./
 RUN npm ci
 COPY verifai-frontend/ ./
+COPY --from=extension-package /artifacts/verifai-extension.zip ./public/downloads/verifai-extension.zip
 ENV VITE_API_URL=/api/v1 VITE_LANDING_ONLY=false VITE_BASE_PATH=/
 RUN npm run build
 
